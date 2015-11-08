@@ -1,5 +1,5 @@
 // FHEM Platform Shim for HomeBridge
-// current version on https://github.com/justme-1968/homebridge-fhem
+// current version on https://github.com/justme-1968/homebridge
 //
 // Remember to add platform to config.json. Example:
 // "platforms": [
@@ -1436,8 +1436,11 @@ FHEMAccessory.prototype = {
       name = subtype + ' (' + this.alias + ')';
 
     if( this.mappings.onOff || this.isSwitch ) {
-      this.log("  switch service for " + this.name)
-      return new Service.Switch(name);
+      if( subtype )
+        this.log("  switch service for " + this.name + ' (' + subtype + ')')
+      else
+        this.log("  switch service for " + this.name)
+      return new Service.Switch(name, subtype);
     } else if( this.isOutlet ) {
       this.log("  outlet service for " + this.name)
       return new Service.Outlet(name);
