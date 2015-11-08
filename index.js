@@ -1,5 +1,5 @@
 // FHEM Platform Shim for HomeBridge
-// current version on https://github.com/justme-1968/homebridge
+// current version on https://github.com/justme-1968/homebridge-fhem
 //
 // Remember to add platform to config.json. Example:
 // "platforms": [
