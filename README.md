@@ -1,6 +1,9 @@
 # homebridge-fhem
 a fhem platform shim for homebridge
 
+uses longpoll and an internal cache to avoid roundtrips to fhem.
+debug browser is available at port 8082
+
 supports:
 - switches (devices with set on and set off commands)
 - lights (devices with set on and set off commands)
@@ -14,6 +17,6 @@ supports:
 - SONOS (power, volume)
 - harmony scenes
 - temperaturecw and humidity sensors
-- CO20 air quality
-- probably some more
+- CO20 air quality sensor
+- probably some more ...
 
