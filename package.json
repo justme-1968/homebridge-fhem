@@ -1,0 +1,21 @@
+{
+  "name": "homebridge-fhem",
+  "version": "0.0.1",
+  "description": "a fhem platform shim for homebridge",
+  "author": {
+    "name": "justme1968"
+  },
+  "keywords": [
+    "homebridge-plugin"
+  ],
+  "engines": {
+    "node": ">=0.12.0",
+    "homebridge": ">=0.2.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/justme-1968/homebridge-fhem.git"
+  },
+  "dependencies": {
+  }
+}
