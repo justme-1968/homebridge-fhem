@@ -193,12 +193,17 @@ function FHEM_startLongpoll(connection) {
                          if( parts[1] != reading )
                            return;
 
-                         var subscription = FHEM_subscriptions[key];
-                         var accessory = subscription.accessory;
+                         var subscriptions = FHEM_subscriptions[key];
+                         if( subscriptions )
+                           subscriptions.forEach(function(subscription) {
+                             if( !subscription.characteristic )
+                               return;
+                             var accessory = subscription.accessory;
 
-                         var activity = parts[2];
+                             var activity = parts[2];
 
-                         subscription.characteristic.setValue(value==activity?1:0, undefined, 'fromFHEM');
+                             subscription.characteristic.setValue(value==activity?1:0, undefined, 'fromFHEM');
+                           } );
                        } );
 
                        return;
