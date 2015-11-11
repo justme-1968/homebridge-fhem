@@ -2,7 +2,7 @@
 a fhem platform shim for homebridge
 
 uses longpoll and an internal cache to avoid roundtrips to fhem.
-debug browser is available at port 8082
+a debug browser is available at port 8082.
 
 supports:
 - switches (devices with set on and set off commands)
