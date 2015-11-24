@@ -219,6 +219,8 @@ function FHEM_startLongpoll(connection) {
                        FHEM_update( device+'-sat', sat );
                        FHEM_update( device+'-bri', bri );
 
+                       FHEM_update( device+'-'+reading, value, false );
+
                        return;
 
                      } else if(accessory.mappings.colormode) {
@@ -234,11 +236,12 @@ function FHEM_startLongpoll(connection) {
                          FHEM_update( device+'-hue', hue );
                          FHEM_update( device+'-sat', sat );
                          FHEM_update( device+'-bri', bri );
+
+                         FHEM_update( device+'-'+reading, value, false );
+
+                         return;
                        }
 
-                       FHEM_update( device+'-'+reading, value, false );
-
-                       return;
 
                      }
 //console.log( "value: "+value );
@@ -409,7 +412,7 @@ FHEM_ct2rgb(ct)
   if( b > 255 )
     b = 255;
 
-  return FHEM_rgb2hex( Math.round(r*255),Math.round(g*255),Math.round(b*255) );
+  return FHEM_rgb2hex( Math.round(r),Math.round(g),Math.round(b) );
 }
 
 function
@@ -447,9 +450,6 @@ FHEM_xyY2rgb(x,y,Y)
       b /= f;
     }
 
-    r *= 255;
-    g *= 255;
-    b *= 255;
   }
 
   return FHEM_rgb2hex( Math.round(r*255),Math.round(g*255),Math.round(b*255) );
@@ -536,7 +536,6 @@ FHEMPlatform.prototype = {
                       var cmd = 'attr global userattr ' + result + ' genericDeviceType:ignore,switch,outlet,light,blind,thermostat,garage,window,lock';
                       this.execute( cmd,
                                     function(result) {
-console.log( result );
                                         console.log( 'genericDeviceType attribute was not known. please restart homebridge.' );
                                         process.exit(0);
                                     } );
@@ -978,9 +977,10 @@ FHEMAccessory(log, connection, s) {
     this.serial = this.type + '.' + s.Internals.DEF;
   else if( this.type == 'IT' )
     this.serial = this.type + '.' + s.Internals.DEF;
-  else if( this.type == 'HUEDevice' )
-    this.serial = s.Internals.uniqueid;
-  else if( this.type == 'SONOSPLAYER' )
+  else if( this.type == 'HUEDevice' ) {
+    if( s.Internals.uniqueid && s.Internals.uniqueid != 'ff:ff:ff:ff:ff:ff:ff:ff-0b' )
+      this.serial = s.Internals.uniqueid;
+  } else if( this.type == 'SONOSPLAYER' )
     this.serial = s.Internals.UDN;
   else if( this.type == 'EnOcean' )
     this.serial = this.type + '.' + s.Internals.DEF;
