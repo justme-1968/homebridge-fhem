@@ -1440,7 +1440,10 @@ FHEMAccessory.prototype = {
       //name = subtype + ' (' + this.name + ')';
       name = subtype + ' (' + this.alias + ')';
 
-    if( this.mappings.onOff || this.isSwitch ) {
+    if( this.isLight || this.mappings.pct || this.mappings.hue || this.mappings.rgb ) {
+      this.log("  lightbulb service for " + this.name)
+      return new Service.Lightbulb(name);
+    } else if( this.mappings.onOff || this.isSwitch ) {
       if( subtype )
         this.log("  switch service for " + this.name + ' (' + subtype + ')')
       else
@@ -1470,9 +1473,6 @@ FHEMAccessory.prototype = {
     } else if( this.mappings.occupancy ) {
       this.log("  occupancy sensor service for " + this.name)
       return new Service.OccupancySensor(name);
-    } else if( this.isLight || this.mappings.pct || this.mappings.hue || this.mappings.rgb ) {
-      this.log("  lightbulb service for " + this.name)
-      return new Service.Lightbulb(name);
     } else if( this.mappings.temperature ) {
       this.log("  temperature sensor service for " + this.name)
       return new Service.TemperatureSensor(name);
