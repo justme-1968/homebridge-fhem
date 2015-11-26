@@ -1,6 +1,6 @@
 {
   "name": "homebridge-fhem",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "a fhem platform shim for homebridge",
   "author": {
     "name": "justme1968"
@@ -11,7 +11,9 @@
     }
   ],
   "keywords": [
-    "homebridge-plugin"
+    "homebridge-plugin",
+    "homebridge",
+    "fhem"
   ],
   "engines": {
     "node": ">=0.12.0",
