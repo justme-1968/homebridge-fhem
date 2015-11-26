@@ -5,6 +5,11 @@
   "author": {
     "name": "justme1968"
   },
+  "licenses": [
+    {
+      "type": "ISC",
+    }
+  ],
   "keywords": [
     "homebridge-plugin"
   ],
