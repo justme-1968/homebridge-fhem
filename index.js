@@ -1198,15 +1198,18 @@ FHEMAccessory.prototype = {
   },
 
   delayed: function(c,value,delay) {
-    var timer = this.delayed[c];
+    if( !this.delayed_timers )
+      this.delayed_timers = {};
+
+    var timer = this.delayed_timers[c];
     if( timer ) {
-      //this.log(this.name + " removing old command " + c);
+      //this.log(this.name + " delayed: removing old command " + c);
       clearTimeout( timer );
     }
 
     this.log(this.name + " delaying command " + c + " with value " + value);
-    this.delayed[c] = setTimeout( function(){clearTimeout(this.delayed[c]); this.command(c,value);}.bind(this),
-                                  delay?delay:1000 );
+    this.delayed_timers[c] = setTimeout( function(){delete this.delayed_timers[c]; this.command(c,value);}.bind(this),
+                                         delay?delay:1000 );
   },
 
   command: function(c,value) {
