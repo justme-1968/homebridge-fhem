@@ -10,13 +10,13 @@ supports:
 - homematc and FS20 dimmers (devices with set on, set off and set dim or set pct commands)
 - HUE, WifiLight, SWAP_0000002200000003 (hue, sat, bri, rgb)
 - homematic, max and pid20 thermostats
-- homematic blinds
+- homematic, DUOFERN and FS20/IT(?) blinds
 - hommatic, MAX and FHTTK contact sensors (door, window)
 - HM-SEC-WIN, HM-SEC-KEY
 - presence, ROOMMATE
 - SONOS (power, volume)
 - harmony scenes
-- temperaturecw and humidity sensors
+- temperature and humidity sensors
 - CO20 air quality sensor
 - probably some more ...
 

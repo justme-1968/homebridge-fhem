@@ -1,6 +1,6 @@
 {
   "name": "homebridge-fhem",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "a fhem platform shim for homebridge",
   "author": {
     "name": "justme1968"

@@ -1042,6 +1042,9 @@ FHEMAccessory.prototype = {
     } else if( reading == 'position' ) {
       value = parseInt( value );
 
+      if( this.type == 'DUOFERN' )
+        value = 100 - value;
+
     } else if(reading == 'motor') {
       if( value.match(/^up/))
         value = Characteristic.PositionState.INCREASING;
@@ -1303,10 +1306,13 @@ FHEMAccessory.prototype = {
 
         cmd = "set " + this.device + " " + this.mappings.window.cmd + " " + value;
 
-      } else if( this.mappings.blind )
+      } else if( this.mappings.blind ) {
+        if( this.type == 'DUOFERN' )
+          value = 100 - value;
+
         cmd = "set " + this.device + " " + this.mappings.blind.cmd + " " + value;
 
-      else
+      } else
         this.log(this.name + " Unhandled command! cmd=" + c + ", value=" + value);
 
     } else {
