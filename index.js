@@ -1128,7 +1128,7 @@ FHEMAccessory.prototype = {
           value = this.mappings.thermostat.min;
 
         if( this.mappings.thermostat.step )
-          value = (Math.round(value / this.mappings.thermostat.step) * this.mappings.thermostat.step).toFixed(1);
+          value = parseFloat( (Math.round(value / this.mappings.thermostat.step) * this.mappings.thermostat.step).toFixed(1) );
       }
 
     } else if( reading == 'humidity' ) {
