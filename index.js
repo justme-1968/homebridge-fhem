@@ -834,8 +834,8 @@ FHEMAccessory(log, connection, s) {
 
     if( match[3] ) {
       var values = match[3].split(',');
-      this.mappings.thermostat.min = values[0];
-      this.mappings.thermostat.max = values[values.length-2];
+      this.mappings.thermostat.min = parseFloat(values[0]);
+      this.mappings.thermostat.max = parseFloat(values[values.length-2]);
       this.mappings.thermostat.step = values[1] - values[0];
     }
 
@@ -1128,7 +1128,7 @@ FHEMAccessory.prototype = {
           value = this.mappings.thermostat.min;
 
         if( this.mappings.thermostat.step )
-          value = Math.round(value / this.mappings.thermostat.step) * this.mappings.thermostat.step;
+          value = (Math.round(value / this.mappings.thermostat.step) * this.mappings.thermostat.step).toFixed(1);
       }
 
     } else if( reading == 'humidity' ) {
