@@ -290,7 +290,7 @@ FHEMPlatform(log, config) {
   this.filter  = config['filter'];
 
   var base_url;
-  if( config['ssl'] )
+  if( config['ssl'] && config['ssl'] == true )
     base_url = 'https://';
   else
     base_url = 'http://';
