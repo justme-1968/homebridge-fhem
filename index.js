@@ -1999,6 +1999,9 @@ FHEMAccessory.prototype = {
 
       var characteristic = controlService.getCharacteristic(Characteristic.CurrentTemperature)
                            || controlService.addCharacteristic(Characteristic.CurrentTemperature);
+      characteristic.setProps( {
+        minValue: -30,
+      } );
 
       FHEM_subscribe(characteristic, this.mappings.temperature.informId, this);
       characteristic.value = FHEM_cached[this.mappings.temperature.informId];
