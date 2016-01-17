@@ -116,6 +116,7 @@ function FHEM_startLongpoll(connection) {
                    var l = input.substr(FHEM_longpollOffset, nOff-FHEM_longpollOffset);
                    FHEM_longpollOffset = nOff+1;
 //console.log( "Rcvd: "+(l.length>132 ? l.substring(0,132)+"...("+l.length+")":l) );
+
                    if(!l.length)
                      continue;
 
@@ -124,15 +125,40 @@ function FHEM_startLongpoll(connection) {
                      d = JSON.parse(l);
                    else
                      d = l.split("<<", 3);
-
 //console.log(d);
 
                    if(d.length != 3)
                      continue;
                    if(d[0].match(/-ts$/))
                      continue;
+                   if(d[0].match(/^#FHEMWEB:/))
+                     continue;
 
-//console.log( "Rcvd: "+(l.length>132 ? l.substring(0,132)+"...("+l.length+")":l) );
+                   var match = d[0].match(/([^-]*)-(.*)/);
+                   if( match == undefined )
+                     continue;
+                   var device = match[1];
+                   var reading = match[2];
+//console.log( "device: "+device );
+//console.log( "reading: "+reading );
+                   if( reading == undefined )
+                     continue;
+
+                   var value = d[1];
+//console.log( "value: "+value );
+                   if( value.match( /^set-/ ) )
+                     continue;
+
+
+                   if( device == 'global' ) {
+                     if( reading == 'DEFINED' ) {
+
+                     } else if( reading == 'DELETED' ) {
+
+                     }
+
+                     continue;
+                   }
 
                    var subscriptions = FHEM_subscriptions[d[0]];
                    if( subscriptions )
@@ -140,19 +166,6 @@ function FHEM_startLongpoll(connection) {
 //console.log( "Rcvd: "+(l.length>132 ? l.substring(0,132)+"...("+l.length+")":l) );
                      FHEM_lastEventTime[connection.base_url] = lastEventTime;
                      var accessory = subscription.accessory;
-
-                     var value = d[1];
-//console.log( "value: "+value );
-                     if( value.match( /^set-/ ) )
-                       return;
-
-                     var match = d[0].match(/([^-]*)-(.*)/);
-                     var device = match[1];
-                     var reading = match[2];
-//console.log( "device: "+device );
-//console.log( "reading: "+reading );
-                     if( reading == undefined )
-                       return;
 
                      if( reading == 'state') {
                        if( accessory.mappings.window ) {
@@ -242,6 +255,16 @@ function FHEM_startLongpoll(connection) {
                          return;
                        }
 
+
+                     } else if(accessory.mappings.reachable && reading == accessory.mappings.reachable.reading) {
+                       value = accessory.reading2homekit(reading, value);
+
+                       FHEM_update( device+'-'+reading, value, true );
+
+                       if( this.updateReachability )
+                         accessory.updateReachability( value ? true : false );
+
+                       return;
 
                      }
 //console.log( "value: "+value );
@@ -567,8 +590,8 @@ FHEMPlatform.prototype = {
     this.connection.request.get( { url: url, json: true, gzip: true },
                  function(err, response, json) {
                    if( !err && response.statusCode == 200 ) {
+//console.log("got json: " + util.inspect(json) );
                      this.log( 'got: ' + json['totalResultsReturned'] + ' results' );
-//this.log("got json: " + util.inspect(json) );
                      if( json['totalResultsReturned'] ) {
                        var sArray=FHEM_sortByKey(json['Results'],"Name");
                        sArray.map(function(s) {
@@ -751,6 +774,8 @@ FHEMAccessory(log, connection, s) {
   else if( s.Readings.firmware )
     this.mappings.firmware = { reading: 'firmware' };
 
+  if( s.Readings.reachable )
+    this.mappings.reachable = { reading: 'reachable' };
 
   if( genericType == 'switch' )
     s.isSwitch = true;
@@ -952,6 +977,8 @@ FHEMAccessory(log, connection, s) {
     log( s.Internals.NAME + ' has firmware ['+ this.mappings.firmware.reading +']' );
   if( this.mappings.volume )
     log( s.Internals.NAME + ' has volume ['+ this.mappings.volume.reading + ':' + (this.mappings.volume.nocache ? 'not cached' : 'cached' )  +']' );
+  if( this.mappings.reachable )
+    log( s.Internals.NAME + ' has reachability ['+ this.mappings.reachable.reading +']' );
 
 //log( util.inspect(s) );
 
@@ -1163,6 +1190,9 @@ FHEMAccessory.prototype = {
         value = Characteristic.OccupancyDetected.OCCUPANCY_DETECTED;
       else
         value = Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED;
+
+    } else if( reading == 'reachable' ) {
+      value = parseInt( value );
 
     } else if( reading == 'state' ) {
       if( value.match(/^set-/ ) )
@@ -1538,6 +1568,15 @@ FHEMAccessory.prototype = {
                      if( this.mappings.firmware )
                        this.query(this.mappings.firmware.reading, callback);
                    }.bind(this) );
+    }
+
+    if( this.mappings.reachable ) {
+      this.log("    setting reachability for " + this.name)
+
+      FHEM_subscribe(undefined, this.mappings.reachable.informId, this);
+
+      if( this.updateReachability )
+        this.updateReachability( FHEM_cached[this.mappings.reachable.informId] ? true : false );
     }
 
 
