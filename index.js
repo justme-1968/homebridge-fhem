@@ -1084,12 +1084,15 @@ FHEMAccessory(log, connection, s) {
       this.mappings[key].informId = informId;
 
       var orig = s.Readings[reading].Value;
+      if( device != this.device )
+        orig = this.query(device+':'+reading);
+
       var value = this.reading2homekit(device, reading, orig);
 
-      if( value == undefined ) {
+      if( value == undefined && device == this.device ) {
         delete this.mappings[key].informId;
 
-      } else {
+      } else if( value != undefined ) {
         if( !this.mappings[key].nocache ) {
           log("  caching: " + informId + ": " + value + " as " + typeof(value) + " (from " + orig + ")" );
           FHEM_cached[informId] = value;
@@ -1394,6 +1397,9 @@ FHEMAccessory.prototype = {
           if( format.match(/int/) )
             value = parseInt( value );
 
+          if( isNaN(value) )
+            value = undefined;
+
           break;
         }
       }
@@ -1534,10 +1540,16 @@ FHEMAccessory.prototype = {
         callback( 1 );
       return;
     }
+    var device = this.device;
+    if(reading.indexOf(':') ) {
+      var l = reading.split(':');
+      device = l[0];
+      reading = l[1];
+    } 
 
-    this.log("query: " + this.name + "-" + reading);
+    this.log("query: " + device + "-" + reading);
 
-    var result = FHEM_cached[this.device + '-' + reading];
+    var result = FHEM_cached[device + '-' + reading];
     if( result != undefined ) {
       this.log("  cached: " + result);
       if( callback != undefined )
@@ -1568,7 +1580,7 @@ FHEMAccessory.prototype = {
 
     }
 
-    var cmd = '{ReadingsVal("'+this.device+'","'+query_reading+'","")}';
+    var cmd = '{ReadingsVal("'+device+'","'+query_reading+'","")}';
 
     this.execute( cmd,
                   function(result) {
@@ -1610,27 +1622,27 @@ FHEMAccessory.prototype = {
                           value = Characteristic.LockCurrentState.UNSECURED;
 
                       } else if(reading == 'hue' && query_reading == this.mappings.rgb) {
-                        //FHEM_update( this.device+'-'+query_reading, value );
+                        //FHEM_update(device+'-'+query_reading, value);
 
                         value = parseInt( FHEM_rgb2hsv(value)[0] * 360 );
 
                       } else if(reading == 'sat' && query_reading == this.mappings.rgb) {
-                        //FHEM_update( this.device+'-'+query_reading, value );
+                        //FHEM_update(device+'-'+query_reading, value);
 
                         value = parseInt( FHEM_rgb2hsv(value)[1] * 100 );
 
                       } else if(reading == 'bri' && query_reading == this.mappings.rgb) {
-                        //FHEM_update( this.device+'-'+query_reading, value );
+                        //FHEM_update(device+'-'+query_reading, value);
 
                         value = parseInt( FHEM_rgb2hsv(value)[2] * 100 );
 
                       }
                     } else {
-                      value = this.reading2homekit(this.device, reading, value);
+                      value = this.reading2homekit(device, reading, value);
                     }
 
                     this.log("  mapped: " + value);
-                    FHEM_update( this.device + '-' + reading, value, true );
+                    FHEM_update( device + '-' + reading, value, true );
 
                     if( callback != undefined ) {
                       if( value == undefined )
@@ -2238,7 +2250,7 @@ FHEMAccessory.prototype = {
       var characteristic = controlService.getCharacteristic(Characteristic.CurrentTemperature)
                            || controlService.addCharacteristic(Characteristic.CurrentTemperature);
       characteristic.setProps( {
-        minValue: -30,
+        minValue: this.mappings.CurrentTemperature.minValue!=undefined ? this.mappings.CurrentTemperature.minValue : -30,
       } );
 
       this.subscribe(this.mappings.CurrentTemperature.informId, characteristic);
