@@ -180,19 +180,19 @@ console.log( "ATTR: "+value );
                        var values = reading.split( ' ' );
                        var accessory = FHEM_isPublished(values[1]);
 
-                       if( values[1] == 'disable' )
+                       if( values[2] == 'disable' )
                          if( accessory && accessory.updateReachability != undefined )
-                           accessory.updateReachability( !values[2] );
-                        
+                           accessory.updateReachability( !values[3] );
+
                      } else if( reading == 'DELETEATTR' ) {
 console.log( "DELETEATTR: "+value );
                        var values = reading.split( ' ' );
                        var accessory = FHEM_isPublished(values[1]);
 
-                       if( value == 'disabled' )
+                       if( values[2] == 'disable' )
                          if( accessory && accessory.updateReachability != undefined )
                            accessory.updateReachability( true );
-                        
+
                      }
 
                      continue;
@@ -1132,6 +1132,20 @@ FHEMAccessory.prototype = {
       return;
 
     this.log( 'homebridgeMapping: ' + homebridgeMapping );
+
+    if( homebridgeMapping.match( /^{.*}$/ ) ) {
+      homebridgeMapping = JSON.parse(homebridgeMapping);
+
+      for( var characteristic in homebridgeMapping )
+        for( var attrname in homebridgeMapping[characteristic] ) {
+          if( !this.mappings[characteristic] )
+            this.mappings[characteristic] = {};
+          this.mappings[characteristic][attrname] = homebridgeMapping[characteristic][attrname];
+      }
+
+      return;
+    }
+
     homebridgeMapping.split(' ').forEach( function(mapping) {
       var parts = mapping.split('=');
       if( parts.length < 2 || !parts[1] ) {
