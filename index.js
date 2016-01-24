@@ -72,7 +72,7 @@ FHEM_update(informId, orig, no_update) {
   console.log("  " + date + " caching: " + informId + ": " + orig );
 
   var subscriptions = FHEM_subscriptions[informId];
-  if( subscriptions && !no_update )
+  if( subscriptions )
     subscriptions.forEach( function(subscription) {
       var mapping = subscription.characteristic.FHEM_mapping;
 
@@ -86,9 +86,9 @@ FHEM_update(informId, orig, no_update) {
       }
 
       mapping.cached = value;
-      console.log("    caching: " + mapping.characteristic_name + ": " + value + " as " + typeof(value) + " (from " + orig + ")" );
+      console.log("    caching: " + mapping.characteristic_name + ": " + value + " (as " + typeof(value) + "; from " + orig + ")" );
 
-      if( typeof mapping.characteristic === 'object' )
+      if( !no_update && typeof mapping.characteristic === 'object' )
         mapping.characteristic.setValue(value, undefined, 'fromFHEM');
     } );
 }
@@ -510,8 +510,6 @@ console.log( "DELETEATTR: "+value );
                        }
 
                      } else if( reading == 'activity') {
-
-                       FHEM_update( device+'-'+reading, value, true );
 
                        Object.keys(FHEM_subscriptions).forEach( function(key) {
                          var parts = key.split( '-', 3 );
@@ -1435,41 +1433,41 @@ FHEMAccessory(log, connection, s) {
 
   Object.keys(this.mappings).forEach( function(key) {
     var mapping = this.mappings[key];
-    if( s.Readings[mapping.reading] && s.Readings[mapping.reading].Value ) {
-      var device = this.device;
-      if( mapping.device === undefined )
-        mapping.device = device;
-      else
-        device = mapping.device;
+    var device = this.device;
+    if( mapping.device === undefined )
+      mapping.device = device;
+    else
+      device = mapping.device;
 
-      mapping.characteristic = this.characteristicOfName(key);
-      mapping.informId = device +'-'+ mapping.reading;
-      mapping.characteristic_name = key;
+    mapping.characteristic = this.characteristicOfName(key);
+    mapping.informId = device +'-'+ mapping.reading;
+    mapping.characteristic_name = key;
 
-      var orig = s.Readings[mapping.reading].Value;
-      if( device != this.device )
-        orig = this.query(mapping);
+    var orig;
+    if( device != this.device )
+      orig = this.query(mapping);
+    else if( s.Readings[mapping.reading] && s.Readings[mapping.reading].Value )
+      orig = s.Readings[mapping.reading].Value;
 
-      if( orig == undefined && device == this.device ) {
-        delete mapping.informId;
+    if( orig == undefined && device == this.device ) {
+      delete mapping.informId;
 
-      } else if( orig != undefined ) {
-        if( !mapping.nocache ) {
-          if( FHEM_cached[mapping.informId] === undefined )
-            FHEM_update(mapping.informId, orig);
+    } else if( orig != undefined ) {
+      if( !mapping.nocache ) {
+        if( FHEM_cached[mapping.informId] === undefined )
+          FHEM_update(mapping.informId, orig);
 
-          var value;
-          if( typeof mapping.reading2homekit === 'function' ) {
-            value = mapping.reading2homekit(orig);
+        var value;
+        if( typeof mapping.reading2homekit === 'function' ) {
+          value = mapping.reading2homekit(orig);
 
-          } else {
-            value = FHEM_reading2homekit(mapping, orig);
+        } else {
+          value = FHEM_reading2homekit(mapping, orig);
 
-          }
-
-          mapping.cached = value;
-          console.log("    caching: " + mapping.characteristic_name + ": " + value + " as " + typeof(value) + " (from " + orig + ")" );
         }
+
+        mapping.cached = value;
+        console.log("    caching: " + mapping.characteristic_name + ": " + value + " (as " + typeof(value) + "; from " + orig + ")" );
       }
     }
   }.bind(this) );
@@ -1962,12 +1960,6 @@ FHEMAccessory.prototype = {
       return;
     }
 
-    if(reading.indexOf(':') ) {
-      var l = reading.split(':');
-      device = l[0];
-      reading = l[1];
-    }
-
     this.log('query: ' + mapping.characteristic_name + ' for ' + mapping.informId);
     var result = mapping.cached;
     if( result != undefined ) {
@@ -1977,7 +1969,7 @@ FHEMAccessory.prototype = {
       return result;
 
     } else {
-      this.log('query: ' + mapping.informId);
+      this.log('not cached; query: ' + mapping.informId);
 
       var result = FHEM_cached[mapping.informId];
       result = FHEM_reading2homekit(mapping, result);
@@ -2012,17 +2004,7 @@ FHEMAccessory.prototype = {
                       return value;
 
                     if( reading != query_reading ) {
-                      if( reading == 'pct'
-                          && query_reading == 'state') {
-
-                        if( match = value.match(/dim(\d+)%/ ) )
-                          value = parseInt( match[1] );
-                        else if( value == 'off' )
-                          value = 0;
-                        else
-                          value = 100;
-
-                      } else if( reading == 'level'
+                      if( reading == 'level'
                                  && query_reading == 'state') {
 
                         if( match = value.match(/^(\d+)/ ) )
@@ -2046,14 +2028,15 @@ FHEMAccessory.prototype = {
 
                     }
 
-                    this.log("  mapped: " + value);
-                    FHEM_update( mapping, value, true );
+                    FHEM_update( mapping.informId, value, true );
 
                     if( callback != undefined ) {
                       if( value == undefined )
                         callback(1);
-                      else
+                      else {
+                        value = FHEM_reading2homekit(mapping, value);
                         callback(undefined, value);
+                      }
                     }
 
                     return value ;
@@ -2711,7 +2694,7 @@ function FHEMdebug_handleRequest(request, response){
         if( !mapping || mapping.cached === undefined ) continue;
 
         derived = 1;
-        response.write( '&nbsp;&nbsp;' + mapping.characteristic_name + ': '+ mapping.cached +'<br>' );
+        response.write( '&nbsp;&nbsp;' + mapping.characteristic_name + ': '+ mapping.cached + ' (as ' + typeof(mapping.cached)+')<br>' );
       }
       if( derived )
         response.write( '<br>' );
