@@ -62,6 +62,12 @@ currently supported parameters are:
   minValue, maxValue, minStep: for all int and float characteristics -> the allowed range for this value in homekit
   cmdOn, cmdOff: for all bool characteristics -> 
   (min,) max: Hue and Saturation characteristics -> the range the reading has in fhem, only if differenf from minValue and maxValue
+  delay: true/false -> the value ist send afer one second inactivity
+  cmdLock, cmdUnlock, cmdOpen: commands to lock, unlock and open a door
+  nocache: don't cache values for this reading
+  threshold: -> ...
+
+  //TODO: invert numeric readings
   
   valueOn, valueOf: the reading values that are mapped to the true/false resp. on/off states in homekit
   values: a ; separated list of reading values that should be mapped to consecutive homekit values
