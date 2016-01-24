@@ -172,7 +172,7 @@ platform.log( platform.filter );
 console.log( "DELETED: "+value );
                        var accessory = FHEM_isPublished(value);
 
-                       if( accessory && accessory.updateReachability != undefined )
+                       //if( accessory && accessory.updateReachability != undefined )
                          accessory.updateReachability( false );
 
                      } else if( reading == 'ATTR' ) {
@@ -181,7 +181,7 @@ console.log( "ATTR: "+value );
                        var accessory = FHEM_isPublished(values[1]);
 
                        if( values[2] == 'disable' )
-                         if( accessory && accessory.updateReachability != undefined )
+                         //if( accessory && accessory.updateReachability != undefined )
                            accessory.updateReachability( !values[3] );
 
                      } else if( reading == 'DELETEATTR' ) {
@@ -190,7 +190,7 @@ console.log( "DELETEATTR: "+value );
                        var accessory = FHEM_isPublished(values[1]);
 
                        if( values[2] == 'disable' )
-                         if( accessory && accessory.updateReachability != undefined )
+                         //if( accessory && accessory.updateReachability != undefined )
                            accessory.updateReachability( true );
 
                      }
@@ -292,17 +292,6 @@ console.log( "DELETEATTR: "+value );
 
                          return;
                        }
-
-
-                     } else if(accessory.mappings.reachable && reading == accessory.mappings.reachable.reading) {
-                       value = accessory.reading2homekit(device, reading, value);
-
-                       FHEM_update( device+'-'+reading, value, true );
-
-                       if( accessory.updateReachability )
-                         accessory.updateReachability( value );
-
-                       return;
 
                      }
 //console.log( "value: "+value );
@@ -748,22 +737,26 @@ FHEMAccessory(log, connection, s) {
 
   this.mappings = {};
 
+  //this.service_name = 'switch';
+
   var match;
   if( match = s.PossibleSets.match(/(^| )pct\b/) ) {
+    this.service_name = 'light';
     this.mappings.Brightness = { reading: 'pct', cmd: 'pct' };
   } else if( match = s.PossibleSets.match(/(^| )dim\d+%/) ) {
+    this.service_name = 'light';
     s.hasDim = true;
     s.pctMax = 100;
   }
   if( match = s.PossibleSets.match(/(^| )hue[^\b\s]*(,(\d+)?)+\b/) ) {
-    s.isLight = true;
+    this.service_name = 'light';
     var max = 360;
     if( match[3] != undefined )
       max = match[3];
     this.mappings.Hue = { reading: 'hue', cmd: 'hue', min: 0, max: max };
   }
   if( match = s.PossibleSets.match(/(^| )sat[^\b\s]*(,(\d+)?)+\b/) ) {
-    s.isLight = true;
+    this.service_name = 'light';
     var max = 100;
     if( match[3] != undefined )
       max = match[3];
@@ -776,20 +769,25 @@ FHEMAccessory(log, connection, s) {
     this.mappings.xy = { reading: 'xy' };
   //FIXME: add ct/colortemperature
 
-  if( s.PossibleSets.match(/(^| )rgb\b/) ) {
-    s.isLight = true;
-    this.mappings.rgb = { reading: 'rgb', cmd: 'rgb' };
-    if( s.Internals.TYPE == 'SWAP_0000002200000003' )
-      this.mappings.rgb = { reading: '0B-RGBlevel', cmd: 'rgb' };
-  } else if( s.PossibleSets.match(/(^| )RGB\b/) ) {
-    s.isLight = true;
-    this.mappings.rgb = { reading: 'RGB', cmd: 'RGB' };
+  if( !this.mappings.Hue ) {
+    if( s.PossibleSets.match(/(^| )rgb\b/) ) {
+      this.service_name = 'light';
+      this.mappings.rgb = { reading: 'rgb', cmd: 'rgb' };
+      if( s.Internals.TYPE == 'SWAP_0000002200000003' )
+        this.mappings.rgb = { reading: '0B-RGBlevel', cmd: 'rgb' };
+    } else if( s.PossibleSets.match(/(^| )RGB\b/) ) {
+      this.service_name = 'light';
+      this.mappings.rgb = { reading: 'RGB', cmd: 'RGB' };
+    }
   }
 
-  if( s.Readings['measured-temp'] )
-    this.mappings.CurrentTemperature = { reading: 'measured-temp' };
-  else if( s.Readings.temperature )
-    this.mappings.CurrentTemperature = { reading: 'temperature' };
+  if( s.Readings['measured-temp'] ) {
+    this.service_name = 'thermometer';
+    this.mappings.CurrentTemperature = { reading: 'measured-temp', minValue: -30 };
+  } else if( s.Readings.temperature ) {
+    this.service_name = 'thermometer';
+    this.mappings.CurrentTemperature = { reading: 'temperature', minValue: -30 };
+  }
 
   if( s.Readings.volume )
     this.mappings.volume = { reading: 'volume', cmd: 'volume' };
@@ -824,36 +822,31 @@ FHEMAccessory(log, connection, s) {
     this.mappings.FirmwareRevision = { reading: 'D-firmware' };
   else if( s.Readings.firmware )
     this.mappings.FirmwareRevision = { reading: 'firmware' };
+  //FIXME: add swversion internal for HUEDevices
 
   if( s.Readings.reachable )
     this.mappings.reachable = { reading: 'reachable' };
 
-  if( genericType == 'switch' )
-    s.isSwitch = true;
-
-  else if( genericType == 'outlet' )
-    s.isOutlet = true;
-
   else if( genericType == 'garage' )
     this.mappings.garage = { reading: 'state', cmdOpen: 'off', cmdClose: 'on' };
 
-  else if( genericType == 'light' )
-    s.isLight = true;
-
   else if( genericType == 'blind'
            || s.Attributes.subType == 'blindActuator' ) {
+    this.service_name = 'blind';
     delete this.mappings.Brightness;
     if( s.PossibleSets.match(/[\^ ]position\b/) )
-      this.mappings.blind = { reading: 'position', cmd: 'position' };
+      this.mappings.blind = { reading: 'position', cmd: 'position', delay: true };
     else
-      this.mappings.blind = { reading: 'pct', cmd: 'pct' };
+      this.mappings.blind = { reading: 'pct', cmd: 'pct', delay: true };
 
   } else if( genericType == 'window'
-           || s.Attributes.model == 'HM-SEC-WIN' )
+           || s.Attributes.model == 'HM-SEC-WIN' ) {
+    this.service_name = 'window';
     this.mappings.window = { reading: 'level', cmd: 'level' };
 
-  else if( genericType == 'lock'
+  } else if( genericType == 'lock'
            || ( s.Attributes.model && s.Attributes.model.match(/^HM-SEC-KEY/ ) ) ) {
+    this.service_name = 'lock';
     this.mappings.lock = { reading: 'lock', cmdLock: 'lock', cmdUnlock: 'unlock', cmdOpen: 'open' };
     if( s.Internals.TYPE == 'dummy' )
       this.mappings.lock = { reading: 'lock', cmdLock: 'lock locked', cmdUnlock: 'lock unlocked', cmdOpen: 'open' };
@@ -879,11 +872,11 @@ FHEMAccessory(log, connection, s) {
     this.mappings.OccupancyDetected = { reading: 'presence' };
 
   else if( s.Attributes.model == 'fs20di' )
-    s.isLight = true;
+    this.service_name = 'light';
 
   if( match = s.PossibleSets.match(/(^| )desired-temp(:[^\d]*([^\$ ]*))?/) ) {
     //HM
-    this.mappings.TargetTemperature = { reading: 'desired-temp', cmd: 'desired-temp' };
+    this.mappings.TargetTemperature = { reading: 'desired-temp', cmd: 'desired-temp', delay: true };
 
     if( s.Readings.controlMode )
       this.mappings.thermostat_mode = { reading: 'controlMode', cmd: 'controlMode' };
@@ -900,7 +893,7 @@ FHEMAccessory(log, connection, s) {
 
   } else if( match = s.PossibleSets.match(/(^| )desiredTemperature(:[^\d]*([^\$ ]*))?/) ) {
     // MAX
-    this.mappings.TargetTemperature = { reading: 'desiredTemperature', cmd: 'desiredTemperature' };
+    this.mappings.TargetTemperature = { reading: 'desiredTemperature', cmd: 'desiredTemperature', delay: true };
 
     if( s.Readings.mode )
       this.mappings.TargetTemperature = { reading: 'mode', cmd: 'desiredTemperature' };
@@ -917,7 +910,7 @@ FHEMAccessory(log, connection, s) {
 
   } else if( match = s.PossibleSets.match(/(^| )desired(:[^\d]*([^\$ ]*))?/) ) {
     //PID20
-    this.mappings.TargetTemperature = { reading: 'desired', cmd: 'desired' };
+    this.mappings.TargetTemperature = { reading: 'desired', cmd: 'desired', delay: true };
 
     if( s.Readings.actuation )
       this.mappings.actuation = { reading: 'actuation' };
@@ -947,6 +940,13 @@ FHEMAccessory(log, connection, s) {
       delete this.mappings.On.reading;
   }
 
+  if( this.service_name === undefined )
+    this.service_name = genericType;
+  if( this.service_name === undefined )
+    return {};
+  if( this.service_name === undefined )
+    this.service_name = 'switch';
+
   var event_map = s.Attributes.eventMap;
   if( event_map ) {
     var parts = event_map.split( ' ' );
@@ -963,7 +963,15 @@ FHEMAccessory(log, connection, s) {
 
   this.fromHomebridgeMapping( s.Attributes.homebridgeMapping );
 
-  if( this.mappings.door )
+  if( this.service_name !== undefined ) {
+    log( s.Internals.NAME + ' is ' + this.service_name );
+    if( this.mappings.rgb )
+      log( s.Internals.NAME + ' has RGB [' + this.mappings.rgb.reading +']');
+    if( this.mappings.Brightness )
+      log( s.Internals.NAME + ' is dimable ['+ this.mappings.Brightness.reading +']' );
+    else if( s.hasDim )
+      log( s.Internals.NAME + ' is dimable [0-'+ s.pctMax +']' );
+  } else if( this.mappings.door )
     log( s.Internals.NAME + ' is door' );
   else if( this.mappings.garage )
     log( s.Internals.NAME + ' is garage' );
@@ -979,14 +987,6 @@ FHEMAccessory(log, connection, s) {
     log( s.Internals.NAME + ' is contact sensor [' + this.mappings.contact.reading +']' );
   else if( this.mappings.OccupancyDetected )
     log( s.Internals.NAME + ' is occupancy sensor' );
-  else if( this.mappings.rgb )
-    log( s.Internals.NAME + ' has RGB [' + this.mappings.rgb.reading +']');
-  else if( this.mappings.Brightness )
-    log( s.Internals.NAME + ' is dimable ['+ this.mappings.Brightness.reading +']' );
-  else if( s.hasDim )
-    log( s.Internals.NAME + ' is dimable [0-'+ s.pctMax +']' );
-  else if( s.isLight )
-    log( s.Internals.NAME + ' is light' );
   else if( s.isOutlet )
     log( s.Internals.NAME + ' is outlet' );
   else if( this.mappings.On || s.isSwitch )
@@ -1069,7 +1069,6 @@ FHEMAccessory(log, connection, s) {
   this.hasDim   = s.hasDim;
   this.pctMax   = s.pctMax;
 
-  this.isLight           = s.isLight;
   this.isSwitch          = s.isSwitch;
   this.isOutlet          = s.isOutlet;
 
@@ -1342,6 +1341,7 @@ FHEMAccessory.prototype = {
 
     } else if( reading == 'reachable' ) {
       value = parseInt( value );
+      //value = parseInt( value ) == true;
 
     } else if( reading == 'state' ) {
       if( value.match(/^set-/ ) )
@@ -1467,6 +1467,9 @@ FHEMAccessory.prototype = {
   },
 
   command: function(c,value) {
+    if( typeof c === 'object' )
+      c = c.cmd;
+
     this.log(this.name + " sending command " + c + " with value " + value);
     if( c == 'identify' ) {
       if( this.type == 'HUEDevice' )
@@ -1713,6 +1716,49 @@ FHEMAccessory.prototype = {
                 }.bind(this) );
   },
 
+  serviceOfName: function(service_name,subtype) {
+    var serviceNameOfGenericDeviceType = {      ignore: null,
+                                                switch: 'Switch',
+                                                outlet: 'Outlet',
+                                                 light: 'Lightbulb',
+                                                 blind: 'WindowCovering',
+                                           thermometer: 'TemperatureSensor',
+                                            thermostat: 'Thermostat',
+                                                garage: 'GarageDoorOpener',
+                                                window: 'WindowCovering',
+                                                  lock: 'LockMechanism'
+                                         };
+
+    if( serviceNameOfGenericDeviceType[service_name] !== undefined )
+      service_name = serviceNameOfGenericDeviceType[service_name];
+
+    var service = Service[service_name];
+    if( typeof service === 'function' ) {
+      //var name = this.alias + ' (' + this.name + ')';
+      var name = this.alias;
+      if( subtype )
+        //name = subtype + ' (' + this.name + ')';
+        name = subtype + ' (' + this.alias + ')';
+
+      this.service_name = service_name;
+      this.log('  ' + service_name + ' service for ' + this.name + (subtype?' (' + subtype + ')':'') );
+      return new service(name,subtype);
+    }
+
+    if( service === undefined )
+      this.log.error(this.name + ': service name >'+ service_name + '< unknown')
+
+    return undefined;
+  },
+
+  characteristicOfName: function(name) {
+    var characteristic = Characteristic[name];
+    if( typeof characteristic === 'function' )
+      return characteristic;
+
+    return undefined;
+  },
+
   createDeviceService: function(subtype) {
     //var name = this.alias + ' (' + this.name + ')';
     var name = this.alias;
@@ -1720,7 +1766,11 @@ FHEMAccessory.prototype = {
       //name = subtype + ' (' + this.name + ')';
       name = subtype + ' (' + this.alias + ')';
 
-    if( this.isLight || this.mappings.Brightness || this.mappings.Hue || this.mappings.rgb ) {
+    var service = this.serviceOfName(this.service_name,subtype);
+    if( typeof service === 'object' )
+      return service;
+
+    if( this.service_name == 'light' || this.mappings.Brightness || this.mappings.Hue || this.mappings.rgb ) {
       this.log("  lightbulb service for " + this.name)
       return new Service.Lightbulb(name);
     } else if( this.mappings.On || this.isSwitch ) {
@@ -1788,6 +1838,7 @@ FHEMAccessory.prototype = {
     var informationService = new Service.AccessoryInformation();
     services.push( informationService );
 
+    this.log("    manufacturer, model and serial number characteristics for " + this.name)
     informationService
       .setCharacteristic(Characteristic.Manufacturer, "FHEM:"+this.type)
       .setCharacteristic(Characteristic.Model, "FHEM:"+ (this.model ? this.model : '<unknown>') )
@@ -1811,13 +1862,22 @@ FHEMAccessory.prototype = {
                    }.bind(this) );
     }
 
-    if( this.mappings.reachable ) {
-      this.log("    setting reachability for " + this.name)
+    if( Characteristic.Reachable )
+      if( this.mappings.reachable ) {
+        this.log("  bridging service for " + this.name)
+        var bridgingService = new Service.BridgingState();
+        services.push( bridgingService );
 
-      this.subscribe(this.mappings.reachable.informId);
+        this.log("    reachability characteristic for " + this.name)
+        var characteristic = bridgingService.getCharacteristic(Characteristic.Reachable);
 
-      if( this.updateReachability )
-        this.updateReachability( FHEM_cached[this.mappings.reachable.informId] );
+        this.subscribe(this.mappings.reachable.informId);
+        characteristic.value = FHEM_cached[this.mappings.reachable.informId]==true;
+
+        characteristic
+          .on('get', function(callback) {
+                       this.query(mapping, callback);
+                     }.bind(this) );
     }
 
 
@@ -1887,46 +1947,48 @@ FHEMAccessory.prototype = {
     var controlService = this.createDeviceService();
     services.push( controlService );
 
-    if( this.mappings.On ) {
-      this.log("    on characteristic for " + this.name)
+    Object.keys(this.mappings).forEach( function(key) {
+      var characteristic = this.characteristicOfName(key);
+      if( !characteristic )
+        return;
+      var mapping = this.mappings[key];
 
-      var characteristic = controlService.getCharacteristic(Characteristic.On);
+      characteristic = controlService.getCharacteristic(characteristic);
 
-      this.subscribe(this.mappings.On.informId, characteristic);
+      if( !characteristic ) {
+        this.log.error(this.name + ': no '+ key + ' characteristic available for service ' + this.service_name)
+        return;
+      }
+      this.log('    ' + key + ' characteristic for ' + this.name)
 
-      if( FHEM_cached[this.mappings.On.informId] != undefined )
-        characteristic.value = FHEM_cached[this.mappings.On.informId];
+      this.subscribe(mapping.informId, characteristic);
+
+      if( FHEM_cached[mapping.informId] !== undefined )
+        characteristic.value = FHEM_cached[mapping.informId];
+
+      if( mapping.minValue !== undefined ) characteristic.setProps( { minValue: mapping.minValue, } );
+      if( mapping.maxValue !== undefined ) characteristic.setProps( { maxValue: mapping.maxValue, } );
+      if( mapping.minStep !== undefined ) characteristic.setProps( { minStep: mapping.minStep, } );
 
       characteristic
         .on('set', function(value, callback, context) {
-                     if( context !== 'fromFHEM' )
-                       this.command( 'set', value == 0 ? this.mappings.On.cmdOff : this.mappings.On.cmdOn );
+                     if( context !== 'fromFHEM' ) {
+                       if( mapping.delayed )
+                         this.delayed(mapping, value);
+                       else if( mapping.cmd )
+                         this.command(mapping, value);
+                       else
+                         this.command( 'set', value == 0 ? mapping.cmdOff : mappings.cmdOn );
+                     }
                      callback();
                    }.bind(this) )
         .on('get', function(callback) {
-                     this.query(this.mappings.On, callback);
+                     this.query(mapping, callback);
                    }.bind(this) );
-    }
+    }.bind(this) );
+
 
     if( this.mappings.Brightness ) {
-      this.log("    brightness characteristic for " + this.name)
-
-      var characteristic = controlService.addCharacteristic(Characteristic.Brightness);
-
-      this.subscribe(this.mappings.Brightness.informId, characteristic);
-      if( FHEM_cached[this.mappings.Brightness.informId] != undefined )
-        characteristic.value = FHEM_cached[this.mappings.Brightness.informId];
-
-      characteristic
-        .on('set', function(value, callback, context) {
-                     if( context !== 'fromFHEM' )
-                       this.command('pct', value);
-                     callback();
-                   }.bind(this) )
-        .on('get', function(callback) {
-                     this.query(this.mappings.Brightness, callback);
-                   }.bind(this) );
-
     } else if( this.hasDim ) {
       this.log("    fake brightness characteristic for " + this.name)
 
@@ -1948,24 +2010,6 @@ FHEMAccessory.prototype = {
     }
 
     if( this.mappings.Hue ) {
-      this.log("    hue characteristic for " + this.name)
-
-      var characteristic = controlService.addCharacteristic(Characteristic.Hue);
-
-      this.subscribe(this.mappings.Hue.informId, characteristic);
-      if( FHEM_cached[this.mappings.Hue.informId] != undefined )
-        characteristic.value = FHEM_cached[this.mappings.Hue.informId];
-
-      characteristic
-        .on('set', function(value, callback, context) {
-                     if( context !== 'fromFHEM' )
-                       this.command('hue', value);
-                     callback();
-                   }.bind(this) )
-        .on('get', function(callback) {
-                     this.query(this.mappings.Hue, callback);
-                   }.bind(this) );
-
     } else if( this.mappings.rgb ) {
       this.log("    fake hue characteristic for " + this.name)
 
@@ -2024,25 +2068,6 @@ FHEMAccessory.prototype = {
       }
     }
 
-    if( this.mappings.Saturation ) {
-      this.log("    saturation characteristic for " + this.name)
-
-      var characteristic = controlService.addCharacteristic(Characteristic.Saturation);
-
-      this.subscribe(this.mappings.Saturation.informId, characteristic);
-      if( FHEM_cached[this.mappings.Saturation.informId] != undefined )
-        characteristic.value = FHEM_cached[this.mappings.Saturation.informId];
-
-      characteristic
-        .on('set', function(value, callback, context) {
-                     if( context !== 'fromFHEM' )
-                       this.command('sat', value);
-                     callback();
-                   }.bind(this) )
-        .on('get', function(callback) {
-                     this.query(this.mappings.Saturation, callback);
-                   }.bind(this) );
-    }
 
     if( this.mappings.volume ) {
       this.log("    custom volume characteristic for " + this.name)
@@ -2301,109 +2326,7 @@ FHEMAccessory.prototype = {
       }
     }
 
-    if( this.mappings.CurrentTemperature ) {
-      this.log("    temperature characteristic for " + this.name)
-
-      var characteristic = controlService.getCharacteristic(Characteristic.CurrentTemperature)
-                           || controlService.addCharacteristic(Characteristic.CurrentTemperature);
-      characteristic.setProps( {
-        minValue: this.mappings.CurrentTemperature.minValue!=undefined ? this.mappings.CurrentTemperature.minValue : -30,
-      } );
-
-      this.subscribe(this.mappings.CurrentTemperature.informId, characteristic);
-      characteristic.value = FHEM_cached[this.mappings.CurrentTemperature.informId];
-
-      characteristic
-        .on('get', function(callback) {
-                     this.query(this.mappings.CurrentTemperature, callback);
-                   }.bind(this) );
-    }
-
-    if( this.mappings.CurrentRelativeHumidity ) {
-      this.log("    humidity characteristic for " + this.name)
-
-      var characteristic = controlService.getCharacteristic(Characteristic.CurrentRelativeHumidity)
-                           || controlService.addCharacteristic(Characteristic.CurrentRelativeHumidity);
-
-      this.subscribe(this.mappings.CurrentRelativeHumidity.informId, characteristic);
-      characteristic.value = FHEM_cached[this.mappings.CurrentRelativeHumidity.informId];
-
-      characteristic
-        .on('get', function(callback) {
-                     this.query(this.mappings.CurrentRelativeHumidity, callback);
-                   }.bind(this) );
-    }
-
-    if( this.mappings.CurrentAmbientLightLevel ) {
-      this.log("    light characteristic for " + this.name)
-
-      var characteristic = controlService.getCharacteristic(Characteristic.CurrentAmbientLightLevel)
-                           || controlService.addCharacteristic(Characteristic.CurrentAmbientLightLevel);
-
-      this.subscribe(this.mappings.CurrentAmbientLightLevel.informId, characteristic);
-      characteristic.value = FHEM_cached[this.mappings.CurrentAmbientLightLevel.informId];
-
-      characteristic
-        .on('get', function(callback) {
-                     this.query(this.mappings.CurrentAmbientLightLevel, callback);
-                   }.bind(this) );
-    }
-
-    if( this.mappings.AirQuality ) {
-      this.log("    air quality characteristic for " + this.name)
-
-      var characteristic = controlService.getCharacteristic(Characteristic.AirQuality)
-                           || controlService.addCharacteristic(Characteristic.AirQuality);
-
-      this.subscribe(this.mappings.AirQuality.informId, characteristic);
-      characteristic.value = FHEM_cached[this.mappings.AirQuality.informId];
-
-      characteristic
-        .on('get', function(callback) {
-                     this.query(this.mappings.AirQuality, callback);
-                   }.bind(this) );
-    }
-
-    if( this.mappings.StatusLowBattery ) {
-      this.log("    battery status characteristic for " + this.name)
-
-      var characteristic = controlService.getCharacteristic(Characteristic.StatusLowBattery)
-                           || controlService.addCharacteristic(Characteristic.StatusLowBattery);
-
-      this.subscribe(this.mappings.StatusLowBattery.informId, characteristic);
-      characteristic.value = FHEM_cached[this.mappings.StatusLowBattery.informId];
-
-      characteristic
-        .on('get', function(callback) {
-                     this.query(this.mappings.StatusLowBattery, callback);
-                   }.bind(this) );
-    }
-
-
     if( this.mappings.TargetTemperature ) {
-      this.log("    target temperature characteristic for " + this.name)
-
-      var characteristic = controlService.getCharacteristic(Characteristic.TargetTemperature);
-
-      this.subscribe(this.mappings.TargetTemperature.informId, characteristic);
-      characteristic.value = FHEM_cached[this.mappings.TargetTemperature.informId];
-
-      characteristic.setProps( {
-        maxValue: this.mappings.TargetTemperature.maxValue,
-        minValue: this.mappings.TargetTemperature.minValue,
-        minStep: this.mappings.TargetTemperature.minStep,
-      } );
-
-      characteristic
-        .on('set', function(value, callback, context) {
-                     if( context !== 'fromFHEM' )
-                       this.delayed('targetTemperature', value, 1500);
-                     callback();
-                   }.bind(this) )
-        .on('get', function(callback) {
-                     this.query(this.mappings.TargetTemperature, callback);
-                   }.bind(this) );
-
       if( this.mappings.thermostat_modex ) {
         this.log("    current mode characteristic for " + this.name)
 
@@ -2492,20 +2415,6 @@ FHEMAccessory.prototype = {
                        callback(undefined, value==Characteristic.ContactSensorState.CONTACT_DETECTED?Characteristic.CurrentDoorState.CLOSED:Characteristic.CurrentDoorState.OPEN);
                      }.bind(this) );
       }
-    }
-
-    if( this.mappings.OccupancyDetected ) {
-      this.log("    occupancy detected characteristic for " + this.name)
-
-      var characteristic = controlService.getCharacteristic(Characteristic.OccupancyDetected);
-
-      this.subscribe(this.mappings.OccupancyDetected.informId, characteristic);
-      characteristic.value = FHEM_cached[this.mappings.OccupancyDetected.informId];
-
-      characteristic
-        .on('get', function(callback) {
-                     this.query(this.mappings.OccupancyDetected, callback);
-                   }.bind(this) );
     }
 
     return services;
