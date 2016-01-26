@@ -316,38 +316,69 @@ FHEM_reading2homekit(mapping, orig)
       if( format == undefined )
         return value;
 
+      if( value !== undefined && mapping.part !== undefined )
+        value = value.split(' ')[mapping.part];
+
+      if( value == undefined )
+        return value;
+
       if( typeof mapping.values === 'object' ) {
         if( mapping.values[value] !== undefined )
           value = mapping.values[value];
         else {
-          var index;
+          var result;
+
           var keys = Object.keys(mapping.values);
           for( var i = 0; i < keys.length; i++ ) {
-            var match = mapping.values[i].match('/(.*)/');
+            var match = mapping.values[i].match('^([^:]*)(:(.*))?$'); //FIXME: preprocess and cache
+            if( !match )
+              continue;
+
+            var from = match[1];
+            var to = match[2] === undefined ? i : match[2];
+
+            match = mapping.values[i].match('^/(.*)/$');
             if( !match && value == mapping.values[i] ) {
-              index = i;
+              result = to;
               continue;
             } else if( match && value.toString().match( match[1] ) ) {
-              index = i;
+              result = to;
               break;
             }
           }
-          if( index !== undefined )
-            value = index;
-          else
-            value = undefined;
+
+          value = result;
         }
       }
+
+      if( Characteristic[mapping.characteristic_name] && Characteristic[mapping.characteristic_name][value] )
+        value = Characteristic[mapping.characteristic_name][value];
+
 
       if( format == 'float' )
         value = parseFloat( value );
 
       else if( format == 'bool' ) {
-        if( mapping.valueOn != undefined && value == mapping.valueOn )
-          value = 1;
-        else if( mapping.valueOff != undefined && value == mapping.valueOff )
-          value = 0;
-        else
+        var orig = value;
+        if( mapping.valueOn !== undefined ) {
+          var match = mapping.valueOn.match('^/(.*)/$');
+          if( !match && value == mapping.valueOn )
+            value = 1;
+          else if( match && value.toString().match( match[1] ) )
+            value = 1;
+          else
+            value = 0;
+        }
+        if( mapping.valueOff !== undefined ) {
+          var match = mapping.valueOff.match('^/(.*)/$');
+          if( !match && value == mapping.valueOff )
+            value = 0;
+          else if( match && value.toString().match( match[1] ) )
+            value = 0;
+          else
+            value = 1;
+        }
+        if( mapping.valueOn === undefined  &&  mapping.valueOff === undefined )
           value = parseInt( value );
 
         if( mapping.threshold ) {
@@ -383,7 +414,6 @@ FHEM_reading2homekit(mapping, orig)
 
       if( format.match(/int/) )
         value = parseInt( value );
-
   }
 
   if( typeof value === 'number' ) {
@@ -1578,7 +1608,10 @@ FHEMAccessory.prototype = {
       params.split(',').forEach( function(param) {
         var p = param.split('=');
         if( p.length == 2 )
-          this.mappings[characteristic][p[0]] = p[1];
+          if( p[0] == 'values' )
+            this.mappings[characteristic][p[0]] = p[1].split(';');
+          else
+            this.mappings[characteristic][p[0]] = p[1];
 
         else if( p.length == 1 ) {
           var p = param.split(':');

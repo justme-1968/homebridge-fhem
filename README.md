@@ -65,19 +65,31 @@ currently supported parameters are for FHEM -> homekit:
   nocache: don't cache values for this reading
   threshold: reading is mapped to true if the value is greater than the threshold value and to false otherwise
   invert: invert the reading, taking minValue, maxValue into account
-  valueOn, valueOf: the reading values that are mapped to the true/false resp. on/off states in homekit
-  values: a ; separated list of reading values that should be mapped to consecutive homekit values
+  part: the reading value will be splitted at spaces and the n-th item is used as the value. counting starts at 0
+  values: a ; separated list that indicates the mapping of reading values to homekit values.
+          each list entry consists of : separated pair of from and to values
+          each from value can be a literal value or a regex of the form /regex/
+          each to value can be a literal value or a homekit defined term for this characteristic
+  valueOn, valueOf: the reading values that are mapped to the true/false resp. on/off states in homekit. shotcut for values
 
-          each value can be a literal value or a regex of the form /regex/
-          // FIXME: ??? homekit values can be given as literal values or homekit definde terms
+    e.g.: PositionState=motor,values=/^up/:INCREASING;/^down/:DECREASING;/.*/:STOPPED On:state,valueOn=/on|dim/,valueOff=off
 
-          e.g.: PositionState=motor,values=/^up/:INCREASING;/^down/:DECREASING;/.*/:STOPPED On:state,valueOn=/on|dim/,valueOff=off
+  the order of the transformations is as follows: part, values, valueOn/valueOff, threshold, maxValue/minValue/minStep, invert
+
+//TODO: multiple occurances of the same characteristic with different paramters -> e.g. multiple switches for the same or harmony activities
+
 
 and for homekit -> FHEM:
   cmd: the set command to use
   cmdOn, cmdOff: for all bool characteristics
   cmdLock, cmdUnlock, cmdOpen: commands to lock, unlock and open a door
   //TODO: commands: a ; separated list of commands that should be used for consecutive homekit values
+
+examples:
+1 device -> 1 service (thermometer)
+n devices -> 1 service (temp + hum, dummy thermostat + temp)
+//TODO: 1 device  -> n services (1 service per harmony activity)
+//TODO: 1 device -> n characteristics (1 characteristic per harmony activity)
 
 
 
