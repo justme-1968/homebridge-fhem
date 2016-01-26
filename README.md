@@ -35,7 +35,7 @@ devices use the homebridgeMapping attribute. which works as follows:
 - the homebridgeMapping attribute containts a space separated list of characteristic descriptions
 - each description consists of the characteristic name followed by a = followed by a komma separated list of parameters
 - each parameter can be of the form <command>:<device>:<reading> where parts can be omitted from left to right
-  or of the form <name>=<value> 
+  or of the form <name>=<value>
 
 e.g:
 attr <thermostat> genericDeviceType thermostat
@@ -72,7 +72,7 @@ currently supported parameters are for FHEM -> homekit:
           each to value can be a literal value or a homekit defined term for this characteristic
   valueOn, valueOf: the reading values that are mapped to the true/false resp. on/off states in homekit. shotcut for values
 
-    e.g.: PositionState=motor,values=/^up/:INCREASING;/^down/:DECREASING;/.*/:STOPPED On:state,valueOn=/on|dim/,valueOff=off
+    e.g.: PositionState=motor,values=/^up/:INCREASING;/^down/:DECREASING;/.*/:STOPPED On=state,valueOn=/on|dim/,valueOff=off
 
   the order of the transformations is as follows: part, values, valueOn/valueOff, threshold, maxValue/minValue/minStep, invert
 
@@ -80,16 +80,25 @@ currently supported parameters are for FHEM -> homekit:
 
 
 and for homekit -> FHEM:
-  cmd: the set command to use
+  cmd: the set command to use: set <device> <cmd> <value>
   cmdOn, cmdOff: for all bool characteristics
   cmdLock, cmdUnlock, cmdOpen: commands to lock, unlock and open a door
-  //TODO: commands: a ; separated list of commands that should be used for consecutive homekit values
+  cmds: a ; separated list that indicates the mapping of homekit values to fhem values.
+        each list entry consists of : separated pair of from and to values
+        each from value can be a literal value or a homekit defined term for this characteristic
+        each to value has to be a literal value
+
+  e.g.: TargetHeatingCoolingState=...,cmds=OFF:desired-temp+off;HEAT:controllMode+day;COOL:controllMode+night;AUTO:controllMode+auto
 
 examples:
 1 device -> 1 service (thermometer)
 n devices -> 1 service (temp + hum, dummy thermostat + temp)
-//TODO: 1 device  -> n services (1 service per harmony activity)
-//TODO: 1 device -> n characteristics (1 characteristic per harmony activity)
+1 device  -> n services (1 service per harmony activity), (temp1, temp2)
+
+attr <hub> genericDeviceType switch
+attr <hub> homebridgeMapping On=currentActivity,subtype=TV,valueOn=TV,cmdOn=activity+TV,cmdOff=off
+                             On=currentActivity,subtype=DVD,valueOn=/DVD/,cmdOn=activity+DVD,cmdOff=off
+                             On=currentActivity,subtype=Off,valueOff=PowerOff,cmd=off
 
 
 
