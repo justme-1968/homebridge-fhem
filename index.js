@@ -32,14 +32,12 @@ FHEM_subscribe(accessory, informId, characteristic) {
   if( !FHEM_subscriptions[informId] )
     FHEM_subscriptions[informId] = [];
 
-  FHEM_subscriptions[informId].push( { 'accessory': accessory, 'characteristic': characteristic } );
+  FHEM_subscriptions[informId].push( { accessor: accessory, characteristic: characteristic } );
 }
 
 function
 FHEM_isPublished(device) {
-  var keys = Object.keys(FHEM_subscriptions);
-  for( var i = 0; i < keys.length; i++ ) {
-    var key = keys[i];
+  for( var key in FHEM_subscriptions ) {
 
     var subscriptions = FHEM_subscriptions[key];
     if( subscriptions )
@@ -67,7 +65,7 @@ FHEM_update(informId, orig, no_update) {
     return;
 
   FHEM_cached[informId] = orig;
-  //FHEM_cached[informId] = { 'orig': orig, 'timestamp': Date.now() };
+  //FHEM_cached[informId] = { orig: orig, timestamp: Date.now() };
   var date = new Date(Date.now()-tzoffset).toISOString().replace(/T/, ' ').replace(/\..+/, '');
   console.log("  " + date + " caching: " + informId + ": " + orig );
 
@@ -685,10 +683,10 @@ FHEMPlatform(log, config) {
     if( auth.sendImmediately === undefined )
       auth.sendImmediately = false;
 
-    request = request.defaults( { 'auth': auth, 'rejectUnauthorized': false } );
+    request = request.defaults( { auth: auth, rejectUnauthorized: false } );
   }
 
-  this.connection = { 'base_url': base_url, 'request': request };
+  this.connection = { base_url: base_url, request: request };
 
   FHEM_platforms.push(this);
 
@@ -1383,9 +1381,8 @@ FHEMAccessory(log, connection, s) {
 
   var event_map = s.Attributes.eventMap;
   if( event_map ) {
-    var parts = event_map.split( ' ' );
-    for( var p = 0; p < parts.length; p++ ) {
-      var map = parts[p].split( ':' );
+    for( var part in event_map.split( ' ' ) ) {
+      var map = part.split( ':' );
       if( map[1] == 'on'
           || map[1] == 'off' ) {
         if( !this.event_map )
@@ -1595,7 +1592,8 @@ FHEMAccessory.prototype = {
       return;
     }
 
-    homebridgeMapping.split(/ |\n/).forEach( function(mapping) {
+    var seen = {};
+    for( mapping in homebridgeMapping.split(/ |\n/) ) {
       if( !mapping )
         return;
 
@@ -1608,18 +1606,27 @@ FHEMAccessory.prototype = {
       var characteristic = parts[0];
       var params = parts.slice(1).join('=');
 
-      if( !this.mappings[characteristic] )
-        this.mappings[characteristic] = {};
+      var mapping;
+      if( seen[characteristic] && this.mappings[characteristic] !== undefined )
+        mapping = this.mappings[characteristic];
+      else {
+        mapping = {};
+        if( this.mappings[characteristic] )
+          this.mappings[characteristic] = [this.mappings[characteristic], mapping];
+        else
+          this.mappings[characteristic] = mapping;
+      }
+      seen[characteristic] = true;
 
       params.split(',').forEach( function(param) {
         var p = param.split('=');
         if( p.length == 2 )
           if( p[0] == 'values' )
-            this.mappings[characteristic][p[0]] = p[1].split(';');
+            mapping[p[0]] = p[1].split(';');
           else if( p[0] == 'cmds' )
-            this.mappings[characteristic][p[0]] = p[1].split(';');
+            mapping[p[0]] = p[1].split(';');
           else
-            this.mappings[characteristic][p[0]] = p[1];
+            mapping[p[0]] = p[1];
 
         else if( p.length == 1 ) {
           var p = param.split(':');
@@ -1629,13 +1636,13 @@ FHEMAccessory.prototype = {
           var cmd = p.length > 2 ? p[p.length-3] : undefined;
 
           if( reading )
-            this.mappings[characteristic].reading = reading;
+            mapping.reading = reading;
 
           if( device )
-            this.mappings[characteristic].device = device;
+            mapping.device = device;
 
           if( cmd )
-            this.mappings[characteristic].cmd = cmd;
+            mapping.cmd = cmd;
 
 
         } else {
@@ -1643,7 +1650,7 @@ FHEMAccessory.prototype = {
 
         }
       }.bind(this) );
-    }.bind(this) );
+    }
   },
 
   delayed: function(c,value,delay) {
@@ -2085,8 +2092,7 @@ FHEMAccessory.prototype = {
 
       var match;
       if( match = this.PossibleSets.match(/(^| )activity:([^\s]*)/) ) {
-        var activities = match[2].split(',');
-        for( var i = 0; i < activities.length; i++ ) {
+        for( var activity in match[2].split(',') ) {
           var activity = activities[i];
 
           var controlService = this.createDeviceService(activity);
@@ -2512,14 +2518,11 @@ function FHEMdebug_handleRequest(request, response){
   if( request.url == '/cached' ) {
     response.write( '<a href="/">home</a><br><br>' );
     if( FHEM_lastEventTime )
-    var keys = Object.keys(FHEM_lastEventTime);
-    for( var i = 0; i < keys.length; i++ )
-      response.write( 'FHEM_lastEventTime ' + keys[i] + ': '+ new Date(FHEM_lastEventTime[keys[i]]) +'<br>' );
+      for( var key in FHEM_lastEventTime )
+        response.write( 'FHEM_lastEventTime ' + keys[i] + ': '+ new Date(FHEM_lastEventTime[key]) +'<br>' );
     response.write( '<br>' );
 
-    var keys = Object.keys(FHEM_subscriptions);
-    for( var i = 0; i < keys.length; i++ ) {
-      var informId = keys[i];
+    for( var informId in FHEM_subscriptions ) {
       response.write( informId + ': '+ FHEM_cached[informId] +'<br>' );
 
       var derived;

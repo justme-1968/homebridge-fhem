@@ -95,6 +95,24 @@ examples:
 n devices -> 1 service (temp + hum, dummy thermostat + temp)
 1 device  -> n services (1 service per harmony activity), (temp1, temp2)
 
+attr <temp> genericDeviceType thermometer
+attr <temp> homebridgeMapping CurrentTemperature=temperature1,minValue=-30
+wenn das reading temperature heisst statt temperature1 muss es nicht angegeben werden.
+
+
+attr <tempHum> genericDeviceType thermometer
+attr <tempHum> homebridgeMapping [CurrentTemperature=temperature1] CurrentRelativeHumidity=<device2>:humidity
+wenn das reading temperature heisst statt temperature1 kann CurrentTemperature=temperature1 weg gelassen werden
+
+attr <thermostat> genericDeviceType thermostat
+attr <thermostat> homebridgeMapping TargetTemperature=target::target,minValue=18,maxValue=25,minStep=0.5 CurrentTemperature=myTemp:temperature
+
+
+attr <dualTemp> genericDeviceType thermometer
+attr <dualTemp> homebridgeMapping CurrentTemperature=temperature1,minValue=-30,subtype=innen
+                                  CurrentTemperature=temperature2,minValue=-30, subtype=aussen
+
+
 attr <hub> genericDeviceType switch
 attr <hub> homebridgeMapping On=currentActivity,subtype=TV,valueOn=TV,cmdOn=activity+TV,cmdOff=off
                              On=currentActivity,subtype=DVD,valueOn=/DVD/,cmdOn=activity+DVD,cmdOff=off
