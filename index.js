@@ -80,7 +80,7 @@ FHEM_update(informId, orig, no_update) {
       }
 
       mapping.cached = value;
-      console.log("    caching: " + mapping.characteristic_name + ": " + value + " (as " + typeof(value) + "; from " + orig + ")" );
+      console.log("    caching: " + mapping.characteristic_name + (mapping.subtype?':'+mapping.subtype:'') +  ": " + value + " (as " + typeof(value) + "; from " + orig + ")" );
 
       if( !no_update && typeof mapping.characteristic === 'object' )
         mapping.characteristic.setValue(value, undefined, 'fromFHEM');
@@ -330,7 +330,7 @@ FHEM_reading2homekit(mapping, orig)
             var from = match[1];
             var to = match[3] === undefined ? i : match[3];
 
-            match = from.match('^/(.*)/$');
+            var match = from.match('^/(.*)/$');
             if( !match && value == from ) {
               result = to;
               break;
@@ -578,30 +578,6 @@ console.log( "DELETEATTR: "+value );
                          return;
 
                        }
-
-                     } else if( reading == 'activity') {
-
-                       Object.keys(FHEM_subscriptions).forEach( function(key) {
-                         var parts = key.split( '-', 3 );
-                         if( parts[0] != '#' + device )
-                           return;
-                         if( parts[1] != reading )
-                           return;
-
-                         var subscriptions = FHEM_subscriptions[key];
-                         if( subscriptions )
-                           subscriptions.forEach( function(subscription) {
-                             if( !subscription.characteristic )
-                               return;
-                             var accessory = subscription.accessory;
-
-                             var activity = parts[2];
-
-                             subscription.characteristic.setValue(value==activity?1:0, undefined, 'fromFHEM');
-                           } );
-                       } );
-
-                       return;
 
                      } else if(accessory.mappings.colormode) {
                        //FIXME: add colormode ct
@@ -1002,7 +978,7 @@ FHEMPlatform.prototype = {
                            accessory = new FHEMAccessory(this.log, this.connection, s);
 
                          } else if( s.Internals.TYPE == 'harmony' ) {
-                             accessory = new FHEMAccessory(this.log, this.connection, s);
+                           accessory = new FHEMAccessory(this.log, this.connection, s);
 
                          } else {
                            this.log( 'ignoring ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ')' );
@@ -1251,10 +1227,11 @@ FHEMAccessory(log, connection, s) {
     if( s.PossibleSets.match(/[\^ ]position\b/) ) {
       this.mappings.CurrentPosition = { reading: 'position' };
       this.mappings.TargetPosition = { reading: 'position', cmd: 'position', delay: true };
-      if( this.type == 'DUOFERN' ) { // FIXME: make configurable. e.g. invert flag
+      if( this.type == 'DUOFERN' ) {
         this.mappings.CurrentPosition.invert = true;
         this.mappings.TargetPosition.invert = true;
 
+        //the following could be used instead of invert
         //var reading2homekit = function(mapping, orig) { return 100 - parseInt( orig ) };
         //var homekit2reading = function(mapping, orig) { return 100 - orig };
         //this.mappings.CurrentPosition.reading2homekit = reading2homekit;
@@ -1357,14 +1334,26 @@ FHEMAccessory(log, connection, s) {
       else
         return null;
 
-    } else
-      this.mappings.On = { reading: 'activity', cmdOn: 'activity', cmdOff: 'off' };
+    } else if( !s.Attributes.homebridgeMapping ) {
+      this.service_name = 'switch';
+
+      var match;
+      if( match = s.PossibleSets.match(/(^| )activity:([^\s]*)/) ) {
+        this.mappings.On = [];
+
+        for( var activity of match[2].split(',') ) {
+          this.mappings.On.push( {reading: 'activity', subtype:activity, valueOn: activity, cmdOn: 'activity+'+activity, cmdOff: 'off'} );
+        }
+      }
+    }
 
   } else if( s.PossibleSets.match(/(^| )on\b/)
            && s.PossibleSets.match(/(^| )off\b/) ) {
     this.mappings.On = { reading: 'state', cmdOn: 'on', cmdOff: 'off' };
     if( !s.Readings.state )
       delete this.mappings.On.reading;
+    else
+      this.service_name = 'switch';
   }
 
   if( this.service_name === undefined )
@@ -1550,7 +1539,7 @@ FHEMAccessory(log, connection, s) {
           }
 
           mapping.cached = value;
-          console.log("    caching: " + mapping.characteristic_name + ": " + value + " (as " + typeof(value) + "; from " + orig + ")" );
+          console.log("    caching: " + mapping.characteristic_name + (mapping.subtype?':'+mapping.subtype:'') + ": " + value + " (as " + typeof(value) + "; from " + orig + ")" );
         }
       }
     }
@@ -2088,43 +2077,6 @@ FHEMAccessory.prototype = {
                      }.bind(this) );
     }
 
-
-    // FIXME: allow multiple switch characteristics also for other types. check if this.mappings.On an array.
-    if( this.type == 'harmony'
-        && this.mappings.On.reading == 'activity' ) {
-
-      this.subscribe(this.mappings.On);
-
-      var match;
-      if( match = this.PossibleSets.match(/(^| )activity:([^\s]*)/) ) {
-        for( var activity of match[2].split(',') ) {
-          var controlService = this.createDeviceService(activity);
-          services.push( controlService );
-
-          this.log("      on characteristic for " + this.name + ' ' + activity);
-
-          var characteristic = controlService.getCharacteristic(Characteristic.On);
-
-          this.subscribe('#' + this.device + '-' + this.mappings.On.reading + '-' + activity, characteristic);
-
-          characteristic.displayName = activity;
-          characteristic.value = (FHEM_cached[this.mappings.On.informId]==activity?1:0);
-
-          characteristic
-            .on('set', function(activity, value, callback, context) {
-                         if( context !== 'fromFHEM' )
-                           this.command( 'set', value == 0 ? this.mappings.On.cmdOff : this.mappings.On.cmdOn + ' ' + activity );
-                         callback();
-                       }.bind(this, activity) )
-            .on('get', function(activity, callback) {
-                         var result = this.query(this.mappings.On);
-                         callback( undefined, result==activity?1:0 );
-                       }.bind(this, activity) );
-          }
-      }
-
-      return services;
-    }
 
     if( this.mappings.xy
         && this.mappings.colormode ) {

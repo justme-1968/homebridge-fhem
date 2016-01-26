@@ -76,8 +76,6 @@ currently supported parameters are for FHEM -> homekit:
 
   the order of the transformations is as follows: part, values, valueOn/valueOff, threshold, maxValue/minValue/minStep, invert
 
-//TODO: multiple occurances of the same characteristic with different paramters -> e.g. multiple switches for the same or harmony activities
-
 
 and for homekit -> FHEM:
   cmd: the set command to use: set <device> <cmd> <value>
@@ -114,9 +112,9 @@ attr <dualTemp> homebridgeMapping CurrentTemperature=temperature1,minValue=-30,s
 
 
 attr <hub> genericDeviceType switch
-attr <hub> homebridgeMapping On=currentActivity,subtype=TV,valueOn=TV,cmdOn=activity+TV,cmdOff=off
-                             On=currentActivity,subtype=DVD,valueOn=/DVD/,cmdOn=activity+DVD,cmdOff=off
-                             On=currentActivity,subtype=Off,valueOff=PowerOff,cmd=off
+attr <hub> homebridgeMapping On=activity,subtype=TV,valueOn=TV,cmdOn=activity+TV,cmdOff=off
+                             On=activity,subtype=DVD,valueOn=/DVD/,cmdOn=activity+DVD,cmdOff=off
+                             On=activity,subtype=Off,valueOn=PowerOff,valueOff=PowerOff,cmd=off
 
 
 
