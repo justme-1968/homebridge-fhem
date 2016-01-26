@@ -32,23 +32,19 @@ FHEM_subscribe(accessory, informId, characteristic) {
   if( !FHEM_subscriptions[informId] )
     FHEM_subscriptions[informId] = [];
 
-  FHEM_subscriptions[informId].push( { accessor: accessory, characteristic: characteristic } );
+  FHEM_subscriptions[informId].push( { accessory: accessory, characteristic: characteristic } );
 }
 
 function
 FHEM_isPublished(device) {
-  for( var key in FHEM_subscriptions ) {
+  for( var inform_id in FHEM_subscriptions ) {
+    for( var subscription of FHEM_subscriptions[inform_id] ) {
+      var accessory = subscription.accessory;
 
-    var subscriptions = FHEM_subscriptions[key];
-    if( subscriptions )
-      for( s = 0; s < subscriptions.length; ++s ) {
-        var subscription = subscriptions[s];
-        var accessory = subscription.accessory;
-
-        if( accessory.device === device )
-          return accessory;
-      };
+      if( accessory.device === device )
+        return accessory;
     };
+  };
 
   return null;
 }
@@ -326,9 +322,8 @@ FHEM_reading2homekit(mapping, orig)
         else {
           var result;
 
-          var keys = Object.keys(mapping.values);
-          for( var i = 0; i < keys.length; i++ ) {
-            var match = mapping.values[i].match('^([^:]*)(:(.*))?$'); //FIXME: preprocess and cache
+          for( var v of mapping.values ) {
+            var match = v.match('^([^:]*)(:(.*))?$'); //FIXME: preprocess and cache
             if( !match )
               continue;
 
@@ -490,7 +485,7 @@ function FHEM_startLongpoll(connection) {
                      continue;
 
                    var match = d[0].match(/([^-]*)-(.*)/);
-                   if( match === undefined )
+                   if( !match )
                      continue;
                    var device = match[1];
                    var reading = match[2];
@@ -963,7 +958,7 @@ FHEMPlatform.prototype = {
 
                          var accessory;
                          if( FHEM_isPublished(s.Internals.NAME) )
-                           this.log( s.Internals.NAME + ' is already published');
+                           this.log.warn( s.Internals.NAME + ' is already published');
 
                          else if( 0 && s.Attributes.disable == 1 ) {
                            this.log( s.Internals.NAME + ' is disabled');
@@ -1381,7 +1376,7 @@ FHEMAccessory(log, connection, s) {
 
   var event_map = s.Attributes.eventMap;
   if( event_map ) {
-    for( var part in event_map.split( ' ' ) ) {
+    for( var part of event_map.split( ' ' ) ) {
       var map = part.split( ':' );
       if( map[1] == 'on'
           || map[1] == 'off' ) {
@@ -1515,46 +1510,51 @@ FHEMAccessory(log, connection, s) {
   }
 
 
-  Object.keys(this.mappings).forEach( function(key) {
-    var mapping = this.mappings[key];
-    var device = this.device;
-    if( mapping.device === undefined )
-      mapping.device = device;
-    else
-      device = mapping.device;
+  for( var characteristic_name in this.mappings ) {
+    var mappings = this.mappings[characteristic_name];
+    if( !Array.isArray(mappings) )
+       mappings = [mappings];
 
-    mapping.characteristic = this.characteristicOfName(key);
-    mapping.informId = device +'-'+ mapping.reading;
-    mapping.characteristic_name = key;
+    for( var mapping of mappings ) {
+      var device = this.device;
+      if( mapping.device === undefined )
+        mapping.device = device;
+      else
+        device = mapping.device;
 
-    var orig;
-    if( device != this.device )
-      orig = this.query(mapping);
-    else if( s.Readings[mapping.reading] && s.Readings[mapping.reading].Value )
-      orig = s.Readings[mapping.reading].Value;
+      mapping.characteristic = this.characteristicOfName(characteristic_name);
+      mapping.informId = device +'-'+ mapping.reading;
+      mapping.characteristic_name = characteristic_name;
 
-    if( orig === undefined && device == this.device ) {
-      delete mapping.informId;
+      var orig;
+      if( device != this.device )
+        orig = this.query(mapping);
+      else if( s.Readings[mapping.reading] && s.Readings[mapping.reading].Value )
+        orig = s.Readings[mapping.reading].Value;
 
-    } else if( orig !== undefined ) {
-      if( !mapping.nocache ) {
-        if( FHEM_cached[mapping.informId] === undefined )
-          FHEM_update(mapping.informId, orig);
+      if( orig === undefined && device == this.device ) {
+        delete mapping.informId;
 
-        var value;
-        if( typeof mapping.reading2homekit === 'function' ) {
-          value = mapping.reading2homekit(orig);
+      } else if( orig !== undefined ) {
+        if( !mapping.nocache ) {
+          if( FHEM_cached[mapping.informId] === undefined )
+            FHEM_update(mapping.informId, orig);
 
-        } else {
-          value = FHEM_reading2homekit(mapping, orig);
+          var value;
+          if( typeof mapping.reading2homekit === 'function' ) {
+            value = mapping.reading2homekit(orig);
 
+          } else {
+            value = FHEM_reading2homekit(mapping, orig);
+
+          }
+
+          mapping.cached = value;
+          console.log("    caching: " + mapping.characteristic_name + ": " + value + " (as " + typeof(value) + "; from " + orig + ")" );
         }
-
-        mapping.cached = value;
-        console.log("    caching: " + mapping.characteristic_name + ": " + value + " (as " + typeof(value) + "; from " + orig + ")" );
       }
     }
-  }.bind(this) );
+  }
 }
 
 FHEM_dim_values = [ 'dim06%', 'dim12%', 'dim18%', 'dim25%', 'dim31%', 'dim37%', 'dim43%', 'dim50%', 'dim56%', 'dim62%', 'dim68%', 'dim75%', 'dim81%', 'dim87%', 'dim93%' ];
@@ -1582,6 +1582,7 @@ FHEMAccessory.prototype = {
     if( homebridgeMapping.match( /^{.*}$/ ) ) {
       homebridgeMapping = JSON.parse(homebridgeMapping);
 
+      //FIXME: handle multiple identical characteristics in this.mappings and in homebridgeMapping
       for( var characteristic in homebridgeMapping )
         for( var attrname in homebridgeMapping[characteristic] ) {
           if( !this.mappings[characteristic] )
@@ -1593,21 +1594,21 @@ FHEMAccessory.prototype = {
     }
 
     var seen = {};
-    for( mapping in homebridgeMapping.split(/ |\n/) ) {
+    for( var mapping of homebridgeMapping.split(/ |\n/) ) {
       if( !mapping )
-        return;
+        continue;
 
       var parts = mapping.split('=');
       if( parts.length < 2 || !parts[1] ) {
         this.log( '  wrong syntax: ' + mapping );
-        return;
+        continue;
       }
 
       var characteristic = parts[0];
       var params = parts.slice(1).join('=');
 
       var mapping;
-      if( seen[characteristic] && this.mappings[characteristic] !== undefined )
+      if( !seen[characteristic] && this.mappings[characteristic] !== undefined )
         mapping = this.mappings[characteristic];
       else {
         mapping = {};
@@ -1618,7 +1619,7 @@ FHEMAccessory.prototype = {
       }
       seen[characteristic] = true;
 
-      params.split(',').forEach( function(param) {
+      for( var param of params.split(',') ) {
         var p = param.split('=');
         if( p.length == 2 )
           if( p[0] == 'values' )
@@ -1649,7 +1650,7 @@ FHEMAccessory.prototype = {
           this.log( '  wrong syntax: ' + param );
 
         }
-      }.bind(this) );
+      }
     }
   },
 
@@ -1783,9 +1784,8 @@ FHEMAccessory.prototype = {
         else {
           var result;
 
-          var keys = Object.keys(mapping.cmds);
-          for( var i = 0; i < keys.length; i++ ) {
-            var match = mapping.cmds[i].match('^([^:]*)(:(.*))?$'); //FIXME: preprocess and cache
+          for( var c of mapping.cmds ) {
+            var match = c.match('^([^:]*)(:(.*))?$'); //FIXME: preprocess and cache
             if( !match )
               continue;
 
@@ -1805,11 +1805,16 @@ FHEMAccessory.prototype = {
         }
       }
 
+      if( cmd === undefined ) {
+        this.log(this.name + " no cmd for " + c + ", value=" + value);
+        return;
+      }
+
       command = "set " + this.device + " " + cmd + " " + value;
 
     }
 
-    if( !command ) {
+    if( command === undefined) {
       this.log(this.name + " Unhandled command! cmd=" + c + ", value=" + value);
       return;
     }
@@ -2092,9 +2097,7 @@ FHEMAccessory.prototype = {
 
       var match;
       if( match = this.PossibleSets.match(/(^| )activity:([^\s]*)/) ) {
-        for( var activity in match[2].split(',') ) {
-          var activity = activities[i];
-
+        for( var activity of match[2].split(',') ) {
           var controlService = this.createDeviceService(activity);
           services.push( controlService );
 
@@ -2145,58 +2148,69 @@ FHEMAccessory.prototype = {
     var controlService = this.createDeviceService();
     services.push( controlService );
 
-    Object.keys(this.mappings).forEach( function(key) {
-      var mapping = this.mappings[key];
-      if( !mapping.characteristic )
-        return;
+    var seen = {};
+    for( var characteristic_name in this.mappings ) {
+      var mappings = this.mappings[characteristic_name];
+      if( !Array.isArray(mappings) )
+         mappings = [mappings];
 
-      if( controlService.testCharacteristic(mapping.characteristic) ) {
-        if( mapping.subtype === undefined ) {
-          this.log.error(this.name + ': '+ key + ' characteristic already defined for service ' + this.name + ' and no subtype given')
-          return;
+      for( var mapping of mappings ) {
+        if( !mapping.characteristic )
+          continue;
+
+        if( seen[characteristic_name] ) {
+          if( mapping.subtype === undefined ) {
+            this.log.error(this.name + ': '+ characteristic_name + ' characteristic already defined for service ' + this.name + ' and no subtype given')
+            continue;
+          }
+
+          controlService = this.createDeviceService( mapping.subtype );
+          services.push( controlService );
+
+        } else if( mapping.subtype ) {
+          controlService.subtype = mapping.subtype;
+
         }
 
-        controlService = this.createDeviceService( mappings.subtype );
-        services.push( controlService );
+        var characteristic = controlService.getCharacteristic(mapping.characteristic)
+                             || controlService.addCharacteristic(mapping.characteristic);
+        seen[characteristic_name] = true;
+
+        if( !characteristic ) {
+          this.log.error(this.name + ': no '+ characteristic_name + ' characteristic available for service ' + this.service_name)
+          continue;
+        }
+        if( mappings.subtype )
+          this.log('    ' + characteristic_name + ':' + mappings.subtype + ' characteristic for ' + mapping.device + ':' + mapping.reading)
+        else
+          this.log('    ' + characteristic_name + ' characteristic for ' + mapping.device + ':' + mapping.reading)
+
+        this.subscribe(mapping, characteristic);
+
+        if( mapping.cached !== undefined )
+          characteristic.value = mapping.cached;
+
+        if( mapping.minValue !== undefined ) characteristic.setProps( { minValue: mapping.minValue, } );
+        if( mapping.maxValue !== undefined ) characteristic.setProps( { maxValue: mapping.maxValue, } );
+        if( mapping.minStep !== undefined ) characteristic.setProps( { minStep: mapping.minStep, } );
+
+        characteristic
+          .on('set', function(mapping, value, callback, context) {
+                       if( context !== 'fromFHEM' ) {
+                         if( mapping.delayed )
+                           this.delayed(mapping, value, mapping.delayed);
+                         else if( mapping.cmd )
+                           this.command(mapping, value);
+                         else
+                           this.command( 'set', value == 0 ? (mapping.cmdOff?mapping.cmdOff:mapping.cmd) : (mapping.cmdOn?mapping.cmdOn:mapping.cmd) );
+                       }
+                       callback();
+                     }.bind(this,mapping) )
+          .on('get', function(callback) {
+                       this.query(mapping, callback);
+                     }.bind(this) );
       }
-
-      var characteristic = controlService.getCharacteristic(mapping.characteristic)
-                           || controlService.addCharacteristic(mapping.characteristic);
-
-      if( !characteristic ) {
-        this.log.error(this.name + ': no '+ key + ' characteristic available for service ' + this.service_name)
-        return;
-      }
-      if( mappings.subtype )
-        this.log('    ' + key + ':' + mappings.subtype + ' characteristic for ' + mapping.device + ':' + mapping.reading)
-      else
-        this.log('    ' + key + ' characteristic for ' + mapping.device + ':' + mapping.reading)
-
-      this.subscribe(mapping, characteristic);
-
-      if( mapping.cached !== undefined )
-        characteristic.value = mapping.cached;
-
-      if( mapping.minValue !== undefined ) characteristic.setProps( { minValue: mapping.minValue, } );
-      if( mapping.maxValue !== undefined ) characteristic.setProps( { maxValue: mapping.maxValue, } );
-      if( mapping.minStep !== undefined ) characteristic.setProps( { minStep: mapping.minStep, } );
-
-      characteristic
-        .on('set', function(mapping, value, callback, context) {
-                     if( context !== 'fromFHEM' ) {
-                       if( mapping.delayed )
-                         this.delayed(mapping, value, mapping.delayed);
-                       else if( mapping.cmd )
-                         this.command(mapping, value);
-                       else
-                         this.command( 'set', value == 0 ? (mapping.cmdOff?mapping.cmdOff:mapping.cmd) : (mapping.cmdOn?mapping.cmdOn:mapping.cmd) );
-                     }
-                     callback();
-                   }.bind(this,mapping) )
-        .on('get', function(callback) {
-                     this.query(mapping, callback);
-                   }.bind(this) );
-    }.bind(this) );
+    }
 
 
     if( this.mappings.volume ) {
@@ -2519,15 +2533,14 @@ function FHEMdebug_handleRequest(request, response){
     response.write( '<a href="/">home</a><br><br>' );
     if( FHEM_lastEventTime )
       for( var key in FHEM_lastEventTime )
-        response.write( 'FHEM_lastEventTime ' + keys[i] + ': '+ new Date(FHEM_lastEventTime[key]) +'<br>' );
+        response.write( 'FHEM_lastEventTime ' + key + ': '+ new Date(FHEM_lastEventTime[key]) +'<br>' );
     response.write( '<br>' );
 
     for( var informId in FHEM_subscriptions ) {
       response.write( informId + ': '+ FHEM_cached[informId] +'<br>' );
 
       var derived;
-      for( s = 0; s < FHEM_subscriptions[informId].length; ++s ) {
-        var characteristic = FHEM_subscriptions[informId][s].characteristic;
+      for( var characteristic of FHEM_subscriptions[informId] ) {
         if( !characteristic ) continue;
 
         var mapping = characteristic.FHEM_mapping;

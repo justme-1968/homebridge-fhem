@@ -123,4 +123,4 @@ attr <hub> homebridgeMapping On=currentActivity,subtype=TV,valueOn=TV,cmdOn=acti
 instead of the format described above homebridgeMapping can also contain the same data encoded as json
 this hast to be used if any of the separators aabove are used in an command or value.
 
-e.g.: { "PositionState" = { "reading" = "motor", "values" = [...] }, "On" = { "reading" = "state", "valueOn" = "/on|dim/", "valueOff" = "off" } }
+e.g.: { "PositionState": { "reading": "motor", "values": [...] }, "On": { "reading": "state", "valueOn": "/on|dim/", "valueOff": "off" } }
