@@ -35,7 +35,8 @@ devices use the homebridgeMapping attribute. which works as follows:
 - the homebridgeMapping attribute containts a space separated list of characteristic descriptions
 - each description consists of the characteristic name followed by a = followed by a komma separated list of parameters
 - each parameter can be of the form <command>:<device>:<reading> where parts can be omitted from left to right
-  or of the form <name>=<value>
+  or of the form <name>=<value> or the special clear to clear the mappings for the current characteristic
+- the following special values for a description are recognized: clear -> clears all mappings for this device
 
 e.g:
 attr <thermostat> genericDeviceType thermostat
@@ -119,6 +120,7 @@ attr <hub> homebridgeMapping On=activity,subtype=TV,valueOn=TV,cmdOn=activity+TV
 
 
 instead of the format described above homebridgeMapping can also contain the same data encoded as json
-this hast to be used if any of the separators aabove are used in an command or value.
+this hast to be used if any of the separators above are used in an command or value. at the moment the
+json version replaces all build in defaults.
 
 e.g.: { "PositionState": { "reading": "motor", "values": [...] }, "On": { "reading": "state", "valueOn": "/on|dim/", "valueOff": "off" } }
