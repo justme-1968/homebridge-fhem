@@ -59,11 +59,12 @@ currently supported values for characteristic names are:
   StatusLowBattery
   FirmwareRevision
 
-currently supported parameters are for FHEM -> homekit:
+currently supported parameters for FHEM -> homekit direction are:
   minValue, maxValue, minStep: for all int and float characteristics -> the allowed range for this value in homekit
   (min,) max: Hue and Saturation characteristics -> the range the reading has in fhem, only if different from minValue and maxValue
-  delay: true/false -> the value ist send afer one second inactivity
+  delay: true/false/<number> -> the value ist send afer one second/<number>ms of inactivity
   nocache: don't cache values for this reading
+  subtype: unique value necessary if multiple characteristics of the same type cwshould be used in an accessory.
   threshold: reading is mapped to true if the value is greater than the threshold value and to false otherwise
   invert: invert the reading, taking minValue, maxValue into account
   part: the reading value will be splitted at spaces and the n-th item is used as the value. counting starts at 0
@@ -78,7 +79,9 @@ currently supported parameters are for FHEM -> homekit:
   the order of the transformations is as follows: part, values, valueOn/valueOff, threshold, maxValue/minValue/minStep, invert
 
 
-and for homekit -> FHEM:
+and for the homekit -> FHEM direction:
+  maxValue: for all int and float characteristics -> the allowed range for this value in homekit
+  max: the max value the reading has in fhem, only if different from maxValue
   cmd: the set command to use: set <device> <cmd> <value>
   cmdOn, cmdOff: for all bool characteristics
   cmdLock, cmdUnlock, cmdOpen: commands to lock, unlock and open a door
@@ -89,38 +92,42 @@ and for homekit -> FHEM:
 
   e.g.: TargetHeatingCoolingState=...,cmds=OFF:desired-temp+off;HEAT:controllMode+day;COOL:controllMode+night;AUTO:controllMode+auto
 
+  the order of the transformations is as follows: invert, max/maxValue
+  precedence for mapping of homekit value to commands is in increasing order: cmd, cmdOn/cmdOff, cmds
+
+
 examples:
 1 device -> 1 service (thermometer)
+  attr <temp> genericDeviceType thermometer
+  attr <temp> homebridgeMapping CurrentTemperature=temperature1,minValue=-30
+  wenn das reading temperature heisst statt temperature1 muss es nicht angegeben werden.
+
+1 device -> 1 service, 2 characteristics (thermostat)
+  attr <thermostat> genericDeviceType thermostat
+  attr <thermostat> homebridgeMapping TargetTemperature=target::target,minValue=18,maxValue=25,minStep=0.5
+                                      CurrentTemperature=myTemp:temperature
+
+1 device -> 2 services mit identischen characteristics (thermometer)
+  attr <dualTemp> genericDeviceType thermometer
+  attr <dualTemp> homebridgeMapping CurrentTemperature=temperature1,minValue=-30,subtype=innen
+                                    CurrentTemperature=temperature2,minValue=-30,subtype=aussen
+
 n devices -> 1 service (temp + hum, dummy thermostat + temp)
+  attr <tempHum> genericDeviceType thermometer
+  attr <tempHum> homebridgeMapping [CurrentTemperature=temperature1] CurrentRelativeHumidity=<device2>:humidity
+  wenn das reading temperature heisst statt temperature1 kann CurrentTemperature=temperature1 weg gelassen werden
+
 1 device  -> n services (1 service per harmony activity), (temp1, temp2)
-
-attr <temp> genericDeviceType thermometer
-attr <temp> homebridgeMapping CurrentTemperature=temperature1,minValue=-30
-wenn das reading temperature heisst statt temperature1 muss es nicht angegeben werden.
-
-
-attr <tempHum> genericDeviceType thermometer
-attr <tempHum> homebridgeMapping [CurrentTemperature=temperature1] CurrentRelativeHumidity=<device2>:humidity
-wenn das reading temperature heisst statt temperature1 kann CurrentTemperature=temperature1 weg gelassen werden
-
-attr <thermostat> genericDeviceType thermostat
-attr <thermostat> homebridgeMapping TargetTemperature=target::target,minValue=18,maxValue=25,minStep=0.5 CurrentTemperature=myTemp:temperature
-
-
-attr <dualTemp> genericDeviceType thermometer
-attr <dualTemp> homebridgeMapping CurrentTemperature=temperature1,minValue=-30,subtype=innen
-                                  CurrentTemperature=temperature2,minValue=-30, subtype=aussen
-
-
-attr <hub> genericDeviceType switch
-attr <hub> homebridgeMapping On=activity,subtype=TV,valueOn=TV,cmdOn=activity+TV,cmdOff=off
-                             On=activity,subtype=DVD,valueOn=/DVD/,cmdOn=activity+DVD,cmdOff=off
-                             On=activity,subtype=Off,valueOn=PowerOff,valueOff=PowerOff,cmd=off
+  attr <hub> genericDeviceType switch
+  attr <hub> homebridgeMapping clear
+                               On=activity,subtype=TV,valueOn=TV,cmdOn=activity+TV,cmdOff=off
+                               On=activity,subtype=DVD,valueOn=/DVD/,cmdOn=activity+DVD,cmdOff=off
+                               On=activity,subtype=Off,valueOn=PowerOff,valueOff=PowerOff,cmd=off
 
 
 
 instead of the format described above homebridgeMapping can also contain the same data encoded as json
 this hast to be used if any of the separators above are used in an command or value. at the moment the
-json version replaces all build in defaults.
+json version replaces all build in defaults for a device.
 
 e.g.: { "PositionState": { "reading": "motor", "values": [...] }, "On": { "reading": "state", "valueOn": "/on|dim/", "valueOff": "off" } }

@@ -324,6 +324,9 @@ FHEM_reading2homekit(mapping, orig)
             var from = match[1];
             var to = match[3] === undefined ? i : match[3];
 
+            if( Characteristic[mapping.characteristic_name] && Characteristic[mapping.characteristic_name][to] )
+              to = Characteristic[mapping.characteristic_name][to];
+
             var match = from.match('^/(.*)/$');
             if( !match && value == from ) {
               result = to;
@@ -339,9 +342,6 @@ FHEM_reading2homekit(mapping, orig)
 
           value = result;
         }
-
-        if( Characteristic[mapping.characteristic_name] && Characteristic[mapping.characteristic_name][value] )
-          value = Characteristic[mapping.characteristic_name][value];
       }
 
 
@@ -898,6 +898,7 @@ FHEMPlatform.prototype = {
                     if( !result.match(/(^| )homebridgeMapping\b/) ) {
                       var cmd = '{ addToAttrList( "homebridgeMapping:textField-long" ) }';
                       this.execute( cmd );
+                      console.log.info( 'homebridgeMapping attribute created.' );
                     }
 
                     if( !result.match(/(^| )genericDeviceType\b/) ) {
@@ -1063,14 +1064,14 @@ FHEMAccessory(log, connection, s) {
     var max = 360;
     if( match[3] !== undefined )
       max = match[3];
-    this.mappings.Hue = { reading: 'hue', cmd: 'hue', min: 0, max: max };
+    this.mappings.Hue = { reading: 'hue', cmd: 'hue', min: 0, max: max, maxValue: 360 };
   }
   if( match = s.PossibleSets.match(/(^| )sat[^\b\s]*(,(\d+)?)+\b/) ) {
     this.service_name = 'light';
     var max = 100;
     if( match[3] !== undefined )
       max = match[3];
-    this.mappings.Saturation = { reading: 'sat', cmd: 'sat', min: 0, max: max };
+    this.mappings.Saturation = { reading: 'sat', cmd: 'sat', min: 0, max: max, maxValue: 100 };
   }
 
   if( s.Readings.colormode )
@@ -1539,6 +1540,48 @@ FHEMAccessory(log, connection, s) {
       mapping.informId = device +'-'+ mapping.reading;
       mapping.characteristic_name = characteristic_name;
 
+      if( typeof mapping.values === 'object' ) {
+        mapping.value2homekit = {};
+        mapping.value2homekit_re = {};
+        for( var entry of mapping.values ) {
+          var match = entry.match('^([^:]*)(:(.*))?$');
+          if( !match )
+            continue;
+
+          var from = match[1];
+          var to = match[3] === undefined ? i : match[3];
+
+          if( Characteristic[mapping.characteristic_name] && Characteristic[mapping.characteristic_name][to] )
+            to = Characteristic[mapping.characteristic_name][to];
+
+          var match;
+          if( match = from.match('^/(.*)/$') )
+            mapping.value2homekit_re[match[1]] = to;
+          else
+            mapping.value2homekit[from] = to;
+        }
+        this.log.info( 'value2homekit: ' + mapping.value2homekit );
+        this.log.info( 'value2homekit_re: ' + mapping.value2homekit_re );
+      }
+
+      if( typeof mapping.cmds === 'object' ) {
+        mapping.homekit2cmd = {};
+        for( var entry of mapping.cmds ) {
+          var match = entry.match('^([^:]*)(:(.*))?$');
+          if( !match )
+            continue;
+
+          var from = (match[1] === undefined || match[2] === undefined ) ? i : match[1];
+          var to = match[2] !== undefined ? match[3] : match[1];
+
+          if( Characteristic[mapping.characteristic_name] && Characteristic[mapping.characteristic_name][from] )
+            from = Characteristic[mapping.characteristic_name][from];
+
+          mapping.homekit2cmd[from] = to;
+        }
+        this.log.info( 'homekit2cmd: ' + mapping.homekit2cmd );
+      }
+
       var orig;
       if( device != this.device )
         orig = this.query(mapping);
@@ -1554,20 +1597,19 @@ FHEMAccessory(log, connection, s) {
             FHEM_update(mapping.informId, orig);
 
           var value;
-          if( typeof mapping.reading2homekit === 'function' ) {
+          if( typeof mapping.reading2homekit === 'function' )
             value = mapping.reading2homekit(orig);
-
-          } else {
+          else
             value = FHEM_reading2homekit(mapping, orig);
-
-          }
 
           mapping.cached = value;
           console.log("    caching: " + mapping.characteristic_name + (mapping.subtype?':'+mapping.subtype:'') + ": " + value + " (" + typeof(value) + "; from " + orig + ")" );
         }
       }
+
     }
   }
+
 }
 
 FHEM_dim_values = [ 'dim06%', 'dim12%', 'dim18%', 'dim25%', 'dim31%', 'dim37%', 'dim43%', 'dim50%', 'dim56%', 'dim62%', 'dim68%', 'dim75%', 'dim81%', 'dim87%', 'dim93%' ];
@@ -1798,6 +1840,9 @@ FHEMAccessory.prototype = {
           }
       }
 
+      if( mapping.max !== undefined && mapping.maxValue != undefined )
+        value = Math.round(value * mapping.max / mapping.maxValue);
+
       var cmd = mapping.cmd;
 
       if( mapping.cmdOn !== undefined && value == 1 )
@@ -1818,7 +1863,7 @@ FHEMAccessory.prototype = {
               continue;
 
             var from = (match[1] === undefined || match[2] === undefined ) ? i : match[1];
-	    var to = match[2] !== undefined ? match[3] : match[1];
+            var to = match[2] !== undefined ? match[3] : match[1];
 
             if( Characteristic[mapping.characteristic_name] && Characteristic[mapping.characteristic_name][from] )
               from = Characteristic[mapping.characteristic_name][from];
