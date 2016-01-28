@@ -80,7 +80,7 @@ FHEM_update(informId, orig, no_update) {
       }
 
       mapping.cached = value;
-      console.log('    caching: ' + mapping.characteristic_name + (mapping.subtype?':'+mapping.subtype:'') +  ': ' + value + ' (' + typeof(value) + '; from ' + orig + ')' );
+      mapping.log.info('    caching: ' + mapping.characteristic_name + (mapping.subtype?':'+mapping.subtype:'') +  ': ' + value + ' (' + typeof(value) + '; from ' + orig + ')' );
 
       if( !no_update && typeof mapping.characteristic === 'object' )
         mapping.characteristic.setValue(value, undefined, 'fromFHEM');
@@ -211,6 +211,8 @@ FHEM_reading2homekit(mapping, orig)
       value = 1;
 
   } else {
+    var orig = value;
+
     var format;
     if( typeof mapping.characteristic === 'object' )
       format = mapping.characteristic.props.format;
@@ -229,12 +231,13 @@ FHEM_reading2homekit(mapping, orig)
       return value;
     }
 
-    if( value !== undefined && mapping.part !== undefined )
+    if( value !== undefined && mapping.part !== undefined ) {
       value = value.split(' ')[mapping.part];
 
-    if( value === undefined ) {
-      console.log(mapping.informId + ' value has no part ' + mapping.part);
-      return value;
+      if( value === undefined ) {
+        mapping.log.error(mapping.informId + ' value ' + orig + ' has no part ' + mapping.part);
+        return value;
+      }
     }
 
     if( typeof mapping.value2homekit_re === 'object' || typeof mapping.value2homekit === 'object' ) {
@@ -252,10 +255,11 @@ FHEM_reading2homekit(mapping, orig)
           result = mapping.value2homekit[value];
 
       if( result === undefined ) {
-        console.log(mapping.informId + ' value ' + value + ' not handled in values');
+        mapping.log.error(mapping.informId + ' value ' + value + ' not handled in values');
         return undefined;
       }
 
+      mapping.log.debug(mapping.informId + ' value ' + value + ' mapped to ' + result);
       value = result;
     }
 
@@ -301,13 +305,18 @@ FHEM_reading2homekit(mapping, orig)
     } else if( format && format.match(/int/) )
       value = parseInt( value );
 
-    if( mapping.max && mapping.maxValue )
+    if( mapping.max && mapping.maxValue ) {
       value = Math.round(value * mapping.maxValue / mapping.max );
+      mapping.log.debug(mapping.informId + ' value ' + orig + ' scaled to: ' + value);
+    }
 
-    if( mapping.minValue !== undefined && value < mapping.minValue )
+    if( mapping.minValue !== undefined && value < mapping.minValue ) {
+      mapping.log.debug(mapping.informId + ' value ' + value + ' clipped to minValue: ' + mapping.minValue);
       value = parseFloat(mapping.minValue);
-    else if( mapping.maxValue !== undefined && value > mapping.maxValue )
+    } else if( mapping.maxValue !== undefined && value > mapping.maxValue ) {
+      mapping.log.debug(mapping.informId + ' value ' + value + ' clipped to maxValue: ' + mapping.maxValue);
       value = parseFloat(mapping.maxValue);
+    }
 
     if( mapping.minStep ) {
       if( mapping.minValue )
@@ -322,14 +331,19 @@ FHEM_reading2homekit(mapping, orig)
   }
 
   if( typeof value === 'number' ) {
-    if( isNaN(value) )
+    if( isNaN(value) ) {
+      mapping.log.error(mapping.informId + '  not a number ' + orig);
       return undefined;
-    else if( mapping.invert && mapping.minValue !== undefined && mapping.maxValue !== undefined )
+    } else if( mapping.invert && mapping.minValue !== undefined && mapping.maxValue !== undefined ) {
       value = mapping.maxValue - value + mapping.minValue;
-    else if( mapping.invert && mapping.maxValue !== undefined )
+      mapping.log.debug(mapping.informId + ' value inverted to ' + value);
+    } else if( mapping.invert && mapping.maxValue !== undefined ) {
       value = mapping.maxValue - value;
-    else if( mapping.invert )
+      mapping.log.debug(mapping.informId + ' value inverted to ' + value);
+    } else if( mapping.invert ) {
       value = 100 - value;
+      mapping.log.debug(mapping.informId + ' value inverted to ' + value);
+    }
 
   }
 
@@ -1258,7 +1272,7 @@ FHEMAccessory(log, connection, s) {
     this.mappings.TargetTemperature = { reading: 'desiredTemperature', cmd: 'desiredTemperature', delay: true };
 
     if( s.Readings.mode )
-      this.mappings.TargetTemperature = { reading: 'mode', cmd: 'desiredTemperature' };
+      this.mappings.thermostat_mode = { reading: 'mode', cmd: 'desiredTemperature' };
 
     if( s.Readings.valveposition )
       this.mappings.actuation = { reading: 'valveposition' };
@@ -1468,14 +1482,17 @@ FHEMAccessory(log, connection, s) {
       mapping.characteristic = this.characteristicOfName(characteristic_name);
       mapping.informId = device +'-'+ mapping.reading;
       mapping.characteristic_name = characteristic_name;
+      mapping.log = this.log;
 
       if( typeof mapping.values === 'object' ) {
         mapping.value2homekit = {};
         mapping.value2homekit_re = [];
         for( var entry of mapping.values ) {
           var match = entry.match('^([^:]*)(:(.*))?$');
-          if( !match )
+          if( !match ) {
+            log.error( 'values: format wrong for ' + entry );
             continue;
+          }
 
           var from = match[1];
           var to = match[3] === undefined ? i : match[3];
@@ -1489,16 +1506,18 @@ FHEMAccessory(log, connection, s) {
           else
             mapping.value2homekit[from] = to;
         }
-        this.log.debug( 'value2homekit_re: ' + util.inspect(mapping.value2homekit_re) );
-        this.log.debug( 'value2homekit: ' + util.inspect(mapping.value2homekit) );
+        if(mapping.value2homekit_re.length) this.log.debug( 'value2homekit_re: ' + util.inspect(mapping.value2homekit_re) );
+        if(Object.keys(mapping.value2homekit).length) this.log.debug( 'value2homekit: ' + util.inspect(mapping.value2homekit) );
       }
 
       if( typeof mapping.cmds === 'object' ) {
         mapping.homekit2cmd = {};
         for( var entry of mapping.cmds ) {
           var match = entry.match('^([^:]*)(:(.*))?$');
-          if( !match )
+          if( !match ) {
+            log.error( 'cmds: format wrong for ' + entry );
             continue;
+          }
 
           var from = (match[1] === undefined || match[2] === undefined ) ? i : match[1];
           var to = match[2] !== undefined ? match[3] : match[1];
@@ -1508,7 +1527,7 @@ FHEMAccessory(log, connection, s) {
 
           mapping.homekit2cmd[from] = to;
         }
-        this.log.debug( 'homekit2cmd: ' + mapping.homekit2cmd );
+        if(Object.keys(mapping.homekit2cmd).length) this.log.debug( 'homekit2cmd: ' + mapping.homekit2cmd );
       }
 
       var orig;
@@ -1532,7 +1551,7 @@ FHEMAccessory(log, connection, s) {
             value = FHEM_reading2homekit(mapping, orig);
 
           mapping.cached = value;
-          console.log("    caching: " + mapping.characteristic_name + (mapping.subtype?':'+mapping.subtype:'') + ": " + value + " (" + typeof(value) + "; from " + orig + ")" );
+          mapping.log.info("    caching: " + mapping.characteristic_name + (mapping.subtype?':'+mapping.subtype:'') + ": " + value + " (" + typeof(value) + "; from " + orig + ")" );
         }
       }
 
@@ -2077,10 +2096,12 @@ FHEMAccessory.prototype = {
           }
 
           controlService = this.createDeviceService( mapping.subtype );
+          controlService.getCharacteristic(Characteristic.Name).setValue(mapping.subtype);
           services.push( controlService );
 
         } else if( mapping.subtype ) {
           controlService.subtype = mapping.subtype;
+          controlService.getCharacteristic(Characteristic.Name).setValue(mapping.subtype);
 
         }
 
