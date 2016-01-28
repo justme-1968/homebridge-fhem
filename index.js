@@ -248,8 +248,8 @@ FHEM_reading2homekit(mapping, orig)
         }
 
       if( typeof mapping.value2homekit === 'object' )
-        if( value2homekit[value] )
-          result = value2homekit[value];
+        if( mapping.value2homekit[value] )
+          result = mapping.value2homekit[value];
 
       if( result === undefined ) {
         console.log(mapping.informId + ' value ' + value + ' not handled in values');
@@ -1115,7 +1115,7 @@ FHEMAccessory(log, connection, s) {
   if( s.Readings.voc ) {
     if( !this.service_name ) this.service_name = 'AirQualitySensor';
     this.mappings.AirQuality = { reading: 'voc' };
-    this.mappings.AirQuality.reading2homekit = function(mapping, orig) { 
+    this.mappings.AirQuality.reading2homekit = function(mapping, orig) {
       value = parseInt( value );
       if( orig > 1500 )
         return Characteristic.AirQuality.POOR;
@@ -1211,17 +1211,23 @@ FHEMAccessory(log, connection, s) {
              || s.Attributes.subType == 'thermostat' )
     s.isThermostat = true;
 
-  else if( s.Internals.TYPE == 'CUL_FHTTK' )
+  else if( s.Internals.TYPE == 'CUL_FHTTK' ) {
+    this.service_name = 'ContactSensor';
     this.mappings.ContactSensorState = { reading: 'Window', values: ['/^Closed/:CONTACT_DETECTED', '/.*/:CONTACT_NOT_DETECTED' ] };
+    this.mappings.CurrentDoorState = { reading: 'Window', values: ['/^Closed/:CLOSED', '/.*/:OPEN' ] };
 
-  else if( s.Internals.TYPE == 'MAX'
-             && s.Internals.type == 'ShutterContact' )
-    this.mappings.ContactSensorState = { reading: 'state', values: ['closed:CONTACT_DETECTED', 'opened:CONTACT_NOT_DETECTED' ]  };
+  } else if( s.Internals.TYPE == 'MAX'
+             && s.Internals.type == 'ShutterContact' ) {
+    this.service_name = 'ContactSensor';
+    this.mappings.ContactSensorState = { reading: 'state', values: ['closed:CONTACT_DETECTED', '/.*/:CONTACT_NOT_DETECTED' ]  };
+    this.mappings.CurrentDoorState = { reading: 'state', values: ['closed:CLOSED', '/.*/:OPEN' ]  };
 
-  else if( s.Attributes.subType == 'threeStateSensor' )
+  } else if( s.Attributes.subType == 'threeStateSensor' ) {
+    this.service_name = 'ContactSensor';
     this.mappings.ContactSensorState = { reading: 'contact', values: ['/^closed/:CONTACT_DETECTED', '/.*/:CONTACT_NOT_DETECTED' ] };
+    this.mappings.CurrentDoorState = { reading: 'contact', values: ['/^closed/:CLOSED', '/.*/:OPEN' ] };
 
-  else if( s.Internals.TYPE == 'PRESENCE' )
+  } else if( s.Internals.TYPE == 'PRESENCE' )
     this.mappings.OccupancyDetected = { reading: 'state', values: ['present:OCCUPANCY_DETECTED', 'absent:OCCUPANCY_NOT_DETECTED' ] };
 
   else if( s.Internals.TYPE == 'ROOMMATE' )
@@ -1229,14 +1235,6 @@ FHEMAccessory(log, connection, s) {
 
   else if( s.Attributes.model == 'fs20di' )
     this.service_name = 'light';
-
-  if( this.mappings.ContactSensorState ) {
-    if( !this.service_name )
-      this.service_name = 'ContactSensor';
-
-    if( !this.mappings.CurrentDoorState ) //FIXME: should also copy values and replace ContactSensorState constants with CurrentDoorState constants
-      this.mappings.CurrentDoorState = { reading: this.mappings.ContactSensorState.reading, maxValue: 1, invert: true };
-  }
 
   if( match = s.PossibleSets.match(/(^| )desired-temp(:[^\d]*([^\$ ]*))?/) ) {
     //HM
@@ -1472,8 +1470,8 @@ FHEMAccessory(log, connection, s) {
       mapping.characteristic_name = characteristic_name;
 
       if( typeof mapping.values === 'object' ) {
-        mapping.value2homekit = [];
-        mapping.value2homekit_re = {};
+        mapping.value2homekit = {};
+        mapping.value2homekit_re = [];
         for( var entry of mapping.values ) {
           var match = entry.match('^([^:]*)(:(.*))?$');
           if( !match )
@@ -1482,17 +1480,17 @@ FHEMAccessory(log, connection, s) {
           var from = match[1];
           var to = match[3] === undefined ? i : match[3];
 
-          if( Characteristic[mapping.characteristic_name] && Characteristic[mapping.characteristic_name][to] )
+          if( Characteristic[mapping.characteristic_name] && Characteristic[mapping.characteristic_name][to] !== undefined )
             to = Characteristic[mapping.characteristic_name][to];
 
           var match;
           if( match = from.match('^/(.*)/$') )
-            value2homekit_re.push( { re: mapping.value2homekit_re[match[1]], to: to} );
+            mapping.value2homekit_re.push( { re: match[1], to: to} );
           else
             mapping.value2homekit[from] = to;
         }
-        this.log.debug( 'value2homekit_re: ' + mapping.value2homekit_re );
-        this.log.debug( 'value2homekit: ' + mapping.value2homekit );
+        this.log.debug( 'value2homekit_re: ' + util.inspect(mapping.value2homekit_re) );
+        this.log.debug( 'value2homekit: ' + util.inspect(mapping.value2homekit) );
       }
 
       if( typeof mapping.cmds === 'object' ) {
@@ -1505,7 +1503,7 @@ FHEMAccessory(log, connection, s) {
           var from = (match[1] === undefined || match[2] === undefined ) ? i : match[1];
           var to = match[2] !== undefined ? match[3] : match[1];
 
-          if( Characteristic[mapping.characteristic_name] && Characteristic[mapping.characteristic_name][from] )
+          if( Characteristic[mapping.characteristic_name] && Characteristic[mapping.characteristic_name][from] !== undefined )
             from = Characteristic[mapping.characteristic_name][from];
 
           mapping.homekit2cmd[from] = to;
