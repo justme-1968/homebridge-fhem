@@ -77,11 +77,15 @@ currently supported parameters for FHEM -> homekit direction are:
           each to value can be a literal value or a homekit defined term for this characteristic
   valueOn, valueOff: the reading values that are mapped to the true/false resp. on/off states in homekit. shotcut for values
                      if only one is given all values not matching this one are automaticaly mapped to the other
-TODO: event_map
+TODO: add default?
 
     e.g.: PositionState=motor,values=/^up/:INCREASING;/^down/:DECREASING;/.*/:STOPPED On=state,valueOn=/on|dim/,valueOff=off
 
   the order of the transformations is as follows: eventMap, part, values, valueOn/valueOff, threshold, max, maxValue/minValue/minStep, invert
+
+  instead of using the transformation chain reading2homekit can be set to the name of a js function that is imported from a file
+  named by the jsFunctions config option. relative paths are relative to the same path the config file is located in.
+  the function it will be called with mapping and reading value as parameters and has to return the value to be used with homekit.
 
 
 and for the homekit -> FHEM direction:
@@ -101,6 +105,10 @@ and for the homekit -> FHEM direction:
 
   the order of the transformations is as follows: invert, max/maxValue
   precedence for mapping of homekit value to commands is in increasing order: cmd, cmdOn/cmdOff, cmds
+
+  instead of using the transformation chain homekit2reading can be set to the name of a js function that is imported from a file
+  named by the jsFunctions config option. relative paths are relative to the same path the config file is located in.
+  the function it will be called with mapping and the homekit value as parameters and has to return the value to be used with the fhem set command.
 
 
 examples:
