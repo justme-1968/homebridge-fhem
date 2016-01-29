@@ -4,15 +4,16 @@
 // Remember to add platform to config.json. Example:
 // "platforms": [
 //     {
-//         'platform': "FHEM",
-//         'name': "FHEM",
-//         'server': "127.0.0.1",
-//         'port': 8083,
-//         'ssl': true,
-//         'auth': {'user': "fhem", 'pass': "fhempassword"},
-//         'filter': "room=xyz"
+//         "platform": "FHEM",
+//         "name": "FHEM",
+//         "server": "127.0.0.1",
+//         "port": 8083,
+//         "ssl": true,
+//         "auth": {"user": "fhem", "pass": "fhempassword"},
+//         "filter": "room=xyz"
 //     }
 // ],
+"use strict";
 
 var Service, Characteristic;
 module.exports = function(homebridge){
@@ -184,8 +185,8 @@ FHEM_reading2homekit(mapping, orig)
       else
         value = 100;
 
-    } else if( this.event_map !== undefined ) {
-      var mapped = this.event_map[value];
+    } else if( mapping.event_map !== undefined ) {
+      var mapped = mapping.event_map[value];
       if( mapped !== undefined )
         value = mapped;
 
@@ -221,7 +222,7 @@ FHEM_reading2homekit(mapping, orig)
 
       format = characteristic.props.format;
 
-      delete characteristic;
+      //delete characteristic;
     } else if( mapping.format ) { // only for testing !
       format = mapping.format;
 
@@ -229,6 +230,14 @@ FHEM_reading2homekit(mapping, orig)
 
     if( format === undefined ) {
       return value;
+    }
+
+    if( mapping.event_map !== undefined ) {
+      var mapped = mapping.event_map[value];
+      if( mapped !== undefined ) {
+        mapping.log.debug(mapping.informId + ' value ' + value + ' mapped to ' + mapped);
+        value = mapped;
+      }
     }
 
     if( value !== undefined && mapping.part !== undefined ) {
@@ -241,34 +250,41 @@ FHEM_reading2homekit(mapping, orig)
     }
 
     if( typeof mapping.value2homekit_re === 'object' || typeof mapping.value2homekit === 'object' ) {
-      var result;
+      var mapped;
       if( typeof mapping.value2homekit_re === 'object' )
         for( var entry of mapping.value2homekit_re ) {
           if( value.match( entry.re ) ) {
-            result = entry.to;
+            mapped = entry.to;
             break;
           }
         }
 
       if( typeof mapping.value2homekit === 'object' )
         if( mapping.value2homekit[value] )
-          result = mapping.value2homekit[value];
+          mapped = mapping.value2homekit[value];
 
-      if( result === undefined ) {
+      if( mapped === undefined ) {
         mapping.log.error(mapping.informId + ' value ' + value + ' not handled in values');
         return undefined;
       }
 
-      mapping.log.debug(mapping.informId + ' value ' + value + ' mapped to ' + result);
-      value = result;
+      mapping.log.debug(mapping.informId + ' value ' + value + ' mapped to ' + mapped);
+      value = mapped;
     }
+    var mapped = value;
 
 
-    if( format == 'float' )
+    if( format == 'string' ) {
+
+    } else if( format == 'float' ) {
       value = parseFloat( value );
 
-    else if( format == 'bool' ) {
-      var orig = value;
+      if( typeof value !== 'number' ) {
+        mapping.log.error(mapping.informId + '  not a number: ' + mapped);
+        return undefined;
+      }
+
+    } else if( format == 'bool' ) {
       if( mapping.valueOn !== undefined ) {
         var match = mapping.valueOn.match('^/(.*)/$');
         if( !match && value == mapping.valueOn )
@@ -287,8 +303,14 @@ FHEM_reading2homekit(mapping, orig)
         else
           value = 1;
       }
-      if( mapping.valueOn === undefined  &&  mapping.valueOff === undefined )
-        value = parseInt( value );
+      if( mapping.valueOn === undefined  &&  mapping.valueOff === undefined ) {
+        if( value == 'on' )
+          value = 1;
+        else if( value == 'off' )
+          value = 0;
+        else
+          value = parseInt( value );
+      }
 
       if( mapping.threshold ) {
         if( value > mapping.threshold )
@@ -302,8 +324,14 @@ FHEM_reading2homekit(mapping, orig)
         mapping.maxValue = 1;
       }
 
-    } else if( format && format.match(/int/) )
+    } else if( format && format.match(/int/) ) {
       value = parseInt( value );
+
+      if( typeof value !== 'number' ) {
+        mapping.log.error(mapping.informId + '  not a number ' + mapped);
+        return undefined;
+      }
+    }
 
     if( mapping.max && mapping.maxValue ) {
       value = Math.round(value * mapping.maxValue / mapping.max );
@@ -1160,7 +1188,7 @@ FHEMAccessory(log, connection, s) {
                                                 '/^open/:OPEN', '/^closed/:CLOSED', '/.*/:STOPPED' ] };
 
   if( s.Readings.battery ) {
-    var value = parseInt( s.Readings.battery.Value );
+    value = parseInt( s.Readings.battery.Value );
 
     if( isNaN(value) )
       this.mappings.StatusLowBattery = { reading: 'battery' };
@@ -1200,9 +1228,9 @@ FHEMAccessory(log, connection, s) {
         //the following could be used instead of invert
         //var reading2homekit = function(mapping, orig) { return 100 - parseInt( orig ) };
         //var homekit2reading = function(mapping, orig) { return 100 - orig };
-        //this.mappings.CurrentPosition.reading2homekit = reading2homekit;
-        //this.mappings.TargetPosition.reading2homekit = reading2homekit;
-        //this.mappings.TargetPosition.homekit2reading = homekit2reading;
+        //this.mappings.CurrentPosition.reading2homekit = reading2homekit.bind(undefined, this.mappings.CurrentPosition);
+        //this.mappings.TargetPosition.reading2homekit = reading2homekit.bind(undefined, this.mappings.TargetPosition);
+        //this.mappings.TargetPosition.homekit2reading = homekit2reading.bind(undefined, this.mappings.TargetPosition);
       }
     } else {
       this.mappings.CurrentPosition = { reading: 'pct' };
@@ -1336,19 +1364,6 @@ FHEMAccessory(log, connection, s) {
   }
   if( this.service_name === undefined )
     this.service_name = 'switch';
-
-  var event_map = s.Attributes.eventMap;
-  if( event_map ) {
-    for( var part of event_map.split( ' ' ) ) {
-      var map = part.split( ':' );
-      if( map[1] == 'on'
-          || map[1] == 'off' ) {
-        if( !this.event_map )
-          this.event_map = {}
-        this.event_map[map[0]] = map[1];
-      }
-    }
-  }
 
   this.fromHomebridgeMapping( s.Attributes.homebridgeMapping );
   log.debug( 'mappings for ' + s.Internals.NAME + ': '+ util.inspect(this.mappings) );
@@ -1484,6 +1499,20 @@ FHEMAccessory(log, connection, s) {
       mapping.characteristic_name = characteristic_name;
       mapping.log = this.log;
 
+      //FIXME: better integrate eventMap
+      if( s.Attributes.eventMap ) {
+        for( var part of s.Attributes.eventMap.split( ' ' ) ) {
+          var map = part.split( ':' );
+          if( map[1] == 'on'
+              || map[1] == 'off' ) {
+            if( !mapping.event_map )
+              mapping.event_map = {}
+            mapping.event_map[map[0]] = map[1];
+          }
+        }
+        if(Object.keys(mapping.event_map).length) this.log.debug( 'event_map: ' + mapping.event_map );
+      }
+
       if( typeof mapping.values === 'object' ) {
         mapping.value2homekit = {};
         mapping.value2homekit_re = [];
@@ -1530,6 +1559,26 @@ FHEMAccessory(log, connection, s) {
         if(Object.keys(mapping.homekit2cmd).length) this.log.debug( 'homekit2cmd: ' + mapping.homekit2cmd );
       }
 
+      if( mapping.reading2homekit !== undefined && typeof mapping.reading2homekit !== 'function' ) {
+        if( mapping.reading2homekit.match( /^{.*}$/ ) )
+          mapping.reading2homekit = new Function( 'mapping', 'orig', mapping.reading2homekit ).bind(undefined,mapping);
+
+        if( typeof mapping.reading2homekit !== 'function' ) {
+          log.error( '  reading2homekit is not a function' );
+          delete mapping.reading2homekit;
+        }
+      }
+
+      if( mapping.homekit2reading !== undefined && typeof mapping.homekit2reading !== 'function' ) {
+        if( mapping.homekit2reading.match( /^{.*}$/ ) )
+          mapping.homekit2reading = new Function( 'mapping', 'orig', mapping.homekit2reading ).bind(undefined,mapping);
+
+        if( typeof mapping.homekit2reading !== 'function' ) {
+          log.error( '  homekit2reading is not a function' );
+          delete mapping.reading2homekit;
+        }
+      }
+
       var orig;
       if( device != this.device )
         orig = this.query(mapping);
@@ -1560,7 +1609,7 @@ FHEMAccessory(log, connection, s) {
 
 }
 
-FHEM_dim_values = [ 'dim06%', 'dim12%', 'dim18%', 'dim25%', 'dim31%', 'dim37%', 'dim43%', 'dim50%', 'dim56%', 'dim62%', 'dim68%', 'dim75%', 'dim81%', 'dim87%', 'dim93%' ];
+var FHEM_dim_values = [ 'dim06%', 'dim12%', 'dim18%', 'dim25%', 'dim31%', 'dim37%', 'dim43%', 'dim50%', 'dim56%', 'dim62%', 'dim68%', 'dim75%', 'dim81%', 'dim87%', 'dim93%' ];
 
 FHEMAccessory.prototype = {
   subscribe: function(mapping, characteristic) {
@@ -2388,7 +2437,7 @@ FHEMAccessory.prototype = {
 //http server for debugging
 var http = require('http');
 
-const FHEMdebug_PORT=8082;
+var FHEMdebug_PORT=8082;
 
 function FHEMdebug_handleRequest(request, response){
   //console.log( request );
@@ -2440,13 +2489,3 @@ FHEMdebug_server.on('error', function (e) {
 FHEMdebug_server.listen(FHEMdebug_PORT, function(){
     console.log('Server listening on: http://<ip>:%s', FHEMdebug_PORT);
 });
-
-//var mapping = { format: 'int', reading: 'statex', values: ['on', 'off', '/dim06/']};
-//var mapping = { format: 'bool', reading: 'statex', valueOn: 1, valueOff: 0, values: ['on', 'off'] };
-//var mapping = { format: 'bool', reading: 'state' };
-//console.log( FHEM_reading2homekit( mapping, '0' ) );
-//console.log( FHEM_reading2homekit( mapping, '1' ) );
-//console.log( FHEM_reading2homekit( mapping, 'on' ) );
-//console.log( FHEM_reading2homekit( mapping, 'off' ) );
-//console.log( FHEM_reading2homekit( mapping, 'dim06%' ) );
-//process.exit(0);

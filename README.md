@@ -30,8 +30,9 @@ this is probably mostly used for differentiating betewwn switches and lights.
 
 
 for devices that don't use the autodetected readings and commands or for devices that mix readings from different
-devices use the homebridgeMapping attribute. which works as follows:
+devices use the homebridgeMapping attribute. it is parsed from left to right and works as follows:
 - the genericDeviceType attribute is used to determine the service type that should be used for this device
+  in addition to the symbolic names above all homekit Service names are recognized
 - the homebridgeMapping attribute containts a space separated list of characteristic descriptions
 - each description consists of the characteristic name followed by a = followed by a komma separated list of parameters
 - each parameter can be of the form <command>:<device>:<reading> where parts can be omitted from left to right
@@ -43,6 +44,7 @@ attr <thermostat> genericDeviceType thermostat
 attr <thermostat> homebridgeMapping TargetTemperature=target::target,minValue=18,maxValue=25,minStep=0.5 CurrentTemperature=myTemp:temperature
 
 this would define a thermostat device with a command target to set the desired temperature, a reading target that indicates the desired target temperature, the desired min, max and step values and a current temeprature comming from the temperature reading of the device myTemp.
+
 
 currently supported values for characteristic names are:
   On
@@ -58,13 +60,14 @@ currently supported values for characteristic names are:
   OccupancyDetected
   StatusLowBattery
   FirmwareRevision
+  and all other homebridge Characteristic names
 
 currently supported parameters for FHEM -> homekit direction are:
   minValue, maxValue, minStep: for all int and float characteristics -> the allowed range for this value in homekit
-  (min,) max: Hue and Saturation characteristics -> the range the reading has in fhem, only if different from minValue and maxValue
-  delay: true/false/<number> -> the value ist send afer one second/<number>ms of inactivity
+  max: Hue and Saturation characteristics -> the range the reading has in fhem, only if different from minValue and maxValue
+  delay: true/<number> -> the value ist send afer one second/<number>ms of inactivity
   nocache: don't cache values for this reading
-  subtype: unique value necessary if multiple characteristics of the same type cwshould be used in an accessory.
+  subtype: unique value necessary if multiple characteristics of the same type are in an accessory.
   threshold: reading is mapped to true if the value is greater than the threshold value and to false otherwise
   invert: invert the reading, taking minValue, maxValue into account
   part: the reading value will be splitted at spaces and the n-th item is used as the value. counting starts at 0
@@ -72,11 +75,13 @@ currently supported parameters for FHEM -> homekit direction are:
           each list entry consists of : separated pair of from and to values
           each from value can be a literal value or a regex of the form /regex/
           each to value can be a literal value or a homekit defined term for this characteristic
-  valueOn, valueOf: the reading values that are mapped to the true/false resp. on/off states in homekit. shotcut for values
+  valueOn, valueOff: the reading values that are mapped to the true/false resp. on/off states in homekit. shotcut for values
+                     if only one is given all values not matching this one are automaticaly mapped to the other
+TODO: event_map
 
     e.g.: PositionState=motor,values=/^up/:INCREASING;/^down/:DECREASING;/.*/:STOPPED On=state,valueOn=/on|dim/,valueOff=off
 
-  the order of the transformations is as follows: part, values, valueOn/valueOff, threshold, maxValue/minValue/minStep, invert
+  the order of the transformations is as follows: eventMap, part, values, valueOn/valueOff, threshold, max, maxValue/minValue/minStep, invert
 
 
 and for the homekit -> FHEM direction:
@@ -89,6 +94,8 @@ and for the homekit -> FHEM direction:
         each list entry consists of : separated pair of from and to values
         each from value can be a literal value or a homekit defined term for this characteristic
         each to value has to be a literal value
+
+  spaces in commands have to be replaced by +
 
   e.g.: TargetHeatingCoolingState=...,cmds=OFF:desired-temp+off;HEAT:controllMode+day;COOL:controllMode+night;AUTO:controllMode+auto
 
