@@ -65,7 +65,6 @@ currently supported values for characteristic names are:
 currently supported parameters for FHEM -> homekit direction are:
   minValue, maxValue, minStep: for all int and float characteristics -> the allowed range for this value in homekit
   max: Hue and Saturation characteristics -> the range the reading has in fhem, only if different from minValue and maxValue
-  delay: true/<number> -> the value ist send afer one second/<number>ms of inactivity
   nocache: don't cache values for this reading
   subtype: unique value necessary if multiple characteristics of the same type are in an accessory.
   threshold: reading is mapped to true if the value is greater than the threshold value and to false otherwise
@@ -89,6 +88,7 @@ TODO: add default?
 
 
 and for the homekit -> FHEM direction:
+  delay: true/<number> -> the value ist send afer one second/<number>ms of inactivity
   maxValue: for all int and float characteristics -> the allowed range for this value in homekit
   max: the max value the reading has in fhem, only if different from maxValue
   cmd: the set command to use: set <device> <cmd> <value>

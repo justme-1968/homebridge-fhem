@@ -1,4 +1,4 @@
-// FHEM Platform Shim for HomeBridge
+// FHEM Platform Plugin for HomeBridge
 // current version on https://github.com/justme-1968/homebridge
 //
 // Remember to add platform to config.json. Example:
@@ -189,7 +189,7 @@ FHEM_reading2homekit(mapping, orig)
     value = parseInt( value );
     //value = parseInt( value ) == true;
 
-  } else if( reading == 'state' ) {
+  } else if( reading == 'state' && (typeof mapping.values !== 'object' && mapping.valueOn === undefined && mapping.valueOff === undefined) ) {
     if( value.match(/^set-/ ) )
       return undefined;
 
@@ -251,22 +251,24 @@ FHEM_reading2homekit(mapping, orig)
     if( mapping.event_map !== undefined ) {
       var mapped = mapping.event_map[value];
       if( mapped !== undefined ) {
-        mapping.log.debug(mapping.informId + ' value ' + value + ' mapped to ' + mapped);
+        mapping.log.debug(mapping.informId + ' eventMap: value ' + value + ' mapped to: ' + mapped);
         value = mapped;
       }
     }
 
     if( value !== undefined && mapping.part !== undefined ) {
-      value = value.split(' ')[mapping.part];
+      var mapped = value.split(' ')[mapping.part];
 
-      if( value === undefined ) {
-        mapping.log.error(mapping.informId + ' value ' + orig + ' has no part ' + mapping.part);
+      if( mapped === undefined ) {
+        mapping.log.error(mapping.informId + ' value ' + value + ' has no part ' + mapping.part);
         return value;
       }
+      mapping.log.debug(mapping.informId + ' parts: using part ' + mapping.part + ' of: ' + value + ' results in: ' + mapped);
+      value = mapped;
     }
 
     if( typeof mapping.value2homekit_re === 'object' || typeof mapping.value2homekit === 'object' ) {
-      var mapped;
+      var mapped = undefined;
       if( typeof mapping.value2homekit_re === 'object' )
         for( var entry of mapping.value2homekit_re ) {
           if( value.match( entry.re ) ) {
@@ -284,55 +286,62 @@ FHEM_reading2homekit(mapping, orig)
         return undefined;
       }
 
-      mapping.log.debug(mapping.informId + ' value ' + value + ' mapped to ' + mapped);
+      mapping.log.debug(mapping.informId + ' values: value ' + value + ' mapped to ' + mapped);
       value = mapped;
     }
-    var mapped = value;
-
 
     if( format == 'string' ) {
 
     } else if( format == 'float' ) {
-      value = parseFloat( value );
+      var mapped = parseFloat( value );
 
-      if( typeof value !== 'number' ) {
-        mapping.log.error(mapping.informId + ' ot a number: ' + mapped);
+      if( typeof mapped !== 'number' ) {
+        mapping.log.error(mapping.informId + ' is not a number: ' + value);
         return undefined;
       }
+      value = mapped;
 
     } else if( format == 'bool' ) {
+      var mapped = undefined;;
       if( mapping.valueOn !== undefined ) {
         var match = mapping.valueOn.match('^/(.*)/$');
         if( !match && value == mapping.valueOn )
-          value = 1;
+          mapped = 1;
         else if( match && value.toString().match( match[1] ) )
-          value = 1;
+          mapped = 1;
         else
-          value = 0;
+          mapped = 0;
       }
       if( mapping.valueOff !== undefined ) {
         var match = mapping.valueOff.match('^/(.*)/$');
         if( !match && value == mapping.valueOff )
-          value = 0;
+          mapped = 0;
         else if( match && value.toString().match( match[1] ) )
-          value = 0;
+          mapped = 0;
         else
-          value = 1;
+          mapped = 1;
       }
       if( mapping.valueOn === undefined  &&  mapping.valueOff === undefined ) {
         if( value == 'on' )
-          value = 1;
+          mapped = 1;
         else if( value == 'off' )
-          value = 0;
+          mapped = 0;
         else
-          value = parseInt( value );
+          mapped = parseInt( value );
+      }
+      if( mapped !== undefined ) {
+        mapping.log.debug(mapping.informId + ' valueOn/valueOff: value ' + value + ' mapped to ' + mapped);
+        value = mapped;
       }
 
       if( mapping.threshold ) {
+        var mapped;
         if( value > mapping.threshold )
-          value = 1;
+          mapped = 1;
         else
-          value = 0;
+          mapped = 0;
+        mapping.log.debug(mapping.informId + ' threshold: value ' + value + ' mapped to ' + mapped);
+        value = mapped;
       }
 
       if( mapping.invert ) {
@@ -341,12 +350,13 @@ FHEM_reading2homekit(mapping, orig)
       }
 
     } else if( format && format.match(/int/) ) {
-      value = parseInt( value );
+      var mapped = parseInt( value );
 
-      if( typeof value !== 'number' ) {
-        mapping.log.error(mapping.informId + ' not a number: ' + mapped);
+      if( typeof mapped !== 'number' ) {
+        mapping.log.error(mapping.informId + ' not a number: ' + value);
         return undefined;
       }
+      value = mapped;
     }
 
     if( mapping.max && mapping.maxValue ) {
@@ -375,20 +385,22 @@ FHEM_reading2homekit(mapping, orig)
   }
 
   if( typeof value === 'number' ) {
+    var mapped = value;
     if( isNaN(value) ) {
       mapping.log.error(mapping.informId + ' not a number: ' + orig);
       return undefined;
     } else if( mapping.invert && mapping.minValue !== undefined && mapping.maxValue !== undefined ) {
       value = mapping.maxValue - value + mapping.minValue;
-      mapping.log.debug(mapping.informId + ' value inverted to ' + value);
+      mapping.log.debug(mapping.informId + ' value: ' + value + ' inverted to ' + mapped);
     } else if( mapping.invert && mapping.maxValue !== undefined ) {
       value = mapping.maxValue - value;
-      mapping.log.debug(mapping.informId + ' value inverted to ' + value);
+      mapping.log.debug(mapping.informId + ' value: ' + value + ' inverted to ' + mapped);
     } else if( mapping.invert ) {
       value = 100 - value;
-      mapping.log.debug(mapping.informId + ' value inverted to ' + value);
+      mapping.log.debug(mapping.informId + ' value: ' + value + ' inverted to ' + mapped);
     }
 
+    value = mapped;
   }
 
   return(value);
@@ -1379,12 +1391,18 @@ FHEMAccessory(accessory, s) {
     }
 
   } else if( s.PossibleSets.match(/(^| )on\b/)
-           && s.PossibleSets.match(/(^| )off\b/) ) {
+             && s.PossibleSets.match(/(^| )off\b/) ) {
     this.mappings.On = { reading: 'state', cmdOn: 'on', cmdOff: 'off' };
     if( !s.Readings.state )
       delete this.mappings.On.reading;
     else
       this.service_name = 'switch';
+  } else if( s.Attributes.setList ) {
+    var parts = s.Attributes.setList.split( ' ' );
+    if( parts.length == 2 ) {
+      this.service_name = 'switch';
+      this.mappings.On = { reading: 'state', valueOn: parts[0], cmdOn: parts[0], cmdOff: parts[1] };
+    }
   }
 
   if( this.service_name === undefined )
@@ -1426,6 +1444,20 @@ FHEMAccessory(accessory, s) {
     return {};
   }
 
+  if( 0 )
+  for( var characteristic_name in this.mappings ) {
+    this.log( s.Internals.NAME + ' has' );
+    var mappings = this.mappings[characteristic_name];
+    if( !Array.isArray(mappings) )
+       mappings = [mappings];
+
+    for( var mapping of mappings ) {
+      if( characteristic_name == 'On' )
+        this.log( '  ' + characteristic_name + ' [' + (mapping.device ? mapping.device +'.':'') + mapping.reading + ';' + mapping.cmdOn +',' + mapping.cmdOff + ']' );
+      else
+        this.log( '  ' + characteristic_name + ' [' + (mapping.device ? mapping.device +'.':'') + mapping.reading + ']' );
+    }
+  }
 
   if( this.mappings.On )
     this.log( s.Internals.NAME + ' has On [' +  this.mappings.On.reading + ';' + this.mappings.On.cmdOn +',' + this.mappings.On.cmdOff + ']' );
@@ -1525,6 +1557,9 @@ FHEMAccessory(accessory, s) {
       else
         device = mapping.device;
 
+      if( mapping.reading === undefined )
+        mapping.reading = 'state';
+
       mapping.characteristic = this.characteristicOfName(characteristic_name);
       mapping.informId = device +'-'+ mapping.reading;
       mapping.characteristic_name = characteristic_name;
@@ -1541,7 +1576,7 @@ FHEMAccessory(accessory, s) {
             mapping.event_map[map[0]] = map[1];
           }
         }
-        if(Object.keys(mapping.event_map).length) this.log.debug( 'event_map: ' + mapping.event_map );
+        if(mapping.event_map && Object.keys(mapping.event_map).length) this.log.debug( 'event_map: ' + mapping.event_map );
       }
 
       if( typeof mapping.values === 'object' ) {
@@ -1566,8 +1601,10 @@ FHEMAccessory(accessory, s) {
           else
             mapping.value2homekit[from] = to;
         }
-        if(mapping.value2homekit_re.length) this.log.debug( 'value2homekit_re: ' + util.inspect(mapping.value2homekit_re) );
-        if(Object.keys(mapping.value2homekit).length) this.log.debug( 'value2homekit: ' + util.inspect(mapping.value2homekit) );
+        if(mapping.value2homekit_re
+           && mapping.value2homekit_re.length) this.log.debug( 'value2homekit_re: ' + util.inspect(mapping.value2homekit_re) );
+        if(mapping.value2homekit
+           && Object.keys(mapping.value2homekit).length) this.log.debug( 'value2homekit: ' + util.inspect(mapping.value2homekit) );
       }
 
       if( typeof mapping.cmds === 'object' ) {
@@ -1587,7 +1624,8 @@ FHEMAccessory(accessory, s) {
 
           mapping.homekit2cmd[from] = to;
         }
-        if(Object.keys(mapping.homekit2cmd).length) this.log.debug( 'homekit2cmd: ' + mapping.homekit2cmd );
+        if(mapping.homekit2cmd
+           && Object.keys(mapping.homekit2cmd).length) this.log.debug( 'homekit2cmd: ' + mapping.homekit2cmd );
       }
 
       if( mapping.reading2homekit !== undefined && typeof mapping.reading2homekit !== 'function' ) {
@@ -1879,8 +1917,8 @@ FHEMAccessory.prototype = {
       } else
         this.log.error(this.name + " Unhandled command! cmd=" + c + ", value=" + value);
 
-    } else if( mapping.cmd ) {
-      this.log.info(this.name + ': sending ' + mapping.characteristic_name + ' with value ' + value + ' to set ' + mapping.cmd );
+    } else {
+      this.log.info(this.name + ': executing set cmd for ' + mapping.characteristic_name + ' with value ' + value );
 
       if( typeof mapping.homekit2reading === 'function' ) {
           try {
@@ -1896,6 +1934,7 @@ FHEMAccessory.prototype = {
         }
 
         this.log.info( '  value converted to ' + value );
+
       } else {
         if( typeof value === 'number' ) {
           if( mapping.invert && mapping.minValue !== undefined && mapping.maxValue !== undefined )
@@ -1910,7 +1949,7 @@ FHEMAccessory.prototype = {
       if( mapping.max !== undefined && mapping.maxValue != undefined )
         value = Math.round(value * mapping.max / mapping.maxValue);
 
-      var cmd = mapping.cmd;
+      var cmd = mapping.cmd + ' ' + value;
 
       if( mapping.cmdOn !== undefined && value == 1 )
         cmd = mapping.cmdOn
@@ -1918,25 +1957,24 @@ FHEMAccessory.prototype = {
       else if( mapping.cmdOff !== undefined && value == 0 )
         cmd = mapping.cmdOff
 
-      else if( typeof mapping.homekit2cmd === 'object' ) {
+      else if( typeof mapping.homekit2cmd === 'object' )
         cmd = homekit2cmd[value];
-      }
 
       if( cmd === undefined ) {
         this.log.error(this.name + ' no cmd for ' + c + ', value ' + value);
         return;
       }
 
-      command = 'set ' + this.device + ' ' + cmd + ' ' + value;
+      command = 'set ' + this.device + ' ' + cmd;
 
     }
 
     if( command === undefined) {
-      this.error(this.name + ' Unhandled command! cmd=' + c + ', value ' + value);
+      this.log.error(this.name + ' Unhandled command! cmd=' + c + ', value ' + value);
       return;
     }
 
-    this.execute(cmd);
+    this.execute(command);
   },
 
   execute: function(cmd,callback) {FHEM_execute(this.log, this.connection, cmd, callback)},
@@ -2262,7 +2300,8 @@ FHEMAccessory.prototype = {
                          else if( mapping.cmd )
                            this.command(mapping, value);
                          else
-                           this.command( 'set', value == 0 ? (mapping.cmdOff?mapping.cmdOff:mapping.cmd) : (mapping.cmdOn?mapping.cmdOn:mapping.cmd) );
+                           this.command(mapping, value);
+                           //this.command( 'set', value == 0 ? (mapping.cmdOff?mapping.cmdOff:mapping.cmd) : (mapping.cmdOn?mapping.cmdOn:mapping.cmd) );
                        }
                        callback();
                      }.bind(this,mapping) )
@@ -2530,7 +2569,6 @@ console.log( FHEM_subscriptions[informId] );
         var characteristic = subscription.characteristic;
         if( !characteristic ) continue;
 
-console.log( characteristic );
         var mapping = characteristic.FHEM_mapping;
         if( !mapping || mapping.cached === undefined ) continue;
 
