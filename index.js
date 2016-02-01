@@ -2305,9 +2305,9 @@ FHEMAccessory.prototype = {
                        }
                        callback();
                      }.bind(this,mapping) )
-          .on('get', function(callback) {
+          .on('get', function(mapping, callback) {
                        this.query(mapping, callback);
-                     }.bind(this) );
+                     }.bind(this,mapping) );
       }
     }
 
@@ -2564,7 +2564,6 @@ function FHEMdebug_handleRequest(request, response){
       response.write( informId + ': '+ FHEM_cached[informId] +'<br>' );
 
       var derived;
-console.log( FHEM_subscriptions[informId] );
       for( var subscription of FHEM_subscriptions[informId] ) {
         var characteristic = subscription.characteristic;
         if( !characteristic ) continue;
