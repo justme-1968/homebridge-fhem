@@ -202,18 +202,6 @@ FHEM_reading2homekit(mapping, orig)
 
     if( value == 'off' )
       value = 0;
-    else if( value == 'opened' )
-      value = Characteristic.ContactSensorState.CONTACT_NOT_DETECTED;
-    else if( value == 'closed' )
-      value = Characteristic.ContactSensorState.CONTACT_DETECTED;
-    else if( value == 'present' )
-      value = Characteristic.OccupancyDetected.OCCUPANCY_DETECTED;
-    else if( value == 'absent' )
-      value = Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED;
-    else if( value == 'locked' )
-      value = Characteristic.LockCurrentState.SECURED;
-    else if( value == 'unlocked' )
-      value = Characteristic.LockCurrentState.UNSECURED;
     else if( value == '000000' )
       value = 0;
     else if( value.match( /^[A-D]0$/ ) ) //FIXME: not necessary any more. handled by event_map now.
@@ -276,7 +264,7 @@ FHEM_reading2homekit(mapping, orig)
         }
 
       if( typeof mapping.value2homekit === 'object' )
-        if( mapping.value2homekit[value] )
+        if( mapping.value2homekit[value] !== undefined )
           mapped = mapping.value2homekit[value];
 
       if( mapped === undefined ) {
@@ -1305,10 +1293,17 @@ FHEMAccessory(accessory, s) {
     this.mappings.reachable = { reading: 'reachable' };
   }
 
-  else if( genericType == 'garage' )
-    this.mappings.garage = { reading: 'state', cmdOpen: 'off', cmdClose: 'on' };
+  else if( genericType == 'garage' ) {
+    this.service_name = 'garage';
+    if( s.PossibleAttrs.match(/[\^ ]setList\b/) && !s.Attributes.setList  ) s.Attributes.setList = 'on off';
+    var parts = s.Attributes.setList.split( ' ' );
+    if( parts.length == 2 ) {
+      this.mappings.CurrentDoorState = { reading: 'state', values: [parts[0]+':OPEN', parts[1]+':CLOSED'] };
+      this.mappings.TargetDoorState = { reading: 'state', values: [parts[0]+':CLOSED', parts[1]+':OPEN'],
+                                                          cmds: ['OPEN:'+parts[0], 'CLOSED:'+parts[1]] };
+    }
 
-  else if( genericType == 'blind'
+  } else if( genericType == 'blind'
            || s.Attributes.subType == 'blindActuator' ) {
     this.service_name = 'blind';
     delete this.mappings.Brightness;
@@ -1452,9 +1447,9 @@ FHEMAccessory(accessory, s) {
     this.mappings.On = { reading: 'state', valueOff: 'off', cmdOn: 'on', cmdOff: 'off' };
     if( !s.Readings.state )
       delete this.mappings.On.reading;
-    else
+    else if( !this.service_name )
       this.service_name = 'switch';
-  } else if( s.Attributes.setList ) {
+  } else if( !this.service_name && s.Attributes.setList ) {
     var parts = s.Attributes.setList.split( ' ' );
     if( parts.length == 2 ) {
       this.service_name = 'switch';
@@ -1480,11 +1475,7 @@ FHEMAccessory(accessory, s) {
       this.log( s.Internals.NAME + ' has RGB [' + this.mappings.rgb.reading +']');
     if( this.mappings.Brightness )
       this.log( s.Internals.NAME + ' is dimable ['+ this.mappings.Brightness.reading +';' + this.mappings.Brightness.cmd +']' );
-  } else if( this.mappings.door )
-    this.log( s.Internals.NAME + ' is door' );
-  else if( this.mappings.garage )
-    this.log( s.Internals.NAME + ' is garage' );
-  else if( this.mappings.window )
+  } else if( this.mappings.window )
     this.log( s.Internals.NAME + ' is window' );
   else if( this.mappings.CurrentPosition )
     this.log( s.Internals.NAME + ' is blind ['+ this.mappings.CurrentPosition.reading +']' );
@@ -1534,6 +1525,8 @@ FHEMAccessory(accessory, s) {
     this.log( s.Internals.NAME + ' has AirQuality ['+ this.mappings.AirQuality.reading +']' );
   if( this.mappings.PositionState )
     this.log( s.Internals.NAME + ' has PositionState ['+ this.mappings.PositionState.reading +']' );
+  if( this.mappings.targetDoorState )
+    this.log( s.Internals.NAME + ' has TargetDoorState');
   if( this.mappings.CurrentDoorState )
     this.log( s.Internals.NAME + ' has CurrentDoorState ['+ this.mappings.CurrentDoorState.reading +']');
   if( this.mappings.BatteryLevel )
@@ -1585,7 +1578,8 @@ FHEMAccessory(accessory, s) {
 
 //log( util.inspect(s.Readings) );
 
-  if( this.mappings.CurrentPosition || this.mappings.door || this.mappings.garage || this.mappings.window || this.mappings.TargetTemperature )
+  if( this.mappings.CurrentPosition || this.mappings.TargetTemperature
+      || this.service_name === 'lock' || this.service_name === 'garage' || this.mappings.window )
     delete this.mappings.On;
 
   if( s.isThermostat && (!this.mappings.TargetTemperature
@@ -2158,10 +2152,7 @@ FHEMAccessory.prototype = {
     if( typeof service === 'object' )
       return service;
 
-    if( this.mappings.garage ) {
-      this.log("  garage door opener service for " + this.name)
-      return new Service.GarageDoorOpener(name);
-    } else if( this.mappings.window ) {
+    if( this.mappings.window ) {
       this.log("  window service for " + this.name)
       return new Service.Window(name);
     }
@@ -2387,46 +2378,6 @@ FHEMAccessory.prototype = {
                    }.bind(this) )
         .on('get', function(callback) {
                      this.query(this.mappings.window, callback);
-                   }.bind(this) );
-    }
-
-    if( this.mappings.garage ) {
-      this.log("    current door state characteristic for " + this.name);
-
-      var characteristic = controlService.getCharacteristic(Characteristic.CurrentDoorState);
-
-      characteristic.value = Characteristic.CurrentDoorState.STOPPED;
-
-      if (this.mappings.CurrentDoorState) {
-        this.subscribe(this.mappings.CurrentDoorState.informId, characteristic);
-        characteristic.value = this.mappings.CurrentDoorState?FHEM_cached[this.mappings.CurrentDoorState.informId]:Characteristic.CurrentDoorState.STOPPED;
-        characteristic
-          .on('get', function(callback) {
-                       this.query(this.mappings.CurrentDoorState, callback);
-                     }.bind(this) );
-
-      } else {
-        characteristic
-          .on('get', function(callback) {
-                       callback(undefined, Characteristic.CurrentDoorState.STOPPED);
-                     }.bind(this) );
-      }
-
-
-      this.log("    target door state characteristic for " + this.name);
-
-      var characteristic = controlService.getCharacteristic(Characteristic.TargetDoorState);
-
-      characteristic.value = 1;
-
-      characteristic
-        .on('set', function(value, callback, context) {
-                     if( context !== 'fromFHEM' )
-                       this.command( 'set', value == 0 ? this.mappings.garage.cmdOpen : this.mappings.garage.cmdClose );
-                     callback();
-                   }.bind(this) )
-        .on('get', function(callback) {
-                     this.query(this.mappings.garage, callback);
                    }.bind(this) );
     }
 

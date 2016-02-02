@@ -115,6 +115,8 @@ and for the homekit -> FHEM direction:
   named by the jsFunctions config option. relative paths are relative to the same path the config file is located in.
   the function it will be called with mapping and the homekit value as parameters and has to return the value to be used with the fhem set command.
 
+a dummy with a setList of exactly two entries will be mapped to a On characteristic where the first entry will be mapped to on and the second to off.
+
 
 examples:
 1 device -> 1 service (thermometer)
