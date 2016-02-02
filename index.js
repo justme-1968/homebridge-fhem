@@ -97,7 +97,7 @@ FHEM_update(informId, orig, no_update) {
         return;
 
       mapping.cached = value;
-      mapping.log.info('    caching: ' + mapping.characteristic_name + (mapping.subtype?':'+mapping.subtype:'') +  ': ' + value + ' (' + typeof(value) + '; from ' + orig + ')' );
+      mapping.log.info('    caching: ' + mapping.characteristic_type + (mapping.subtype?':'+mapping.subtype:'') +  ': ' + value + ' (' + typeof(value) + '; from ' + orig + ')' );
 
       if( !no_update && typeof mapping.characteristic === 'object' )
         mapping.characteristic.setValue(value, undefined, 'fromFHEM');
@@ -160,7 +160,7 @@ FHEM_reading2homekit(mapping, orig)
     value = parseInt( value );
 
   } else if( reading == 'battery' ) {
-    if(mapping.characteristic_name == 'BatteryLevel' ) {
+    if(mapping.characteristic_type == 'BatteryLevel' ) {
       value = parseInt(value);
 
     } else if( value == 'ok' )
@@ -1120,15 +1120,15 @@ FHEMAccessory(accessory, s) {
         if( v === undefined ) v = 1.0;
         //console.log( ' old : [' + h + ',' + s + ',' + v + ']' );
 
-        if( mapping.characteristic_name == 'Hue' ) {
+        if( mapping.characteristic_type == 'Hue' ) {
           h = orig / mapping.max;
           FHEM_cached[mapping.device + '-h'] = h;
 
-        } else if( mapping.characteristic_name == 'Saturation' ) {
+        } else if( mapping.characteristic_type == 'Saturation' ) {
           s = orig / mapping.max;
           FHEM_cached[mapping.device + '-s'] = s;
 
-        } else if( mapping.characteristic_name == 'Brightness' ) {
+        } else if( mapping.characteristic_type == 'Brightness' ) {
           v = orig / mapping.max;
           FHEM_cached[mapping.device + '-v'] = v;
 
@@ -1197,6 +1197,10 @@ FHEMAccessory(accessory, s) {
     if( s.Attributes.generateVolumeEvent == 1 )
       delete this.mappings.volume.nocache;
 
+  }
+
+  if( s.Readings.voltage ) {
+    this.mappings['E863F10A-079E-48FF-8F27-9C2605A29F52'] = { name: 'Voltage', reading: 'voltage' };
   }
 
   if( s.Readings.humidity ) {
@@ -1301,7 +1305,7 @@ FHEMAccessory(accessory, s) {
   } else if( genericType == 'lock'
            || ( s.Attributes.model && s.Attributes.model.match(/^HM-SEC-KEY/ ) ) ) {
     this.service_name = 'lock';
-    if( s.Internals.TYPE == 'dummy' ) {
+    if( s.Internals.TYPE == 'dummy' ) { //FIXME: simplify dummy
       this.mappings.LockCurrentState = { reading: 'state',
                                          values: ['/uncertain/:UNKNOWN', '/^locked/:SECURED', '/.*/:UNSECURED' ] };
       this.mappings.LockTargetState = { reading: 'state',
@@ -1469,17 +1473,17 @@ FHEMAccessory(accessory, s) {
   }
 
   if( 0 )
-  for( var characteristic_name in this.mappings ) {
+  for( var characteristic_type in this.mappings ) {
     this.log( s.Internals.NAME + ' has' );
-    var mappings = this.mappings[characteristic_name];
+    var mappings = this.mappings[characteristic_type];
     if( !Array.isArray(mappings) )
        mappings = [mappings];
 
     for( var mapping of mappings ) {
-      if( characteristic_name == 'On' )
-        this.log( '  ' + characteristic_name + ' [' + (mapping.device ? mapping.device +'.':'') + mapping.reading + ';' + mapping.cmdOn +',' + mapping.cmdOff + ']' );
+      if( characteristic_type == 'On' )
+        this.log( '  ' + characteristic_type + ' [' + (mapping.device ? mapping.device +'.':'') + mapping.reading + ';' + mapping.cmdOn +',' + mapping.cmdOff + ']' );
       else
-        this.log( '  ' + characteristic_name + ' [' + (mapping.device ? mapping.device +'.':'') + mapping.reading + ']' );
+        this.log( '  ' + characteristic_type + ' [' + (mapping.device ? mapping.device +'.':'') + mapping.reading + ']' );
     }
   }
 
@@ -1569,8 +1573,8 @@ FHEMAccessory(accessory, s) {
   }
 
 
-  for( var characteristic_name in this.mappings ) {
-    var mappings = this.mappings[characteristic_name];
+  for( var characteristic_type in this.mappings ) {
+    var mappings = this.mappings[characteristic_type];
     if( !Array.isArray(mappings) )
        mappings = [mappings];
 
@@ -1584,9 +1588,9 @@ FHEMAccessory(accessory, s) {
       if( mapping.reading === undefined )
         mapping.reading = 'state';
 
-      mapping.characteristic = this.characteristicOfName(characteristic_name);
+      mapping.characteristic = this.characteristicOfName(characteristic_type);
       mapping.informId = device +'-'+ mapping.reading;
-      mapping.characteristic_name = characteristic_name;
+      mapping.characteristic_type = characteristic_type;
       mapping.log = this.log;
 
       //FIXME: better integrate eventMap
@@ -1616,8 +1620,8 @@ FHEMAccessory(accessory, s) {
           var from = match[1];
           var to = match[3] === undefined ? i : match[3];
 
-          if( Characteristic[mapping.characteristic_name] && Characteristic[mapping.characteristic_name][to] !== undefined )
-            to = Characteristic[mapping.characteristic_name][to];
+          if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][to] !== undefined )
+            to = Characteristic[mapping.characteristic_type][to];
 
           var match;
           if( match = from.match('^/(.*)/$') )
@@ -1643,8 +1647,8 @@ FHEMAccessory(accessory, s) {
           var from = (match[1] === undefined || match[2] === undefined ) ? i : match[1];
           var to = match[2] !== undefined ? match[3] : match[1];
 
-          if( Characteristic[mapping.characteristic_name] && Characteristic[mapping.characteristic_name][from] !== undefined )
-            from = Characteristic[mapping.characteristic_name][from];
+          if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][from] !== undefined )
+            from = Characteristic[mapping.characteristic_type][from];
 
           mapping.homekit2cmd[from] = to;
         }
@@ -1727,7 +1731,7 @@ FHEMAccessory(accessory, s) {
             value = FHEM_reading2homekit(mapping, orig);
 
           mapping.cached = value;
-          mapping.log.info("    caching: " + mapping.characteristic_name + (mapping.subtype?':'+mapping.subtype:'') + ": " + value + " (" + typeof(value) + "; from " + orig + ")" );
+          mapping.log.info("    caching: " + mapping.characteristic_type + (mapping.subtype?':'+mapping.subtype:'') + ": " + value + " (" + typeof(value) + "; from " + orig + ")" );
         }
       }
 
@@ -1931,7 +1935,7 @@ FHEMAccessory.prototype = {
         this.log.error(this.name + " Unhandled command! cmd=" + c + ", value=" + value);
 
     } else {
-      this.log.info(this.name + ': executing set cmd for ' + mapping.characteristic_name + ' with value ' + value );
+      this.log.info(this.name + ': executing set cmd for ' + mapping.characteristic_type + ' with value ' + value );
 
       if( typeof mapping.homekit2reading === 'function' ) {
           try {
@@ -2011,7 +2015,7 @@ FHEMAccessory.prototype = {
       return;
     }
 
-    this.log.info('query: ' + mapping.characteristic_name + ' for ' + mapping.informId);
+    this.log.info('query: ' + mapping.characteristic_type + ' for ' + mapping.informId);
     var result = mapping.cached;
     if( result !== undefined ) {
       this.log.info("  cached: " + result);
@@ -2232,21 +2236,21 @@ FHEMAccessory.prototype = {
     services.push( controlService );
 
     var seen = {};
-    for( var characteristic_name in this.mappings ) {
-      var mappings = this.mappings[characteristic_name];
+    for( var characteristic_type in this.mappings ) {
+      var mappings = this.mappings[characteristic_type];
       if( !Array.isArray(mappings) )
          mappings = [mappings];
 
       for( var mapping of mappings ) {
-        if( !mapping.characteristic ) {
-          //this.log.error(this.name + ': '+ ' no such characteristic: ' + characteristic_name );
+        if( !mapping.characteristic && mapping.xname === undefined ) {
+          //this.log.error(this.name + ': '+ ' no such characteristic: ' + characteristic_type );
           continue;
         }
 
-        if( seen[characteristic_name] ) {
+        if( seen[characteristic_type] ) {
           if( mapping.subtype === undefined ) {
-            this.log.error(this.name + ': '+ characteristic_name + ' characteristic already defined for service ' + this.name + ' and no subtype given');
-            continue;
+            this.log.error(this.name + ': '+ characteristic_type + ' characteristic already defined for service ' + this.name + ' and no subtype given');
+            //continue;
           }
 
           controlService = this.createDeviceService( mapping.subtype );
@@ -2259,18 +2263,26 @@ FHEMAccessory.prototype = {
 
         }
 
-        var characteristic = controlService.getCharacteristic(mapping.characteristic)
-                             || controlService.addCharacteristic(mapping.characteristic)
-        seen[characteristic_name] = true;
+        var characteristic = undefined;
+        if( !mapping.characteristic && mapping.name !== undefined ) {
+          characteristic = new Characteristic('Volume', mapping.characteristic_type ); // FIXME!!!
+          controlService.addCharacteristic(characteristic);
+          mapping.characteristic_type = 'Custom ' + mapping.name;
 
-        if( !characteristic ) {
-          this.log.error(this.name + ': no '+ characteristic_name + ' characteristic available for service ' + this.service_name);
+        } else
+          characteristic = controlService.getCharacteristic(mapping.characteristic)
+                             || controlService.addCharacteristic(mapping.characteristic)
+
+        if( characteristic == undefined ) {
+          this.log.error(this.name + ': no '+ characteristic_type + ' characteristic available for service ' + this.service_name);
           continue;
         }
-        if( mappings.subtype )
-          this.log('    ' + characteristic_name + ':' + mappings.subtype + ' characteristic for ' + mapping.device + ':' + mapping.reading);
+        seen[characteristic_type] = true;
+
+        if( mapping.subtype )
+          this.log('    ' + mapping.characteristic_type + ':' + mapping.subtype + ' characteristic for ' + mapping.device + ':' + mapping.reading);
         else
-          this.log('    ' + characteristic_name + ' characteristic for ' + mapping.device + ':' + mapping.reading);
+          this.log('    ' + mapping.characteristic_type + ' characteristic for ' + mapping.device + ':' + mapping.reading);
 
         this.subscribe(mapping, characteristic);
 
@@ -2537,7 +2549,7 @@ function FHEMdebug_handleRequest(request, response){
         if( !mapping || mapping.cached === undefined ) continue;
 
         derived = 1;
-        response.write( '&nbsp;&nbsp;' + mapping.characteristic_name + ': '+ mapping.cached + ' (' + typeof(mapping.cached)+')<br>' );
+        response.write( '&nbsp;&nbsp;' + mapping.characteristic_type + ': '+ mapping.cached + ' (' + typeof(mapping.cached)+')<br>' );
       }
       if( derived )
         response.write( '<br>' );
