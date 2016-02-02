@@ -87,6 +87,9 @@ TODO: add default?
   named by the jsFunctions config option. relative paths are relative to the same path the config file is located in.
   the function it will be called with mapping and reading value as parameters and has to return the value to be used with homekit.
 
+for custom characterisitcs the additional parameters name, format and unit have to be set.
+  e.g.: 00000027-0000-1000-8000-0026BB765291=Volume::Volume,name=Volume,format=UINT8,unit=PERCENTAGE,minValue=0,maxValue=0,minStep=1
+
 
 and for the homekit -> FHEM direction:
   delay: true/<number> -> the value ist send afer one second/<number>ms of inactivity

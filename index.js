@@ -350,7 +350,7 @@ FHEM_reading2homekit(mapping, orig)
         value *= mapping.factor;
       }
 
-    } else if( format && format.match(/int/i) ) {
+    } else if( format && format.match(/(int|PERCENTAGE)/i) ) {
       var mapped = parseInt( value );
 
       if( typeof mapped !== 'number' ) {
@@ -1203,13 +1203,17 @@ FHEMAccessory(accessory, s) {
     this.mappings.CurrentTemperature = { reading: 'temperature', minValue: -30 };
   }
 
-  if( s.Readings.volume )
-    this.mappings.volume = { reading: 'volume', cmd: 'volume' };
+  if( s.Readings.volume ) {
+    this.mappings['00000027-0000-1000-8000-0026BB765291'] = { reading: 'volume', cmd: 'volume',
+                                                              name: 'Volume', format: 'UINT8', unit: 'PERCENTAGE',
+                                                              maxValue: 100, minValue: 0, minStep: 1  };
 
-  else if( s.Readings.Volume ) {
-    this.mappings.volume = { reading: 'Volume', cmd: 'Volume', nocache: true };
+  } else if( s.Readings.Volume ) {
+    this.mappings['00000027-0000-1000-8000-0026BB765291'] = { reading: 'Volume', cmd: 'Volume', nocache: true,
+                                                              name: 'Volume', format: 'UINT8', unit: 'PERCENTAGE',
+                                                              maxValue: 100, minValue: 0, minStep: 1  };
     if( s.Attributes.generateVolumeEvent == 1 )
-      delete this.mappings.volume.nocache;
+      delete this.mappings['00000027-0000-1000-8000-0026BB765291'].nocache;
 
   }
 
@@ -1410,10 +1414,11 @@ FHEMAccessory(accessory, s) {
 
   }
 
-  if( s.Internals.TYPE == 'SONOSPLAYER' ) //FIXME: use sets [Pp]lay/[Pp]ause/[Ss]top
+  if( s.Internals.TYPE == 'SONOSPLAYER' ) { //FIXME: use sets [Pp]lay/[Pp]ause/[Ss]top
+    this.service_name = 'switch';
     this.mappings.On = { reading: 'transportState', valueOn: 'PLAYING', cmdOn: 'play', cmdOff: 'pause' };
 
-  else if( s.Internals.TYPE == 'harmony' ) {
+  } else if( s.Internals.TYPE == 'harmony' ) {
     if( s.Internals.id !== undefined ) {
       if( s.Attributes.genericDeviceType )
         this.mappings.On = { reading: 'power', cmdOn: 'on', cmdOff: 'off' };
@@ -1531,8 +1536,8 @@ FHEMAccessory(accessory, s) {
     this.log( s.Internals.NAME + ' has StatusLowBattery ['+ this.mappings.StatusLowBattery.reading +']' );
   if( this.mappings.FirmwareRevision )
     this.log( s.Internals.NAME + ' has FirmwareRevision ['+ this.mappings.FirmwareRevision.reading +']' );
-  if( this.mappings.volume )
-    this.log( s.Internals.NAME + ' has volume ['+ this.mappings.volume.reading + ':' + (this.mappings.volume.nocache ? 'not cached' : 'cached' )  +']' );
+  if( this.mappings['00000027-0000-1000-8000-0026BB765291'] )
+    this.log( s.Internals.NAME + ' has volume ['+ this.mappings['00000027-0000-1000-8000-0026BB765291'].reading + ':' + (this.mappings['00000027-0000-1000-8000-0026BB765291'].nocache ? 'not cached' : 'cached' )  +']' );
   if( this.mappings.reachable )
     this.log( s.Internals.NAME + ' has reachability ['+ this.mappings.reachable.reading +']' );
 
@@ -2256,7 +2261,7 @@ FHEMAccessory.prototype = {
          mappings = [mappings];
 
       for( var mapping of mappings ) {
-        if( !mapping.characteristic && mapping.xname === undefined ) {
+        if( !mapping.characteristic && mapping.name === undefined ) {
           //this.log.error(this.name + ': '+ ' no such characteristic: ' + characteristic_type );
           continue;
         }
@@ -2315,10 +2320,16 @@ FHEMAccessory.prototype = {
         if( mapping.minValue !== undefined ) characteristic.setProps( { minValue: mapping.minValue } );
         if( mapping.maxValue !== undefined ) characteristic.setProps( { maxValue: mapping.maxValue } );
         if( mapping.minStep !== undefined ) characteristic.setProps( { minStep: mapping.minStep } );
+
+        //characteristic.readable = true;
         if( mapping.cmd === undefined )
           characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY] } );
-        else 
+        else {
+          //characteristic.writable = true;
           characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.WRITE, Characteristic.Perms.NOTIFY] } );
+        }
+        //characteristic.supportsEventNotification = true;
+
 
 
         this.log.debug('      props: ' + util.inspect(characteristic.props) );
@@ -2342,43 +2353,6 @@ FHEMAccessory.prototype = {
       }
     }
 
-
-    if( this.mappings.volume ) {
-      this.log("    custom volume characteristic for " + this.name);
-
-      var characteristic = new Characteristic('Volume', '00000027-0000-1000-8000-0026BB765291'); // FIXME!!!
-      controlService.addCharacteristic(characteristic);
-
-      if( !this.mappings.volume.nocache ) {
-        this.subscribe(this.mappings.volume.informId, characteristic);
-        characteristic.value = FHEM_cached[this.mappings.volume.informId];
-      } else {
-        characteristic.value = 10;
-      }
-
-      characteristic.setProps({
-        format: Characteristic.Formats.UINT8,
-        unit: Characteristic.Units.PERCENTAGE,
-        maxValue: 100,
-        minValue: 0,
-        minStep: 1,
-        perms: [Characteristic.Perms.READ, Characteristic.Perms.WRITE, Characteristic.Perms.NOTIFY]
-      });
-
-      characteristic.readable = true;
-      characteristic.writable = true;
-      characteristic.supportsEventNotification = true;
-
-      characteristic
-        .on('set', function(value, callback, context) {
-                     if( context !== 'fromFHEM' )
-                       this.delayed('volume', value);
-                     callback();
-                   }.bind(this) )
-        .on('get', function(callback) {
-                     this.query(this.mappings.volume, callback);
-                   }.bind(this) );
-    }
 
     if( this.mappings.window ) {
       this.log("    current position characteristic for " + this.name);
