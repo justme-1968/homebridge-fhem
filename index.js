@@ -81,20 +81,20 @@ FHEM_update(informId, orig, no_update) {
           try {
             value = mapping.reading2homekit(orig);
           } catch(err) {
-            this.log.error( mapping.informId + ' reading2homekit: ' + err );
+            mapping.log.error( mapping.informId + ' reading2homekit: ' + err );
             return;
           }
         if( typeof value === 'number' && isNaN(value) ) {
           mapping.log.error(mapping.informId + ' not a number: ' + orig);
           return;
         }
-        if( value === undefined )
-          return;
-
       } else {
         value = FHEM_reading2homekit(mapping, orig);
 
       }
+
+      if( value === undefined )
+        return;
 
       mapping.cached = value;
       mapping.log.info('    caching: ' + mapping.characteristic_name + (mapping.subtype?':'+mapping.subtype:'') +  ': ' + value + ' (' + typeof(value) + '; from ' + orig + ')' );
@@ -129,14 +129,6 @@ FHEM_reading2homekit(mapping, orig)
   } else if( reading == 'volume'
              || reading == 'Volume' ) {
     value = parseInt( value );
-
-  } else if( reading == 'lock' ) {
-      if( value.match( /uncertain/ ) )
-        value = Characteristic.LockCurrentState.UNKNOWN;
-      else if( value.match( /^locked/ ) )
-        value = Characteristic.LockCurrentState.SECURED;
-      else
-        value = Characteristic.LockCurrentState.UNSECURED;
 
   } else if( reading == 'actuator'
              || reading == 'actuation'
@@ -189,24 +181,21 @@ FHEM_reading2homekit(mapping, orig)
     value = parseInt( value );
     //value = parseInt( value ) == true;
 
-  } else if( reading == 'state' && (typeof mapping.values !== 'object' && mapping.valueOn === undefined && mapping.valueOff === undefined) ) {
+  } else if( reading == 'state' && (typeof mapping.values !== 'object'
+                                    && mapping.reading2homekit !== undefined
+                                    && mapping.valueOn === undefined && mapping.valueOff === undefined ) ) {
     if( value.match(/^set-/ ) )
       return undefined;
+    if( value.match(/^set_/ ) )
+      return undefined;
 
-    if( mapping.characteristic_name == 'Brightness' ) {
-      if( value == 'off' )
-        value = 0;
-      else if( match = value.match(/dim(\d+)%?/ ) )
-        value = parseInt( match[1] );
-      else
-        value = 100;
-
-    } else if( mapping.event_map !== undefined ) {
+    if( mapping.event_map !== undefined ) {
       var mapped = mapping.event_map[value];
       if( mapped !== undefined )
         value = mapped;
+    }
 
-    } else if( value == 'off' )
+    if( value == 'off' )
       value = 0;
     else if( value == 'opened' )
       value = Characteristic.ContactSensorState.CONTACT_NOT_DETECTED;
@@ -228,6 +217,11 @@ FHEM_reading2homekit(mapping, orig)
       value = 1;
 
   } else {
+    if( value.match(/^set-/ ) )
+      return undefined;
+    else if( value.match(/^set_/ ) )
+      return undefined;
+
     var orig = value;
 
     var format;
@@ -559,17 +553,6 @@ console.log( 'DELETEATTR: '+value );
                              level = 0;
 
                            FHEM_update( accessory.mappings.window.informId, level );
-                           return;
-
-                         } else if( accessory.mappings.lock ) {
-                           var lock = Characteristic.LockCurrentState.UNSECURED;
-                           if( value.match( /^locked/ ) )
-                             lock = Characteristic.LockCurrentState.SECURED;
-
-                           if( value.match( /uncertain/ ) )
-                             level = Characteristic.LockCurrentState.UNKNOWN;
-
-                           FHEM_update( accessory.mappings.lock.informId, lock );
                            return;
 
                          }
@@ -1054,11 +1037,38 @@ FHEMAccessory(accessory, s) {
   var match;
   if( match = s.PossibleSets.match(/(^| )pct\b/) ) {
     this.service_name = 'light';
+    this.mappings.On = { reading: 'pct', valueOff: '0', cmdOn: 'on', cmdOff: 'off' };
     this.mappings.Brightness = { reading: 'pct', cmd: 'pct', delay: true };
+
   } else if( match = s.PossibleSets.match(/(^| )dim\d+%/) ) {
     this.service_name = 'light';
-    this.mappings.Brightness = { reading: 'state', cmd: 'dim', delay: true };
+    this.mappings.On = { reading: 'state', valueOff: 'off', cmdOn: 'on', cmdOff: 'off' };
+    this.mappings.Brightness = { reading: 'state', cmd: ' ', delay: true };
+
+    this.mappings.Brightness.reading2homekit = function(mapping, orig) {
+      var match;
+      if( orig == 'off' )
+        return 0;
+      else if( match = orig.match(/dim(\d+)%?/ ) )
+        return parseInt( match[1] );
+
+      return 100;
+    }.bind(null,this.mappings.Brightness);
+
+    this.mappings.Brightness.homekit2reading = function(mapping, orig) {
+      var dim_values = [ 'dim06%', 'dim12%', 'dim18%', 'dim25%', 'dim31%', 'dim37%', 'dim43%',
+                         'dim50%', 'dim56%', 'dim62%', 'dim68%', 'dim75%', 'dim81%', 'dim87%', 'dim93%' ];
+      //if( value < 3 )
+      //  value = 'off';
+      //else
+      if( orig > 97 )
+        return 'on';
+
+      return 'dim ' + dim_values[Math.round(orig/6.25)];
+    }
+
   }
+
   if( match = s.PossibleSets.match(/(^| )hue[^\b\s]*(,(\d+)?)+\b/) ) {
     this.service_name = 'light';
     var max = 360;
@@ -1066,6 +1076,7 @@ FHEMAccessory(accessory, s) {
       max = match[3];
     this.mappings.Hue = { reading: 'hue', cmd: 'hue', min: 0, max: max, maxValue: 360 };
   }
+
   if( match = s.PossibleSets.match(/(^| )sat[^\b\s]*(,(\d+)?)+\b/) ) {
     this.service_name = 'light';
     var max = 100;
@@ -1180,10 +1191,12 @@ FHEMAccessory(accessory, s) {
 
   if( s.Readings.volume )
     this.mappings.volume = { reading: 'volume', cmd: 'volume' };
+
   else if( s.Readings.Volume ) {
     this.mappings.volume = { reading: 'Volume', cmd: 'Volume', nocache: true };
     if( s.Attributes.generateVolumeEvent == 1 )
       delete this.mappings.volume.nocache;
+
   }
 
   if( s.Readings.humidity ) {
@@ -1288,9 +1301,21 @@ FHEMAccessory(accessory, s) {
   } else if( genericType == 'lock'
            || ( s.Attributes.model && s.Attributes.model.match(/^HM-SEC-KEY/ ) ) ) {
     this.service_name = 'lock';
-    this.mappings.lock = { reading: 'lock', cmdLock: 'lock', cmdUnlock: 'unlock', cmdOpen: 'open' };
-    if( s.Internals.TYPE == 'dummy' )
-      this.mappings.lock = { reading: 'lock', cmdLock: 'lock locked', cmdUnlock: 'lock unlocked', cmdOpen: 'open' };
+    if( s.Internals.TYPE == 'dummy' ) {
+      this.mappings.LockCurrentState = { reading: 'state',
+                                         values: ['/uncertain/:UNKNOWN', '/^locked/:SECURED', '/.*/:UNSECURED' ] };
+      this.mappings.LockTargetState = { reading: 'state',
+                                        values: this.mappings.LockCurrentState.values,
+                                        cmds: ['UNSECURED:lock+locked', '/SECURED/:lock+unlocked' ],
+                                        cmdOpen: 'open' };
+    } else {
+      this.mappings.LockCurrentState = { reading: 'state',
+                                         values: ['/uncertain/:UNKNOWN', '/^locked/:SECURED', '/.*/:UNSECURED' ] };
+      this.mappings.LockTargetState = { reading: 'state',
+                                        values: this.mappings.LockCurrentState.values,
+                                        cmds: ['UNSECURED:lock', '/SECURED/:unlock' ],
+                                        cmdOpen: 'open' };
+    }
 
   } else if( genericType == 'thermostat'
              || s.Attributes.subType == 'thermostat' )
@@ -1368,7 +1393,7 @@ FHEMAccessory(accessory, s) {
   }
 
   if( s.Internals.TYPE == 'SONOSPLAYER' ) //FIXME: use sets [Pp]lay/[Pp]ause/[Ss]top
-    this.mappings.On = { reading: 'transportState', cmdOn: 'play', cmdOff: 'pause', valueOn: 'PLAYING' };
+    this.mappings.On = { reading: 'transportState', valueOn: 'PLAYING', cmdOn: 'play', cmdOff: 'pause' };
 
   else if( s.Internals.TYPE == 'harmony' ) {
     if( s.Internals.id !== undefined ) {
@@ -1390,9 +1415,10 @@ FHEMAccessory(accessory, s) {
       }
     }
 
-  } else if( s.PossibleSets.match(/(^| )on\b/)
+  } else if( !this.mappings.On
+             && s.PossibleSets.match(/(^| )on\b/)
              && s.PossibleSets.match(/(^| )off\b/) ) {
-    this.mappings.On = { reading: 'state', cmdOn: 'on', cmdOff: 'off' };
+    this.mappings.On = { reading: 'state', valueOff: 'off', cmdOn: 'on', cmdOff: 'off' };
     if( !s.Readings.state )
       delete this.mappings.On.reading;
     else
@@ -1427,8 +1453,6 @@ FHEMAccessory(accessory, s) {
     this.log( s.Internals.NAME + ' is door' );
   else if( this.mappings.garage )
     this.log( s.Internals.NAME + ' is garage' );
-  else if( this.mappings.lock )
-    this.log( s.Internals.NAME + ' is lock ['+ this.mappings.lock.reading +']' );
   else if( this.mappings.window )
     this.log( s.Internals.NAME + ' is window' );
   else if( this.mappings.CurrentPosition )
@@ -1712,8 +1736,6 @@ FHEMAccessory(accessory, s) {
 
 }
 
-var FHEM_dim_values = [ 'dim06%', 'dim12%', 'dim18%', 'dim25%', 'dim31%', 'dim37%', 'dim43%', 'dim50%', 'dim56%', 'dim62%', 'dim68%', 'dim75%', 'dim81%', 'dim87%', 'dim93%' ];
-
 FHEMAccessory.prototype = {
   subscribe: function(mapping, characteristic) {
     if( typeof mapping === 'object' ) {
@@ -1866,15 +1888,6 @@ FHEMAccessory.prototype = {
     } else if( c == 'pct' ) {
       command = "set " + this.device + " pct " + value;
 
-    } else if( c == 'dim' ) {
-      //if( value < 3 )
-      //  command = "set " + this.device + " off";
-      //else
-      if( value > 97 )
-        command = "set " + this.device + " on";
-      else
-        command = "set " + this.device + " " + FHEM_dim_values[Math.round(value/6.25)];
-
     } else if( c == 'hue' ) {
         value = Math.round(value * this.mappings.Hue.max / 360);
         command = "set " + this.device + " hue " + value;
@@ -2026,9 +2039,6 @@ FHEMAccessory.prototype = {
     if( reading == 'level' && this.mappings.window ) {
       query_reading = 'state';
 
-    } else if( reading == 'lock' && this.mappings.lock ) {
-      //query_reading = 'state';
-
     }
 
     var cmd = '{ReadingsVal("'+device+'","'+query_reading+'","")}';
@@ -2051,16 +2061,6 @@ FHEMAccessory.prototype = {
                           value = 0;
                         else
                           value = 50;
-
-                      } else if( reading == 'lock'
-                                 && query_reading == 'state') {
-
-                        if( value.match( /uncertain/ ) )
-                          value = Characteristic.LockCurrentState.UNKNOWN;
-                        else if( value.match( /^locked/ ) )
-                          value = Characteristic.LockCurrentState.SECURED;
-                        else
-                          value = Characteristic.LockCurrentState.UNSECURED;
 
                       }
 
@@ -2139,9 +2139,6 @@ FHEMAccessory.prototype = {
     if( this.mappings.garage ) {
       this.log("  garage door opener service for " + this.name)
       return new Service.GarageDoorOpener(name);
-    } else if( this.mappings.lock ) {
-      this.log("  lock mechanism service for " + this.name)
-      return new Service.LockMechanism(name);
     } else if( this.mappings.window ) {
       this.log("  window service for " + this.name)
       return new Service.Window(name);
@@ -2381,56 +2378,24 @@ FHEMAccessory.prototype = {
                    }.bind(this) );
     }
 
-    if( this.mappings.lock ) {
-      this.log("    lock current state characteristic for " + this.name);
+    if( this.mappings.LockTargetState && this.mappings.LockTargetState.cmdOpen ) {
+      this.log("    target door state characteristic for " + this.name);
 
-      var characteristic = controlService.getCharacteristic(Characteristic.LockCurrentState);
+      var characteristic = controlService.addCharacteristic(Characteristic.TargetDoorState);
 
-      //this.subscribe(this.name+'-state', characteristic);
-      this.subscribe(this.mappings.lock.informId, characteristic);
-      characteristic.value = FHEM_cached[this.mappings.lock.informId];
+      characteristic.value = Characteristic.TargetDoorState.CLOSED;
 
       characteristic
+        .on('set', function(characteristic,value, callback, context) {
+                     if( context !== 'fromFHEM' ) {
+                       this.command( 'set', this.mappings.LockTargetState.cmdOpen );
+                       setTimeout( function(){characteristic.setValue(Characteristic.TargetDoorState.CLOSED, undefined, 'fromFHEM');}, 500  );
+                     }
+                     if( callback ) callback();
+                   }.bind(this,characteristic) )
         .on('get', function(callback) {
-                     this.query(this.mappings.lock, callback);
+                     callback(undefined,Characteristic.TargetDoorState.CLOSED);
                    }.bind(this) );
-
-      this.log("    lock target state characteristic for " + this.name);
-
-      var characteristic = controlService.getCharacteristic(Characteristic.LockTargetState);
-
-      characteristic.value = FHEM_cached[this.mappings.lock.informId];
-
-      characteristic
-        .on('set', function(value, callback, context) {
-                     if( context !== 'fromFHEM' )
-                       this.command( 'set', value == Characteristic.LockTargetState.UNSECURED ? this.mappings.lock.cmdUnlock : this.mappings.lock.cmdLock );
-                     callback();
-                   }.bind(this) )
-        .on('get', function(callback) {
-                     this.query(this.mappings.lock, callback);
-                   }.bind(this) );
-
-      if( this.mappings.lock.cmdOpen ) {
-        this.log("    target door state characteristic for " + this.name);
-
-        var characteristic = controlService.addCharacteristic(Characteristic.TargetDoorState);
-
-        characteristic.value = Characteristic.TargetDoorState.CLOSED;
-
-        characteristic
-          .on('set', function(characteristic,value, callback, context) {
-                       if( context !== 'fromFHEM' ) {
-                         this.command( 'set', this.mappings.lock.cmdOpen );
-                         setTimeout( function(){characteristic.setValue(Characteristic.TargetDoorState.CLOSED, undefined, 'fromFHEM');}, 500  );
-                       }
-                       if( callback ) callback();
-                     }.bind(this,characteristic) )
-          .on('get', function(callback) {
-                       callback(undefined,Characteristic.TargetDoorState.CLOSED);
-                     }.bind(this) );
-      }
-
     }
 
     if( this.mappings.garage ) {
