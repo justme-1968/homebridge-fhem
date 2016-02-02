@@ -77,8 +77,8 @@ currently supported parameters for FHEM -> homekit direction are:
           each to value can be a literal value or a homekit defined term for this characteristic
   valueOn, valueOff: the reading values that are mapped to the true/false resp. on/off states in homekit. shotcut for values
                      if only one is given all values not matching this one are automaticaly mapped to the other
-TODO: add default?
-TODO: add push button switch: cmdOn + valueOff + timeout
+  default: value to use if no reading is found or if none of values/valueOn/valueOff matches
+  timeout: timeout in ms after which the homebridge value is reset to the default value -> used to simulate push buttons
 
     e.g.: PositionState=motor,values=/^up/:INCREASING;/^down/:DECREASING;/.*/:STOPPED On=state,valueOn=/on|dim/,valueOff=off
 
