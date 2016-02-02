@@ -67,6 +67,7 @@ currently supported parameters for FHEM -> homekit direction are:
   max: Hue and Saturation characteristics -> the range the reading has in fhem, only if different from minValue and maxValue
   nocache: don't cache values for this reading
   subtype: unique value necessary if multiple characteristics of the same type are in an accessory.
+  factor: multiply reading with this value
   threshold: reading is mapped to true if the value is greater than the threshold value and to false otherwise
   invert: invert the reading, taking minValue, maxValue into account
   part: the reading value will be splitted at spaces and the n-th item is used as the value. counting starts at 0
@@ -80,7 +81,7 @@ TODO: add default?
 
     e.g.: PositionState=motor,values=/^up/:INCREASING;/^down/:DECREASING;/.*/:STOPPED On=state,valueOn=/on|dim/,valueOff=off
 
-  the order of the transformations is as follows: eventMap, part, values, valueOn/valueOff, threshold, max, maxValue/minValue/minStep, invert
+  the order of the transformations is as follows: eventMap, part, values, valueOn/valueOff, factor, threshold, max, maxValue/minValue/minStep, invert
 
   instead of using the transformation chain reading2homekit can be set to the name of a js function that is imported from a file
   named by the jsFunctions config option. relative paths are relative to the same path the config file is located in.

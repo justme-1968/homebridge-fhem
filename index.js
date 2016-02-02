@@ -238,9 +238,8 @@ FHEM_reading2homekit(mapping, orig)
 
     }
 
-    if( format === undefined ) {
+    if( format === undefined )
       return value;
-    }
 
     if( mapping.event_map !== undefined ) {
       var mapped = mapping.event_map[value];
@@ -284,18 +283,7 @@ FHEM_reading2homekit(mapping, orig)
       value = mapped;
     }
 
-    if( format == 'string' ) {
-
-    } else if( format == 'float' ) {
-      var mapped = parseFloat( value );
-
-      if( typeof mapped !== 'number' ) {
-        mapping.log.error(mapping.informId + ' is not a number: ' + value);
-        return undefined;
-      }
-      value = mapped;
-
-    } else if( format == 'bool' ) {
+    if( format == 'bool' ) {
       var mapped = undefined;;
       if( mapping.valueOn !== undefined ) {
         var match = mapping.valueOn.match('^/(.*)/$');
@@ -328,6 +316,11 @@ FHEM_reading2homekit(mapping, orig)
         value = mapped;
       }
 
+      if( mapping.factor ) {
+        mapping.log.debug(mapping.informId + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
+        value *= mapping.factor;
+      }
+
       if( mapping.threshold ) {
         var mapped;
         if( value > mapping.threshold )
@@ -343,7 +336,21 @@ FHEM_reading2homekit(mapping, orig)
         mapping.maxValue = 1;
       }
 
-    } else if( format && format.match(/int/) ) {
+    } else if( format == 'float' ) {
+      var mapped = parseFloat( value );
+
+      if( typeof mapped !== 'number' ) {
+        mapping.log.error(mapping.informId + ' is not a number: ' + value);
+        return undefined;
+      }
+      value = mapped;
+
+      if( mapping.factor ) {
+        mapping.log.debug(mapping.informId + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
+        value *= mapping.factor;
+      }
+
+    } else if( format && format.match(/int/i) ) {
       var mapped = parseInt( value );
 
       if( typeof mapped !== 'number' ) {
@@ -351,7 +358,14 @@ FHEM_reading2homekit(mapping, orig)
         return undefined;
       }
       value = mapped;
+
+      if( mapping.factor ) {
+        mapping.log.debug(mapping.informId + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
+        value *= mapping.factor;
+      }
+    } else if( format == 'string' ) {
     }
+
 
     if( mapping.max && mapping.maxValue ) {
       value = Math.round(value * mapping.maxValue / mapping.max );
@@ -1200,7 +1214,7 @@ FHEMAccessory(accessory, s) {
   }
 
   if( s.Readings.voltage ) {
-    this.mappings['E863F10A-079E-48FF-8F27-9C2605A29F52'] = { name: 'Voltage', reading: 'voltage' };
+    this.mappings['E863F10A-079E-48FF-8F27-9C2605A29F52'] = { name: 'Voltage', reading: 'voltage', format: 'UINT16', factor: 10 };
   }
 
   if( s.Readings.humidity ) {
@@ -2289,15 +2303,23 @@ FHEMAccessory.prototype = {
         if( mapping.cached !== undefined ) {
           characteristic.value = mapping.cached;
           this.log.debug('      initial value is: ' + mapping.cached + ' (' + typeof(mapping.cached) + ')' );
-        } else {
-          if( mapping.default !== undefined )
+        } else if( mapping.default !== undefined ) {
             characteristic.value = mapping.default;
           this.log.debug('      no initial value; default is: ' + characteristic.value + ' (' + typeof(characteristic.value) + ')' );
+        } else {
+          this.log.debug('      no default' );
         }
 
-        if( mapping.minValue !== undefined ) characteristic.setProps( { minValue: mapping.minValue, } );
-        if( mapping.maxValue !== undefined ) characteristic.setProps( { maxValue: mapping.maxValue, } );
-        if( mapping.minStep !== undefined ) characteristic.setProps( { minStep: mapping.minStep, } );
+        if( mapping.format !== undefined ) characteristic.setProps( { format: Characteristic.Formats[mapping.format] } );
+        if( mapping.unit !== undefined ) characteristic.setProps( { unit: Characteristic.Units[mapping.unit] } );
+        if( mapping.minValue !== undefined ) characteristic.setProps( { minValue: mapping.minValue } );
+        if( mapping.maxValue !== undefined ) characteristic.setProps( { maxValue: mapping.maxValue } );
+        if( mapping.minStep !== undefined ) characteristic.setProps( { minStep: mapping.minStep } );
+        if( mapping.cmd === undefined )
+          characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY] } );
+        else 
+          characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.WRITE, Characteristic.Perms.NOTIFY] } );
+
 
         this.log.debug('      props: ' + util.inspect(characteristic.props) );
 
