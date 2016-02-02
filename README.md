@@ -78,6 +78,7 @@ currently supported parameters for FHEM -> homekit direction are:
   valueOn, valueOff: the reading values that are mapped to the true/false resp. on/off states in homekit. shotcut for values
                      if only one is given all values not matching this one are automaticaly mapped to the other
 TODO: add default?
+TODO: add push button switch: cmdOn + valueOff + timeout
 
     e.g.: PositionState=motor,values=/^up/:INCREASING;/^down/:DECREASING;/.*/:STOPPED On=state,valueOn=/on|dim/,valueOff=off
 

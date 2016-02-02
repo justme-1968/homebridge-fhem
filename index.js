@@ -351,7 +351,7 @@ FHEM_reading2homekit(mapping, orig)
       }
 
     } else if( format && format.match(/(int|PERCENTAGE)/i) ) {
-      var mapped = parseInt( value );
+      var mapped = parseFloat( value );
 
       if( typeof mapped !== 'number' ) {
         mapping.log.error(mapping.informId + ' not a number: ' + value);
@@ -363,6 +363,8 @@ FHEM_reading2homekit(mapping, orig)
         mapping.log.debug(mapping.informId + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
         value *= mapping.factor;
       }
+
+      value = parseInt( value + 0.5 );
     } else if( format == 'string' ) {
     }
 
@@ -1217,9 +1219,17 @@ FHEMAccessory(accessory, s) {
 
   }
 
-  if( s.Readings.voltage ) {
+  if( s.Readings.voltage )
     this.mappings['E863F10A-079E-48FF-8F27-9C2605A29F52'] = { name: 'Voltage', reading: 'voltage', format: 'UINT16', factor: 10 };
-  }
+
+  if( s.Readings.current )
+    this.mappings['E863F126-079E-48FF-8F27-9C2605A29F52'] = { name: 'Current', reading: 'current', format: 'UINT16', factor: 100 };
+
+  if( s.Readings.power )
+    this.mappings['E863F10D-079E-48FF-8F27-9C2605A29F52'] = { name: 'Power', reading: 'power', format: 'UINT16', factor: 10 };
+
+  if( s.Readings.energy )
+    this.mappings['E863F10C-079E-48FF-8F27-9C2605A29F52'] = { name: 'Energy', reading: 'energy', format: 'UINT32', factor: 100 };
 
   if( s.Readings.humidity ) {
     if( !this.service_name ) this.service_name = 'HumiditySensor';
@@ -2344,6 +2354,9 @@ FHEMAccessory.prototype = {
                          else
                            this.command(mapping, value);
                            //this.command( 'set', value == 0 ? (mapping.cmdOff?mapping.cmdOff:mapping.cmd) : (mapping.cmdOn?mapping.cmdOn:mapping.cmd) );
+
+                         if( mapping.timeout && mapping.valueOff )
+                           setTimeout( function(){mapping.characteristic.setValue(valueOff, undefined, 'fromFHEM');}, mapping.timeout  );
                        }
                        callback();
                      }.bind(this,mapping) )
