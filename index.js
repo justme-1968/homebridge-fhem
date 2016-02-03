@@ -123,7 +123,7 @@ FHEM_reading2homekit(mapping, orig)
    }
 
    mapping.log.info('    caching: ' + mapping.characteristic_type + (mapping.subtype?':'+mapping.subtype:'') + ': '
-                                    + value + ' (' + 'as '+typeof(value) + (defined?'; means '+defined:'') + '; from \''+orig + '\')' );
+                                    + value + ' (' + 'as '+typeof(value) + (defined?'; means '+defined:'') + '; from \''+orig + '\')');
    mapping.cached = value;
 
   return value;
@@ -1657,6 +1657,11 @@ FHEMAccessory(accessory, s) {
           if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][to] !== undefined ) {
             mapping.homekit2name[Characteristic[mapping.characteristic_type][to]] = to;
             to = Characteristic[mapping.characteristic_type][to];
+          } else if( Characteristic[mapping.characteristic_type] ) {
+            for( var defined in Characteristic[mapping.characteristic_type] ) {
+              if( to == Characteristic[mapping.characteristic_type][defined] )
+                mapping.homekit2name[to] = defined;
+            }
           }
 
           var match;
