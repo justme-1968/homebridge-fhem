@@ -76,33 +76,10 @@ FHEM_update(informId, orig, no_update) {
     subscriptions.forEach( function(subscription) {
       var mapping = subscription.characteristic.FHEM_mapping;
 
-      var value;
-      if( typeof mapping.reading2homekit === 'function' ) {
-          try {
-            value = mapping.reading2homekit(orig);
-          } catch(err) {
-            mapping.log.error( mapping.informId + ' reading2homekit: ' + err );
-            return;
-          }
-        if( typeof value === 'number' && isNaN(value) ) {
-          mapping.log.error(mapping.informId + ' not a number: ' + orig);
-          return;
-        }
-      } else {
-        value = FHEM_reading2homekit(mapping, orig);
+      var value = FHEM_reading2homekit(mapping, orig);
 
-      }
-
-      if( value === undefined ) {
-        if( mapping.default !== undefined ) {
-          orig = 'mapping.default';
-          value = mapping.default;
-        } else
-          return;
-      }
-
-      mapping.cached = value;
-      mapping.log.info('    caching: ' + mapping.characteristic_type + (mapping.subtype?':'+mapping.subtype:'') +  ': ' + value + ' (' + typeof(value) + '; from ' + orig + ')' );
+      if( value === undefined )
+        return;
 
       if( !no_update && typeof mapping.characteristic === 'object' )
         mapping.characteristic.setValue(value, undefined, 'fromFHEM');
@@ -112,35 +89,47 @@ FHEM_update(informId, orig, no_update) {
 function
 FHEM_reading2homekit(mapping, orig)
 {
+  var value;
+  if( typeof mapping.reading2homekit === 'function' ) {
+      try {
+        value = mapping.reading2homekit(orig);
+      } catch(err) {
+        mapping.log.error( mapping.informId + ' reading2homekit: ' + err );
+        return undefined;
+      }
+    if( typeof value === 'number' && isNaN(value) ) {
+      mapping.log.error(mapping.informId + ' not a number: ' + orig);
+      return undefined;
+    }
+
+  } else {
+    value = FHEM_reading2homekit_(mapping, orig);
+
+  }
+
+  if( value === undefined ) {
+    if( mapping.default !== undefined ) {
+      orig = 'mapping.default';
+      value = mapping.default;
+    } else
+      return undefined;
+  }
+
+   mapping.cached = value;
+   mapping.log.info('    caching: ' + mapping.characteristic_type + (mapping.subtype?':'+mapping.subtype:'') + ': ' + value + ' (' + typeof(value) + '; from ' + orig + ')' );
+
+  return value;
+}
+
+function
+FHEM_reading2homekit_(mapping, orig)
+{
   var value = orig;
   if( value === undefined )
     return undefined;
   var reading = mapping.reading;
 
-  if(reading == 'controlMode') {
-    if( value.match(/^auto/))
-      value = Characteristic.TargetHeatingCoolingState.AUTO;
-    else if( value.match(/^manu/))
-      value = Characteristic.TargetHeatingCoolingState.HEAT;
-    else
-      value = Characteristic.TargetHeatingCoolingState.OFF;
-
-  } else if(reading == 'mode') {
-    if( value.match(/^auto/))
-      value = Characteristic.TargetHeatingCoolingState.AUTO;
-    else
-      value = Characteristic.TargetHeatingCoolingState.HEAT;
-
-  } else if( reading == 'volume'
-             || reading == 'Volume' ) {
-    value = parseInt( value );
-
-  } else if( reading == 'actuator'
-             || reading == 'actuation'
-             || reading == 'valveposition' ) {
-    value = parseInt( value );
-
-  } else if( reading == 'temperature'
+  if( reading == 'temperature'
              || reading == 'measured'
              || reading == 'measured-temp'
              || reading == 'desired-temp'
@@ -343,7 +332,7 @@ FHEM_reading2homekit(mapping, orig)
         value *= mapping.factor;
       }
 
-    } else if( format && format.match(/(int|PERCENTAGE)/i) ) {
+    } else if( format && format.match(/int/i) ) {
       var mapped = parseFloat( value );
 
       if( typeof mapped !== 'number' ) {
@@ -1191,10 +1180,10 @@ FHEMAccessory(accessory, s) {
   }
 
   if( s.Readings['measured-temp'] ) {
-    this.service_name = 'thermometer';
+    if( !this.service_name ) this.service_name = 'thermometer';
     this.mappings.CurrentTemperature = { reading: 'measured-temp', minValue: -30 };
   } else if( s.Readings.temperature ) {
-    this.service_name = 'thermometer';
+    if( !this.service_name ) this.service_name = 'thermometer';
     this.mappings.CurrentTemperature = { reading: 'temperature', minValue: -30 };
   }
 
@@ -1223,7 +1212,7 @@ FHEMAccessory(accessory, s) {
     this.mappings['E863F10D-079E-48FF-8F27-9C2605A29F52'] = { name: 'Power', reading: 'power', format: 'UINT16', factor: 10 };
 
   if( s.Readings.energy )
-    this.mappings['E863F10C-079E-48FF-8F27-9C2605A29F52'] = { name: 'Energy', reading: 'energy', format: 'UINT32', factor: 100 };
+    this.mappings['E863F10C-079E-48FF-8F27-9C2605A29F52'] = { name: 'Energy', reading: 'energy', format: 'UINT32', factor: 1000 };
 
   if( s.Readings.humidity ) {
     if( !this.service_name ) this.service_name = 'HumiditySensor';
@@ -1349,10 +1338,10 @@ FHEMAccessory(accessory, s) {
                                       cmds: ['UNSECURED:lock+locked', 'SECURED:lock+unlocked'] };
 
   } else if( genericType == 'thermostat'
-             || s.Attributes.subType == 'thermostat' )
-    s.isThermostat = true;
+             || s.Attributes.subType == 'thermostat' ) {
+    this.service_name = 'thermostat';
 
-  else if( s.Internals.TYPE == 'CUL_FHTTK' ) {
+  } else if( s.Internals.TYPE == 'CUL_FHTTK' ) {
     this.service_name = 'ContactSensor';
     this.mappings.ContactSensorState = { reading: 'Window', values: ['/^Closed/:CONTACT_DETECTED', '/.*/:CONTACT_NOT_DETECTED'] };
     this.mappings.CurrentDoorState = { reading: 'Window', values: ['/^Closed/:CLOSED', '/.*/:OPEN'] };
@@ -1379,10 +1368,13 @@ FHEMAccessory(accessory, s) {
 
   if( match = s.PossibleSets.match(/(^| )desired-temp(:[^\d]*([^\$ ]*))?/) ) {
     //HM
+    this.service_name = 'thermostat';
     this.mappings.TargetTemperature = { reading: 'desired-temp', cmd: 'desired-temp', delay: true };
 
     if( s.Readings.actuator )
-      this.mappings.actuation = { reading: 'actuator' };
+      this.mappings['10000027-0000-1000-8000-0026BB765291'] = { reading: 'actuator',
+                                                                name: 'Actuation', format: 'UINT8', unit: 'PERCENTAGE',
+                                                                maxValue: 100, minValue: 0, minStep: 1  };
 
     if( match[3] ) {
       var values = match[3].split(',');
@@ -1393,10 +1385,13 @@ FHEMAccessory(accessory, s) {
 
   } else if( match = s.PossibleSets.match(/(^| )desiredTemperature(:[^\d]*([^\$ ]*))?/) ) {
     // MAX
+    this.service_name = 'thermostat';
     this.mappings.TargetTemperature = { reading: 'desiredTemperature', cmd: 'desiredTemperature', delay: true };
 
     if( s.Readings.valveposition )
-      this.mappings.actuation = { reading: 'valveposition' };
+      this.mappings['10000027-0000-1000-8000-0026BB765291'] = { reading: 'valveposition',
+                                                                name: 'Actuation', format: 'UINT8', unit: 'PERCENTAGE',
+                                                                maxValue: 100, minValue: 0, minStep: 1  };
 
     if( match[3] ) {
       var values = match[3].split(',');
@@ -1407,10 +1402,13 @@ FHEMAccessory(accessory, s) {
 
   } else if( match = s.PossibleSets.match(/(^| )desired(:[^\d]*([^\$ ]*))?/) ) {
     //PID20
+    this.service_name = 'thermostat';
     this.mappings.TargetTemperature = { reading: 'desired', cmd: 'desired', delay: true };
 
     if( s.Readings.actuation )
-      this.mappings.actuation = { reading: 'actuation' };
+      this.mappings['10000027-0000-1000-8000-0026BB765291'] = { reading: 'actuation',
+                                                                name: 'Actuation', format: 'UINT8', unit: 'PERCENTAGE',
+                                                                maxValue: 100, minValue: 0, minStep: 1  };
 
     if( s.Readings.measured )
       this.mappings.CurrentTemperature = { reading: 'measured' };
@@ -1490,6 +1488,20 @@ FHEMAccessory(accessory, s) {
     return {};
   }
 
+  if( this.mappings.CurrentPosition || this.mappings.TargetTemperature
+      || this.service_name === 'lock' || this.service_name === 'garage' || this.mappings.window )
+    delete this.mappings.On;
+
+  if( this.service_name === 'thermostat'
+      && (!this.mappings.TargetTemperature
+          || !this.mappings.TargetTemperature.cmd || !s.PossibleSets.match('(^| )'+this.mappings.TargetTemperature.cmd+'\\b') ) ) {
+    this.log.error( s.Internals.NAME + ' is NOT a thermostat. set command for target temperature missing: '
+                          + (this.mappings.TargetTemperature && this.mappings.TargetTemperature.cmd?this.mappings.TargetTemperature.cmd:'') );
+    delete this.mappings.TargetTemperature;
+  }
+
+
+
   if( 0 )
   for( var characteristic_type in this.mappings ) {
     this.log( s.Internals.NAME + ' has' );
@@ -1517,6 +1529,8 @@ FHEMAccessory(accessory, s) {
     this.log( s.Internals.NAME + ' has xy [' + this.mappings.xy.reading +']' );
   if( this.mappings.CurrentTemperature )
     this.log( s.Internals.NAME + ' has CurrentTemperature ['+ this.mappings.CurrentTemperature.reading +']' );
+  if( this.mappings.TargetTemperature )
+    this.log( s.Internals.NAME + ' has TargetTemperature ['+ this.mappings.TargetTemperature.cmd +']' );
   if( this.mappings.CurrentRelativeHumidity )
     this.log( s.Internals.NAME + ' has CurrentRelativeHumidity ['+ this.mappings.CurrentRelativeHumidity.reading +']' );
   if( this.mappings.CurrentAmbientLightLevel )
@@ -1576,22 +1590,8 @@ FHEMAccessory(accessory, s) {
 
   this.uuid_base = this.serial;
 
-//log( util.inspect(s.Readings) );
 
-  if( this.mappings.CurrentPosition || this.mappings.TargetTemperature
-      || this.service_name === 'lock' || this.service_name === 'garage' || this.mappings.window )
-    delete this.mappings.On;
-
-  if( s.isThermostat && (!this.mappings.TargetTemperature
-                         || !this.mappings.TargetTemperature.cmd
-                         || !s.PossibleSets.match('(^| )'+this.mappings.TargetTemperature.cmd+'\\b') ) ) {
-    this.log.error( s.Internals.NAME + ' is NOT a thermostat. set command for target temperature missing: '
-                          + (this.mappings.TargetTemperature && this.mappings.TargetTemperature.cmd?this.mappings.TargetTemperature.cmd:'') );
-    s.isThermostat = false;
-    delete this.mappings.TargetTemperature;
-  }
-
-
+  // prepare mapping internals
   for( var characteristic_type in this.mappings ) {
     var mappings = this.mappings[characteristic_type];
     if( !Array.isArray(mappings) )
@@ -1740,32 +1740,7 @@ FHEMAccessory(accessory, s) {
         if( mapping.reading && FHEM_cached[mapping.informId] === undefined )
           FHEM_update(mapping.informId, orig);
 
-        var value;
-        if( typeof mapping.reading2homekit === 'function' ) {
-          try {
-            value = mapping.reading2homekit(orig);
-          } catch(err) {
-            this.log.error( mapping.informId + ' reading2homekit: ' + err );
-            continue;
-          }
-          if( typeof value === 'number' && isNaN(value) ) {
-            mapping.log.error(mapping.informId + ' not a number: ' + orig);
-            continue;
-          }
-
-        } else
-          value = FHEM_reading2homekit(mapping, orig);
-
-        if( value === undefined ) {
-          if( mapping.default !== undefined ) {
-            orig = 'mapping.default';
-            value = mapping.default;
-          } else
-            continue;
-        }
-
-        mapping.cached = value;
-        mapping.log.info("    caching: " + mapping.characteristic_type + (mapping.subtype?':'+mapping.subtype:'') + ": " + value + " (" + typeof(value) + "; from " + orig + ")" );
+        FHEM_reading2homekit(mapping, orig);
       }
 
     }
@@ -2061,7 +2036,7 @@ FHEMAccessory.prototype = {
 
     this.execute( cmd,
                   function(result) {
-                    value = result.replace(/[\r\n]/g, "");
+                    var value = result.replace(/[\r\n]/g, "");
                     this.log.info("  value: " + value);
 
                     if( value === undefined )
@@ -2307,9 +2282,9 @@ FHEMAccessory.prototype = {
 
         if( mapping.format !== undefined ) characteristic.setProps( { format: Characteristic.Formats[mapping.format] } );
         if( mapping.unit !== undefined ) characteristic.setProps( { unit: Characteristic.Units[mapping.unit] } );
-        if( mapping.minValue !== undefined ) characteristic.setProps( { minValue: mapping.minValue } );
-        if( mapping.maxValue !== undefined ) characteristic.setProps( { maxValue: mapping.maxValue } );
-        if( mapping.minStep !== undefined ) characteristic.setProps( { minStep: mapping.minStep } );
+        if( mapping.minValue !== undefined ) characteristic.setProps( { minValue: parseFloat(mapping.minValue) } );
+        if( mapping.maxValue !== undefined ) characteristic.setProps( { maxValue: parseFloat(mapping.maxValue) } );
+        if( mapping.minStep !== undefined ) characteristic.setProps( { minStep: parseFloat(mapping.minStep) } );
 
         if( characteristic_type.match( /-/ ) ) {
           //characteristic.readable = true;
@@ -2379,35 +2354,6 @@ FHEMAccessory.prototype = {
         .on('get', function(callback) {
                      this.query(this.mappings.window, callback);
                    }.bind(this) );
-    }
-
-    if( this.mappings.TargetTemperature ) {
-      if( this.mappings.actuation ) {
-        this.log("    custom actuation characteristic for " + this.name);
-
-        var characteristic = new Characteristic('Actuation', '10000027-0000-1000-8000-0026BB765291'); // FIXME!!!
-        controlService.addCharacteristic(characteristic);
-
-        this.subscribe(this.mappings.actuation.informId, characteristic);
-        characteristic.value = FHEM_cached[this.mappings.actuation.informId];
-
-        characteristic.setProps({
-          format: Characteristic.Formats.UINT8,
-          unit: Characteristic.Units.PERCENTAGE,
-          maxValue: 100,
-          minValue: 0,
-          minStep: 1,
-          perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY]
-        });
-
-        characteristic.readable = true;
-        characteristic.supportsEventNotification = true;
-
-        characteristic
-          .on('get', function(callback) {
-                       this.query(this.mappings.actuation, callback);
-                     }.bind(this) );
-      }
     }
 
     return services;

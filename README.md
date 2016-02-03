@@ -98,7 +98,6 @@ and for the homekit -> FHEM direction:
   max: the max value the reading has in fhem, only if different from maxValue
   cmd: the set command to use: set <device> <cmd> <value>
   cmdOn, cmdOff: for all bool characteristics
-  cmdOpen: commands to open a door, only in TargetDoorState
   cmds: a ; separated list that indicates the mapping of homekit values to fhem values.
         each list entry consists of : separated pair of from and to values
         each from value can be a literal value or a homekit defined term for this characteristic
