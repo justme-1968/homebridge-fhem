@@ -1222,6 +1222,9 @@ FHEMAccessory(accessory, s) {
   if( s.Readings.energy )
     this.mappings['E863F10C-079E-48FF-8F27-9C2605A29F52'] = { name: 'Energy', reading: 'energy', format: 'UINT32', factor: 1000 };
 
+  if( s.Readings.pressure )
+    this.mappings['E863F10F-079E-48FF-8F27-9C2605A29F52'] = { name: 'Air Pressure', reading: 'pressure', format: 'UINT16', factor: 1 };
+
   if( s.Readings.humidity ) {
     if( !this.service_name ) this.service_name = 'HumiditySensor';
     this.mappings.CurrentRelativeHumidity = { reading: 'humidity' };
