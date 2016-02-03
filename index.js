@@ -115,8 +115,16 @@ FHEM_reading2homekit(mapping, orig)
       return undefined;
   }
 
+   var defined;
+   if( mapping.homekit2name !== undefined ) {
+     defined = mapping.homekit2name[value];
+     if( defined === undefined )
+       defined = '???';
+   }
+
+   mapping.log.info('    caching: ' + mapping.characteristic_type + (mapping.subtype?':'+mapping.subtype:'') + ': '
+                                    + value + ' (' + 'as '+typeof(value) + (defined?'; means '+defined:'') + '; from \''+orig + '\')' );
    mapping.cached = value;
-   mapping.log.info('    caching: ' + mapping.characteristic_type + (mapping.subtype?':'+mapping.subtype:'') + ': ' + value + ' (' + typeof(value) + '; from ' + orig + ')' );
 
   return value;
 }
@@ -1259,7 +1267,7 @@ FHEMAccessory(accessory, s) {
                                                 '/^open/:OPEN', '/^closed/:CLOSED', '/.*/:STOPPED'] };
 
   if( s.Readings.battery ) {
-    value = parseInt( s.Readings.battery.Value );
+    var value = parseInt( s.Readings.battery.Value );
 
     if( isNaN(value) )
       this.mappings.StatusLowBattery = { reading: 'battery' };
@@ -1270,9 +1278,9 @@ FHEMAccessory(accessory, s) {
   }
 
   if( s.Readings['D-firmware'] )
-    this.mappings.FirmwareRevision = { reading: 'D-firmware' };
+    this.mappings.FirmwareRevision = { reading: 'D-firmware', _isInformation: true };
   else if( s.Readings.firmware )
-    this.mappings.FirmwareRevision = { reading: 'firmware' };
+    this.mappings.FirmwareRevision = { reading: 'firmware', _isInformation: true };
   //FIXME: add swversion internal for HUEDevices
 
   if( 0 ) {
@@ -1635,6 +1643,7 @@ FHEMAccessory(accessory, s) {
       if( typeof mapping.values === 'object' ) {
         mapping.value2homekit = {};
         mapping.value2homekit_re = [];
+        mapping.homekit2name ={}; 
         for( var entry of mapping.values ) {
           var match = entry.match('^([^:]*)(:(.*))?$');
           if( !match ) {
@@ -1645,8 +1654,10 @@ FHEMAccessory(accessory, s) {
           var from = match[1];
           var to = match[3] === undefined ? i : match[3];
 
-          if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][to] !== undefined )
+          if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][to] !== undefined ) {
+            mapping.homekit2name[Characteristic[mapping.characteristic_type][to]] = to;
             to = Characteristic[mapping.characteristic_type][to];
+          }
 
           var match;
           if( match = from.match('^/(.*)/$') )
@@ -1658,6 +1669,8 @@ FHEMAccessory(accessory, s) {
            && mapping.value2homekit_re.length) this.log.debug( 'value2homekit_re: ' + util.inspect(mapping.value2homekit_re) );
         if(mapping.value2homekit
            && Object.keys(mapping.value2homekit).length) this.log.debug( 'value2homekit: ' + util.inspect(mapping.value2homekit) );
+        if(mapping.homekit2name
+           && Object.keys(mapping.homekit2name).length) this.log.debug( 'homekit2name: ' + util.inspect(mapping.homekit2name) );
       }
 
       if( typeof mapping.cmds === 'object' ) {
@@ -2226,6 +2239,9 @@ FHEMAccessory.prototype = {
          mappings = [mappings];
 
       for( var mapping of mappings ) {
+        if( mapping._isInformation )
+          continue;
+
         if( !mapping.characteristic && mapping.name === undefined ) {
           //this.log.error(this.name + ': '+ ' no such characteristic: ' + characteristic_type );
           continue;
