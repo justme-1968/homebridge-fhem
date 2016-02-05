@@ -1008,6 +1008,13 @@ FHEMAccessory(accessory, s) {
 //log("got json: " + util.inspect(s) );
 //log("got json: " + util.inspect(s.Internals) );
 
+  var CustomUUIDs = {
+       //       F H E M       h o  m e  b r i d g e
+       Volume: '4648454d-0101-686F-6D65-627269646765',
+    Actuation: '4648454d-0201-686F-6D65-627269646765',
+  };
+
+
   if( !(this instanceof FHEMAccessory) )
     return new FHEMAccessory(accessory, s);
 
@@ -1194,16 +1201,16 @@ FHEMAccessory(accessory, s) {
   }
 
   if( s.Readings.volume ) {
-    this.mappings['00000027-0000-1000-8000-0026BB765291'] = { reading: 'volume', cmd: 'volume',
-                                                              name: 'Volume', format: 'UINT8', unit: 'PERCENTAGE',
-                                                              maxValue: 100, minValue: 0, minStep: 1  };
+    this.mappings[CustomUUIDs.Volume] = { reading: 'volume', cmd: 'volume',
+                                          name: 'Volume', format: 'UINT8', unit: 'PERCENTAGE',
+                                          maxValue: 100, minValue: 0, minStep: 1  };
 
   } else if( s.Readings.Volume ) {
-    this.mappings['00000027-0000-1000-8000-0026BB765291'] = { reading: 'Volume', cmd: 'Volume', nocache: true,
-                                                              name: 'Volume', format: 'UINT8', unit: 'PERCENTAGE',
-                                                              maxValue: 100, minValue: 0, minStep: 1  };
+    this.mappings[CustomUUIDs.Volume] = { reading: 'Volume', cmd: 'Volume', nocache: true,
+                                          name: 'Volume', format: 'UINT8', unit: 'PERCENTAGE',
+                                          maxValue: 100, minValue: 0, minStep: 1  };
     if( s.Attributes.generateVolumeEvent == 1 )
-      delete this.mappings['00000027-0000-1000-8000-0026BB765291'].nocache;
+      delete this.mappings[CustomUUIDs.Volume].nocache;
 
   }
 
@@ -1400,9 +1407,9 @@ FHEMAccessory(accessory, s) {
     this.mappings.TargetTemperature = { reading: 'desired-temp', cmd: 'desired-temp', delay: true };
 
     if( s.Readings.actuator )
-      this.mappings['10000027-0000-1000-8000-0026BB765291'] = { reading: 'actuator',
-                                                                name: 'Actuation', format: 'UINT8', unit: 'PERCENTAGE',
-                                                                maxValue: 100, minValue: 0, minStep: 1  };
+      this.mappings[CustomUUIDs.Actuation] = { reading: 'actuator',
+                                               name: 'Actuation', format: 'UINT8', unit: 'PERCENTAGE',
+                                               maxValue: 100, minValue: 0, minStep: 1  };
 
     if( match[3] ) {
       var values = match[3].split(',');
@@ -1417,9 +1424,9 @@ FHEMAccessory(accessory, s) {
     this.mappings.TargetTemperature = { reading: 'desiredTemperature', cmd: 'desiredTemperature', delay: true };
 
     if( s.Readings.valveposition )
-      this.mappings['10000027-0000-1000-8000-0026BB765291'] = { reading: 'valveposition',
-                                                                name: 'Actuation', format: 'UINT8', unit: 'PERCENTAGE',
-                                                                maxValue: 100, minValue: 0, minStep: 1  };
+      this.mappings[CustomUUIDs.Actuation] = { reading: 'valveposition',
+                                               name: 'Actuation', format: 'UINT8', unit: 'PERCENTAGE',
+                                               maxValue: 100, minValue: 0, minStep: 1  };
 
     if( match[3] ) {
       var values = match[3].split(',');
@@ -1434,9 +1441,9 @@ FHEMAccessory(accessory, s) {
     this.mappings.TargetTemperature = { reading: 'desired', cmd: 'desired', delay: true };
 
     if( s.Readings.actuation )
-      this.mappings['10000027-0000-1000-8000-0026BB765291'] = { reading: 'actuation',
-                                                                name: 'Actuation', format: 'UINT8', unit: 'PERCENTAGE',
-                                                                maxValue: 100, minValue: 0, minStep: 1  };
+      this.mappings[CustomUUIDs.Actuation] = { reading: 'actuation',
+                                               name: 'Actuation', format: 'UINT8', unit: 'PERCENTAGE',
+                                               maxValue: 100, minValue: 0, minStep: 1  };
 
     if( s.Readings.measured )
       this.mappings.CurrentTemperature = { reading: 'measured' };
