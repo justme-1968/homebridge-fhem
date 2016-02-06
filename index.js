@@ -1085,7 +1085,7 @@ FHEMAccessory(accessory, s) {
     var max = 360;
     if( match[3] !== undefined )
       max = match[3];
-    this.mappings.Hue = { reading: 'hue', cmd: 'hue', min: 0, max: max, maxValue: 360 };
+    this.mappings.Hue = { reading: 'hue', cmd: 'hue', max: max, maxValue: 360 };
   }
 
   if( match = s.PossibleSets.match(/(^| )sat[^\b\s]*(,(\d+)?)+\b/) ) {
@@ -1093,14 +1093,51 @@ FHEMAccessory(accessory, s) {
     var max = 100;
     if( match[3] !== undefined )
       max = match[3];
-    this.mappings.Saturation = { reading: 'sat', cmd: 'sat', min: 0, max: max, maxValue: 100 };
+    this.mappings.Saturation = { reading: 'sat', cmd: 'sat', max: max, maxValue: 100 };
   }
 
-  if( s.Readings.colormode )
-    this.mappings.colormode = { reading: 'colormode' };
-  if( s.Readings.xy )
-    this.mappings.xy = { reading: 'xy' };
-  //FIXME: add ct/colortemperature
+  if( s.PossibleSets.match(/(^| )hue\b/) && s.PossibleSets.match(/(^| )saturation\b/) && s.PossibleSets.match(/(^| )dim\b/) )  {
+    this.mappings.Hue = { reading: 'hue', cmd: 'hue', max: 360 };
+    this.mappings.Saturation = { reading: 'saturation', cmd: 'saturation', max: 100 };
+    this.mappings.Brightness = { reading: 'brightness', cmd: 'dim', max: 100, delay: true };
+
+  } else if( s.PossibleSets.match(/(^| )HSV\b/)
+             && s.Readings.hue !== undefined && s.Readings.saturation !== undefined && s.Readings.brightness !== undefined ) {
+    this.mappings.Hue = { reading: 'hue', cmd: 'HSV', max: 360 };
+    this.mappings.Saturation = { reading: 'saturation', cmd: 'HSV', max: 100 };
+    this.mappings.Brightness = { reading: 'brightness', cmd: 'HSV', max: 100, delay: true };
+
+    var homekit2reading = function(mapping, orig) {
+      var h = FHEM_cached[mapping.device + '-hue'];
+      var s = FHEM_cached[mapping.device + '-saturation'];
+      var v = FHEM_cached[mapping.device + '-brightness'];
+      //mapping.log( ' from cached : [' + h + ',' + s + ',' + v + ']' );
+
+      if( h === undefined ) h = 0;
+      if( s === undefined ) s = 100;
+      if( v === undefined ) v = 100;
+      //mapping.log( ' old : [' + h + ',' + s + ',' + v + ']' );
+
+      if( mapping.characteristic_type == 'Hue' ) {
+        h = orig;
+
+      } else if( mapping.characteristic_type == 'Saturation' ) {
+        s = orig;
+
+      } else if( mapping.characteristic_type == 'Brightness' ) {
+        v = orig;
+
+      }
+      //mapping.log( ' new : [' + h + ',' + s + ',' + v + ']' );
+
+      return h + ',' + s + ',' + v;
+    }
+
+    this.mappings.Hue.homekit2reading = homekit2reading.bind(null, this.mappings.Hue);
+    this.mappings.Saturation.homekit2reading = homekit2reading.bind(null, this.mappings.Saturation);
+    this.mappings.Brightness.homekit2reading = homekit2reading.bind(null, this.mappings.Brightness);
+
+  }
 
   if( !this.mappings.Hue ) {
     var reading;
@@ -1116,42 +1153,42 @@ FHEMAccessory(accessory, s) {
     }
 
     if( reading && cmd ) {
-      this.mappings.Hue = { reading: reading, cmd: cmd, min: 0, max: 360 };
-      this.mappings.Saturation = { reading: reading, cmd: cmd, min: 0, max: 100 };
-      this.mappings.Brightness = { reading: reading, cmd: cmd, min: 0, max: 100, delay: true };
+      this.mappings.Hue = { reading: reading, cmd: cmd, max: 360 };
+      this.mappings.Saturation = { reading: reading, cmd: cmd, max: 100 };
+      this.mappings.Brightness = { reading: reading, cmd: cmd, max:100,  delay: true };
 
       var homekit2reading = function(mapping, orig) {
         var h = FHEM_cached[mapping.device + '-h'];
         var s = FHEM_cached[mapping.device + '-s'];
         var v = FHEM_cached[mapping.device + '-v'];
-        //console.log( ' from cached : [' + h + ',' + s + ',' + v + ']' );
+        //mapping.log( ' from cached : [' + h + ',' + s + ',' + v + ']' );
 
         if( h === undefined ) h = 0.0;
         if( s === undefined ) s = 1.0;
         if( v === undefined ) v = 1.0;
-        //console.log( ' old : [' + h + ',' + s + ',' + v + ']' );
+        //mapping.log( ' old : [' + h + ',' + s + ',' + v + ']' );
 
-        if( mapping.characteristic_type == 'Hue' ) {
-          h = orig / mapping.max;
+        if( mapping.characteristic_type === 'Hue' ) {
+          h = orig / 360.0;
           FHEM_cached[mapping.device + '-h'] = h;
 
-        } else if( mapping.characteristic_type == 'Saturation' ) {
-          s = orig / mapping.max;
+        } else if( mapping.characteristic_type === 'Saturation' ) {
+          s = orig / 100.0;
           FHEM_cached[mapping.device + '-s'] = s;
 
-        } else if( mapping.characteristic_type == 'Brightness' ) {
-          v = orig / mapping.max;
+        } else if( mapping.characteristic_type === 'Brightness' ) {
+          v = orig / 100.0;
           FHEM_cached[mapping.device + '-v'] = v;
 
         }
-        //console.log( ' new : [' + h + ',' + s + ',' + v + ']' );
+        //mapping.log( ' new : [' + h + ',' + s + ',' + v + ']' );
 
         var value = FHEM_hsv2rgb( h, s, v );
         if( value === FHEM_cached[mapping.informId] )
           return undefined;
 
         FHEM_update(mapping.informId, value, true);
-        //console.log( ' rgb : [' + value + ']' );
+        //mapping.log( ' rgb : [' + value + ']' );
 
         return value;
       }
@@ -1191,6 +1228,13 @@ FHEMAccessory(accessory, s) {
       }
     }
   }
+
+  if( s.Readings.colormode )
+    this.mappings.colormode = { reading: 'colormode' };
+  if( s.Readings.xy )
+    this.mappings.xy = { reading: 'xy' };
+  //FIXME: add ct/colortemperature
+
 
   if( s.Readings['measured-temp'] ) {
     if( !this.service_name ) this.service_name = 'thermometer';
@@ -1396,7 +1440,7 @@ FHEMAccessory(accessory, s) {
 
   } else if( s.Internals.TYPE == 'ROOMMATE' ) {
     this.service_name = 'OccupancySensor';
-    this.mappings.OccupancyDetected = { reading: 'presence', values: ['presence:OCCUPANCY_DETECTED', '/.*/:OCCUPANCY_NOT_DETECTED'] };
+    this.mappings.OccupancyDetected = { reading: 'presence', values: ['present:OCCUPANCY_DETECTED', '/.*/:OCCUPANCY_NOT_DETECTED'] };
 
   } else if( s.Attributes.model == 'fs20di' )
     this.service_name = 'light';
@@ -1507,7 +1551,7 @@ FHEMAccessory(accessory, s) {
     if( this.mappings.rgb )
       this.log( s.Internals.NAME + ' has RGB [' + this.mappings.rgb.reading +']');
     if( this.mappings.Brightness )
-      this.log( s.Internals.NAME + ' is dimable ['+ this.mappings.Brightness.reading +';' + this.mappings.Brightness.cmd +']' );
+      this.log( s.Internals.NAME + ' is dimable ['+ this.mappings.Brightness.reading +';' + this.mappings.Brightness.cmd +';0-100]' );
   } else if( this.mappings.CurrentPosition )
     this.log( s.Internals.NAME + ' is blind ['+ this.mappings.CurrentPosition.reading +']' );
   else if( this.mappings.TargetTemperature )
@@ -1553,9 +1597,9 @@ FHEMAccessory(accessory, s) {
   if( this.mappings.On )
     this.log( s.Internals.NAME + ' has On [' +  this.mappings.On.reading + ';' + this.mappings.On.cmdOn +',' + this.mappings.On.cmdOff + ']' );
   if( this.mappings.Hue )
-    this.log( s.Internals.NAME + ' has Hue [' + this.mappings.Hue.reading + ';0-' + this.mappings.Hue.max +']' );
+    this.log( s.Internals.NAME + ' has Hue [' + this.mappings.Hue.reading + ';' + this.mappings.Hue.cmd + ';0-' + this.mappings.Hue.max +']' );
   if( this.mappings.Saturation )
-    this.log( s.Internals.NAME + ' has Saturation [' + this.mappings.Saturation.reading + ';0-' + this.mappings.Saturation.max +']' );
+    this.log( s.Internals.NAME + ' has Saturation [' + this.mappings.Saturation.reading +';' + this.mappings.Saturation.cmd + ';0-' + this.mappings.Saturation.max +']' );
   if( this.mappings.colormode )
     this.log( s.Internals.NAME + ' has colormode [' + this.mappings.colormode.reading +']' );
   if( this.mappings.xy )
