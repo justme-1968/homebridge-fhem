@@ -127,7 +127,7 @@ FHEM_reading2homekit(mapping, orig)
     }
   }
 
-   var defined;
+   var defined = undefined;
    if( mapping.homekit2name !== undefined ) {
      defined = mapping.homekit2name[value];
      if( defined === undefined )
@@ -1348,7 +1348,7 @@ FHEMAccessory(accessory, s) {
     var parts = s.Attributes.setList.split( ' ' );
     if( parts.length == 2 ) {
       this.mappings.CurrentDoorState = { reading: 'state', values: [parts[0]+':OPEN', parts[1]+':CLOSED'] };
-      this.mappings.TargetDoorState = { reading: 'state', values: [parts[0]+':CLOSED', parts[1]+':OPEN'],
+      this.mappings.TargetDoorState = { reading: 'state', values: [parts[0]+':OPEN', parts[1]+':CLOSED'],
                                                           cmds: ['OPEN:'+parts[0], 'CLOSED:'+parts[1]] };
     }
 
@@ -1403,7 +1403,7 @@ FHEMAccessory(accessory, s) {
     this.mappings.LockCurrentState = { reading: 'state',
                                        values: ['/uncertain/:UNKNOWN', '/^locked/:SECURED', '/.*/:UNSECURED'] };
     this.mappings.LockTargetState = { reading: 'state',
-                                      values: ['/^locked/:UNSECURED', '/.*/:SECURED'],
+                                      values: ['/^locked/:SECURED', '/.*/:UNSECURED'],
                                       cmds: ['UNSECURED:lock', 'SECURED:unlock'], };
 
   } else if( genericType == 'lock' ) {
@@ -1411,7 +1411,7 @@ FHEMAccessory(accessory, s) {
     this.mappings.LockCurrentState = { reading: 'state',
                                        values: ['/uncertain/:UNKNOWN', '/^locked/:SECURED', '/.*/:UNSECURED'] };
     this.mappings.LockTargetState = { reading: 'state',
-                                      values: ['/^locked/:UNSECURED', '/.*/:SECURED'],
+                                      values: ['/^locked/:SECURED', '/.*/:UNSECURED'],
                                       cmds: ['UNSECURED:lock+locked', 'SECURED:lock+unlocked'] };
 
   } else if( genericType == 'thermostat'
@@ -2039,7 +2039,7 @@ FHEMAccessory.prototype = {
         cmd = mapping.cmdOff
 
       else if( typeof mapping.homekit2cmd === 'object' )
-        cmd = homekit2cmd[value];
+        cmd = mapping.homekit2cmd[value];
 
       if( cmd === undefined ) {
         this.log.error(this.name + ' no cmd for ' + c + ', value ' + value);
@@ -2332,7 +2332,15 @@ FHEMAccessory.prototype = {
 
         if( mapping.cached !== undefined ) {
           characteristic.value = mapping.cached;
-          this.log.debug('      initial value is: ' + mapping.cached + ' (' + typeof(mapping.cached) + ')' );
+
+          var defined = undefined;
+          if( mapping.homekit2name !== undefined ) {
+            defined = mapping.homekit2name[characteristic.value];
+            if( defined === undefined )
+              defined = '???';
+          }
+
+          this.log.debug('      initial value is: ' + mapping.cached + ' (' + typeof(mapping.cached) + (defined?'; means '+defined:'') + ')' );
         } else if( mapping.default !== undefined ) {
             characteristic.value = mapping.default;
           this.log.debug('      no initial value; default is: ' + characteristic.value + ' (' + typeof(characteristic.value) + ')' );
