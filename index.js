@@ -92,7 +92,7 @@ FHEM_update(informId, orig, no_update) {
 function
 FHEM_reading2homekit(mapping, orig)
 {
-  var value;
+  var value = undefined;
   if( typeof mapping.reading2homekit === 'function' ) {
       try {
         value = mapping.reading2homekit(orig);
@@ -1704,15 +1704,18 @@ FHEMAccessory(accessory, s) {
       }
 
       if( mapping.default !== undefined ) {
-        if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][mapping.default] !== undefined )
+        if( mapping.homekit2name === undefined ) mapping.homekit2name = {};
+        if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][mapping.default] !== undefined ) {
+          mapping.homekit2name[Characteristic[mapping.characteristic_type][mapping.default]] = mapping.default;
           mapping.default = Characteristic[mapping.characteristic_type][mapping.default];
+        }
         this.log.debug( 'default: ' + mapping.default );
       }
 
       if( typeof mapping.values === 'object' ) {
         mapping.value2homekit = {};
         mapping.value2homekit_re = [];
-        mapping.homekit2name = {};
+        if( mapping.homekit2name === undefined ) mapping.homekit2name = {};
         for( var entry of mapping.values ) {
           var match = entry.match('^([^:]*)(:(.*))?$');
           if( !match ) {
@@ -1814,7 +1817,7 @@ FHEMAccessory(accessory, s) {
         }
       }
 
-      var orig;
+      var orig = undefined;
       if( device != this.device )
         orig = this.query(mapping);
       else if( s.Readings[mapping.reading] && s.Readings[mapping.reading].Value )
