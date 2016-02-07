@@ -1404,7 +1404,7 @@ FHEMAccessory(accessory, s) {
                                        values: ['/uncertain/:UNKNOWN', '/^locked/:SECURED', '/.*/:UNSECURED'] };
     this.mappings.LockTargetState = { reading: 'state',
                                       values: ['/^locked/:SECURED', '/.*/:UNSECURED'],
-                                      cmds: ['UNSECURED:lock', 'SECURED:unlock'], };
+                                      cmds: ['SECURED:lock', 'UNSECURED:unlock'], };
 
   } else if( genericType == 'lock' ) {
     this.mappings.TargetDoorState = { reading:'', default:'CLOSED', timeout:500, cmds: ['OPEN:open'] };
@@ -1412,7 +1412,7 @@ FHEMAccessory(accessory, s) {
                                        values: ['/uncertain/:UNKNOWN', '/^locked/:SECURED', '/.*/:UNSECURED'] };
     this.mappings.LockTargetState = { reading: 'state',
                                       values: ['/^locked/:SECURED', '/.*/:UNSECURED'],
-                                      cmds: ['UNSECURED:lock+locked', 'SECURED:lock+unlocked'] };
+                                      cmds: ['SECURED:lock+locked', 'UNSECURED:lock+unlocked'] };
 
   } else if( genericType == 'thermostat'
              || s.Attributes.subType == 'thermostat' ) {
