@@ -1854,8 +1854,10 @@ Accessory.prototype = {
       for( var param of params.split(',') ) {
         if( param == 'clear' ) {
           mapping = {};
+          delete this.mappings[characteristic];
           continue;
-        }
+        } else if( !this.mappings[characteristic] )
+          this.mappings[characteristic] = mapping
 
         var p = param.split('=');
         if( p.length == 2 )
