@@ -24,7 +24,7 @@ module.exports = function(homebridge){
   User = homebridge.user;
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
-  homebridge.registerPlatform("homebridge-fhem", "FHEM", FHEMPlatform);
+  homebridge.registerPlatform("homebridge-fhem", "FHEM", Platform);
 }
 
 
@@ -49,8 +49,8 @@ FHEM_isPublished(device) {
 
       if( accessory.device === device )
         return accessory;
-    };
-  };
+    }
+  }
 
   return null;
 }
@@ -134,7 +134,7 @@ FHEM_reading2homekit(mapping, orig)
        defined = '???';
    }
 
-   mapping.log.info('    caching: ' + mapping.characteristic_type + (mapping.subtype?':'+mapping.subtype:'') + ': '
+   mapping.log.info('    caching: ' + (mapping.name?'Custom '+mapping.name:mapping.characteristic_type) + (mapping.subtype?':'+mapping.subtype:'') + ': '
                                     + value + ' (' + 'as '+typeof(value) + (defined?'; means '+defined:'') + '; from \''+orig + '\')');
    mapping.cached = value;
 
@@ -211,7 +211,7 @@ FHEM_reading2homekit_(mapping, orig)
 
     var orig = value;
 
-    var format;
+    var format = undefined;
     if( typeof mapping.characteristic === 'object' )
       format = mapping.characteristic.props.format;
     else if( typeof mapping.characteristic === 'function' ) {
@@ -251,7 +251,7 @@ FHEM_reading2homekit_(mapping, orig)
       var mapped;
       if( value > mapping.threshold )
         mapped = 1;
-     else
+      else
         mapped = 0;
       mapping.log.debug(mapping.informId + ' threshold: value ' + value + ' mapped to ' + mapped);
       value = mapped;
@@ -599,7 +599,7 @@ console.log( 'DELETEATTR: '+value );
 var FHEM_platforms = [];
 
 function
-FHEMPlatform(log, config) {
+Platform(log, config) {
   this.log         = log;
   this.server      = config['server'];
   this.port        = config['port'];
@@ -852,7 +852,7 @@ FHEM_execute(log,connection,cmd,callback) {
               .on( 'error', function(err) { log('There was a problem connecting to FHEM ('+ url +'):'+ err); } );
 }
 
-FHEMPlatform.prototype = {
+Platform.prototype = {
   execute: function(cmd,callback) {FHEM_execute(this.log, this.connection, cmd, callback)},
 
   checkAndSetGenericDeviceType: function() {
@@ -913,11 +913,13 @@ FHEMPlatform.prototype = {
                        var sArray=FHEM_sortByKey(json['Results'],"Name");
                        sArray.map( function(s) {
 
-                         var accessory = new FHEMAccessory(this, s);
-                         if( accessory && Object.getOwnPropertyNames(accessory).length ) {
+                         //FIXME: change to factory pattern
+                         var accessory = new Accessory(this, s);
+                         if( accessory && accessory.service_name ) {
                            foundAccessories.push(accessory);
                          } else {
                            this.log.info( 'no accessory created for ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ')' );
+                           return undefined;
                          }
 
                        }.bind(this) );
@@ -938,29 +940,25 @@ FHEMPlatform.prototype = {
 }
 
 function
-FHEMAccessory(accessory, s) {
-  if( !(this instanceof FHEMAccessory) )
-    return new FHEMAccessory(accessory, s);
-
-
+Accessory(platform, s) {
   var CustomUUIDs = {
        //       F H E M       h o  m e  b r i d g e
        Volume: '4648454d-0101-686F-6D65-627269646765',
     Actuation: '4648454d-0201-686F-6D65-627269646765',
   };
 
-  this.log         = accessory.log;
-  this.connection  = accessory.connection;
-  this.jsFunctions = accessory.jsFunctions;
+  this.log         = platform.log;
+  this.connection  = platform.connection;
+  this.jsFunctions = platform.jsFunctions;
 
   if( FHEM_isPublished(s.Internals.NAME) ) {
     this.log.warn( s.Internals.NAME + ' is already published');
-    return null;
+    return;
   }
 
   if( s.Attributes.disable == 1 ) {
     this.log.info( s.Internals.NAME + ' is disabled');
-    //return null;
+    //return;
 
   }
 
@@ -970,12 +968,12 @@ FHEMAccessory(accessory, s) {
 
   if( genericType === 'ignore' ) {
     this.log.info( 'ignoring ' + s.Internals.NAME );
-    return null;
+    return;
   }
 
   if( s.Internals.TYPE === 'structure' && genericType === undefined ) {
     this.log.info( 'ignoring ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without genericDeviceType' );
-    return null;
+    return;
   }
 
 
@@ -1083,8 +1081,8 @@ FHEMAccessory(accessory, s) {
 
   if( !this.mappings.Hue ) {
     // rgb/RGB
-    var reading;
-    var cmd;
+    var reading = undefined;
+    var cmd = undefined;
     if( s.PossibleSets.match(/(^| )rgb\b/) ) {
       this.service_name = 'light';
       reading = 'rgb'; cmd = 'rgb';
@@ -1097,7 +1095,7 @@ FHEMAccessory(accessory, s) {
 
     if( reading && cmd ) {
       this.mappings.Hue = { reading: reading, cmd: cmd, max: 360 };
-      this.mappings.Saturation = { reading: reading, cmd: cmd, max: 100 };
+      accessorthis.mappings.Saturation = { reading: reading, cmd: cmd, max: 100 };
       this.mappings.Brightness = { reading: reading, cmd: cmd, max:100,  delay: true };
 
       var homekit2reading = function(mapping, orig) {
@@ -1446,7 +1444,7 @@ FHEMAccessory(accessory, s) {
       if( s.Attributes.genericDeviceType )
         this.mappings.On = { reading: 'power', cmdOn: 'on', cmdOff: 'off' };
       else
-        return null;
+        return;
 
     } else if( !s.Attributes.homebridgeMapping ) {
       this.service_name = 'switch';
@@ -1484,7 +1482,7 @@ FHEMAccessory(accessory, s) {
 
   if( this.service_name === undefined ) {
     this.log.error( s.Internals.NAME + ': no service type detected' );
-    return {};
+    return;
   }
   if( this.service_name === undefined )
     this.service_name = 'switch';
@@ -1508,7 +1506,7 @@ FHEMAccessory(accessory, s) {
     log( s.Internals.NAME + ' is occupancy sensor' );
   else if( !this.mappings ) {
     this.log.error( s.Internals.NAME + ': no service type detected' );
-    return {};
+    return;
   }
 
   if( this.mappings.CurrentPosition || this.mappings.TargetTemperature
@@ -1572,8 +1570,8 @@ FHEMAccessory(accessory, s) {
     this.log( s.Internals.NAME + ' has StatusLowBattery ['+ this.mappings.StatusLowBattery.reading +']' );
   if( this.mappings.FirmwareRevision )
     this.log( s.Internals.NAME + ' has FirmwareRevision ['+ this.mappings.FirmwareRevision.reading +']' );
-  if( this.mappings['00000027-0000-1000-8000-0026BB765291'] )
-    this.log( s.Internals.NAME + ' has volume ['+ this.mappings['00000027-0000-1000-8000-0026BB765291'].reading + ':' + (this.mappings['00000027-0000-1000-8000-0026BB765291'].nocache ? 'not cached' : 'cached' )  +']' );
+  if( this.mappings[CustomUUIDs.Volume] )
+    this.log( s.Internals.NAME + ' has volume ['+ this.mappings[CustomUUIDs.Volume].reading + ';' + (this.mappings[CustomUUIDs.Volume].nocache ? 'not cached' : 'cached' )  +']' );
   if( this.mappings.reachable )
     this.log( s.Internals.NAME + ' has reachability ['+ this.mappings.reachable.reading +']' );
 
@@ -1781,10 +1779,9 @@ FHEMAccessory(accessory, s) {
 
     }
   }
-
 }
 
-FHEMAccessory.prototype = {
+Accessory.prototype = {
   subscribe: function(mapping, characteristic) {
     if( typeof mapping === 'object' ) {
       mapping.characteristic = characteristic;
@@ -1920,7 +1917,7 @@ FHEMAccessory.prototype = {
     else
       this.log.info(this.name + " sending command " + c + " with value " + value);
 
-    var command;
+    var command = undefined;
     if( c == 'identify' ) {
       if( this.type == 'HUEDevice' )
         command = "set " + this.device + "alert select";
@@ -2342,8 +2339,8 @@ FHEMAccessory.prototype = {
 
 };
 
-//module.exports.accessory = FHEMAccessory;
-//module.exports.platform = FHEMPlatform;
+//module.exports.accessory = Accessory;
+//module.exports.platform = Platform;
 
 
 
@@ -2365,7 +2362,7 @@ function FHEMdebug_handleRequest(request, response){
     for( var informId in FHEM_subscriptions ) {
       response.write( informId + ': '+ FHEM_cached[informId] +'<br>' );
 
-      var derived;
+      var derived = false;
       for( var subscription of FHEM_subscriptions[informId] ) {
         var characteristic = subscription.characteristic;
         if( !characteristic ) continue;
@@ -2373,7 +2370,7 @@ function FHEMdebug_handleRequest(request, response){
         var mapping = characteristic.FHEM_mapping;
         if( !mapping || mapping.cached === undefined ) continue;
 
-        derived = 1;
+        derived = true;
         response.write( '&nbsp;&nbsp;' + mapping.characteristic_type + ': '+ mapping.cached + ' (' + typeof(mapping.cached)+')<br>' );
       }
       if( derived )
