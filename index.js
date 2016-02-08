@@ -173,21 +173,6 @@ FHEM_reading2homekit_(mapping, orig)
   } else if( reading == 'humidity' ) {
     value = parseInt( value );
 
-  } else if( reading == 'battery' ) {
-    if(mapping.characteristic_type == 'BatteryLevel' ) {
-      value = parseInt(value);
-
-    } else if( value == 'ok' )
-      value = Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL;
-
-    else {
-      value = parseInt(value);
-      if( isNaN(value) )
-        value = Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW;
-      else
-        value = value > mapping.threshold ? Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL : Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW;
-    }
-
   } else if( reading == 'onoff' ) {
     value = parseInt( value );
 
@@ -262,6 +247,16 @@ FHEM_reading2homekit_(mapping, orig)
       value = mapped;
     }
 
+    if( format !== 'bool' && mapping.threshold ) {
+      var mapped;
+      if( value > mapping.threshold )
+        mapped = 1;
+     else
+        mapped = 0;
+      mapping.log.debug(mapping.informId + ' threshold: value ' + value + ' mapped to ' + mapped);
+      value = mapped;
+    }
+
     if( typeof mapping.value2homekit_re === 'object' || typeof mapping.value2homekit === 'object' ) {
       var mapped = undefined;
       if( typeof mapping.value2homekit_re === 'object' )
@@ -321,16 +316,6 @@ FHEM_reading2homekit_(mapping, orig)
       if( mapping.factor ) {
         mapping.log.debug(mapping.informId + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
         value *= mapping.factor;
-      }
-
-      if( mapping.threshold ) {
-        var mapped;
-        if( value > mapping.threshold )
-          mapped = 1;
-        else
-          mapped = 0;
-        mapping.log.debug(mapping.informId + ' threshold: value ' + value + ' mapped to ' + mapped);
-        value = mapped;
       }
 
       if( mapping.invert ) {
@@ -928,61 +913,11 @@ FHEMPlatform.prototype = {
                        var sArray=FHEM_sortByKey(json['Results'],"Name");
                        sArray.map( function(s) {
 
-                         var accessory;
-                         if( FHEM_isPublished(s.Internals.NAME) )
-                           this.log.warn( s.Internals.NAME + ' is already published');
-
-                         else if( 0 && s.Attributes.disable == 1 ) {
-                           this.log.info( s.Internals.NAME + ' is disabled');
-
-                         } else if( s.Internals.TYPE == 'structure' ) {
-                           this.log.info( 'ignoring structure ' + s.Internals.NAME );
-
-                         } else if( s.Attributes.genericDisplayType
-                                    || s.Attributes.genericDeviceType ) {
-                           accessory = new FHEMAccessory(this, s);
-
-                         } else if( s.PossibleSets.match(/(^| )on\b/)
-                                    && s.PossibleSets.match(/(^| )off\b/) ) {
-                           accessory = new FHEMAccessory(this, s);
-
-                         } else if( s.Attributes.subType == 'thermostat'
-                                    || s.Attributes.subType == 'blindActuator'
-                                    || s.Attributes.subType == 'threeStateSensor' ) {
-                           accessory = new FHEMAccessory(this, s);
-
-                         } else if( s.Attributes.model == 'HM-SEC-WIN' ) {
-                           accessory = new FHEMAccessory(this, s);
-
-                         } else if( s.Attributes.model && s.Attributes.model.match(/^HM-SEC-KEY/) ) {
-                           accessory = new FHEMAccessory(this, s);
-
-                         } else if( s.Internals.TYPE == 'PRESENCE'
-                                    || s.Internals.TYPE == 'ROOMMATE' ) {
-                           accessory = new FHEMAccessory(this, s);
-
-                         } else if( s.Internals.TYPE == 'SONOSPLAYER' ) {
-                           accessory = new FHEMAccessory(this, s);
-
-                         } else if( s.Readings.temperature ) {
-                           accessory = new FHEMAccessory(this, s);
-
-                         } else if( s.Readings.humidity ) {
-                           accessory = new FHEMAccessory(this, s);
-
-                         } else if( s.Readings.voc ) {
-                           accessory = new FHEMAccessory(this, s);
-
-                         } else if( s.Internals.TYPE == 'harmony' ) {
-                           accessory = new FHEMAccessory(this, s);
-
-                         } else {
-                           this.log.info( 'ignoring ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ')' );
-
-                         }
-
+                         var accessory = new FHEMAccessory(this, s);
                          if( accessory && Object.getOwnPropertyNames(accessory).length ) {
                            foundAccessories.push(accessory);
+                         } else {
+                           this.log.info( 'no accessory created for ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ')' );
                          }
 
                        }.bind(this) );
@@ -1004,9 +939,9 @@ FHEMPlatform.prototype = {
 
 function
 FHEMAccessory(accessory, s) {
-//log( 'sets: ' + s.PossibleSets );
-//log("got json: " + util.inspect(s) );
-//log("got json: " + util.inspect(s.Internals) );
+  if( !(this instanceof FHEMAccessory) )
+    return new FHEMAccessory(accessory, s);
+
 
   var CustomUUIDs = {
        //       F H E M       h o  m e  b r i d g e
@@ -1014,32 +949,35 @@ FHEMAccessory(accessory, s) {
     Actuation: '4648454d-0201-686F-6D65-627269646765',
   };
 
-
-  if( !(this instanceof FHEMAccessory) )
-    return new FHEMAccessory(accessory, s);
-
   this.log         = accessory.log;
   this.connection  = accessory.connection;
   this.jsFunctions = accessory.jsFunctions;
+
+  if( FHEM_isPublished(s.Internals.NAME) ) {
+    this.log.warn( s.Internals.NAME + ' is already published');
+    return null;
+  }
 
   if( s.Attributes.disable == 1 ) {
     this.log.info( s.Internals.NAME + ' is disabled');
     //return null;
 
-  } else if( s.Internals.TYPE == 'structure' ) {
-    this.log.info( 'ignoring ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ')' );
-    return null;
-
   }
 
   var genericType = s.Attributes.genericDeviceType;
-  if( !genericType )
+  if( !genericType === undefined )
     genericType = s.Attributes.genericDisplayType;
 
-  if( genericType == 'ignore' ) {
+  if( genericType === 'ignore' ) {
     this.log.info( 'ignoring ' + s.Internals.NAME );
     return null;
   }
+
+  if( s.Internals.TYPE === 'structure' && genericType === undefined ) {
+    this.log.info( 'ignoring ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without genericDeviceType' );
+    return null;
+  }
+
 
   this.mappings = {};
 
@@ -1047,11 +985,13 @@ FHEMAccessory(accessory, s) {
 
   var match;
   if( match = s.PossibleSets.match(/(^| )pct\b/) ) {
+    // HM dimmer
     this.service_name = 'light';
     this.mappings.On = { reading: 'pct', valueOff: '0', cmdOn: 'on', cmdOff: 'off' };
     this.mappings.Brightness = { reading: 'pct', cmd: 'pct', delay: true };
 
   } else if( match = s.PossibleSets.match(/(^| )dim\d+%/) ) {
+    // FS20 dimmer
     this.service_name = 'light';
     this.mappings.On = { reading: 'state', valueOff: 'off', cmdOn: 'on', cmdOff: 'off' };
     this.mappings.Brightness = { reading: 'state', cmd: ' ', delay: true };
@@ -1097,12 +1037,14 @@ FHEMAccessory(accessory, s) {
   }
 
   if( s.PossibleSets.match(/(^| )hue\b/) && s.PossibleSets.match(/(^| )saturation\b/) && s.PossibleSets.match(/(^| )dim\b/) )  {
+    // MilightDevice
     this.mappings.Hue = { reading: 'hue', cmd: 'hue', max: 360 };
     this.mappings.Saturation = { reading: 'saturation', cmd: 'saturation', max: 100 };
     this.mappings.Brightness = { reading: 'brightness', cmd: 'dim', max: 100, delay: true };
 
   } else if( s.PossibleSets.match(/(^| )HSV\b/)
              && s.Readings.hue !== undefined && s.Readings.saturation !== undefined && s.Readings.brightness !== undefined ) {
+    // Wifilight
     this.mappings.Hue = { reading: 'hue', cmd: 'HSV', max: 360 };
     this.mappings.Saturation = { reading: 'saturation', cmd: 'HSV', max: 100 };
     this.mappings.Brightness = { reading: 'brightness', cmd: 'HSV', max: 100, delay: true };
@@ -1140,6 +1082,7 @@ FHEMAccessory(accessory, s) {
   }
 
   if( !this.mappings.Hue ) {
+    // rgb/RGB
     var reading;
     var cmd;
     if( s.PossibleSets.match(/(^| )rgb\b/) ) {
@@ -1233,8 +1176,8 @@ FHEMAccessory(accessory, s) {
     this.mappings.colormode = { reading: 'colormode' };
   if( s.Readings.xy )
     this.mappings.xy = { reading: 'xy' };
-  //FIXME: add ct/colortemperature
-
+  if( s.Readings.ct )
+    this.mappings.ct = { reading: 'ct' };
 
   if( s.Readings['measured-temp'] ) {
     if( !this.service_name ) this.service_name = 'thermometer';
@@ -1322,10 +1265,10 @@ FHEMAccessory(accessory, s) {
     var value = parseInt( s.Readings.battery.Value );
 
     if( isNaN(value) )
-      this.mappings.StatusLowBattery = { reading: 'battery' };
+      this.mappings.StatusLowBattery = { reading: 'battery', values: ['ok:BATTERY_LEVEL_NORMAL', '/.*/:BATTERY_LEVEL_LOW'] };
     else {
       this.mappings.BatteryLevel = { reading: 'battery' };
-      this.mappings.StatusLowBattery = { reading: 'battery', threshold: 20 };
+      this.mappings.StatusLowBattery = { reading: 'battery', threshold: 20, values: ['0:BATTERY_LEVEL_LOW', '1:BATTERY_LEVEL_NORMAL']  };
     }
   }
 
@@ -1400,9 +1343,9 @@ FHEMAccessory(accessory, s) {
   } else if( s.Attributes.model && s.Attributes.model.match(/^HM-SEC-KEY/ ) ) {
     this.service_name = 'lock';
     this.mappings.TargetDoorState = { reading:'', default:'CLOSED', timeout:500, cmds: ['OPEN:open'] };
-    this.mappings.LockCurrentState = { reading: 'state',
+    this.mappings.LockCurrentState = { reading: 'lock',
                                        values: ['/uncertain/:UNKNOWN', '/^locked/:SECURED', '/.*/:UNSECURED'] };
-    this.mappings.LockTargetState = { reading: 'state',
+    this.mappings.LockTargetState = { reading: 'lock',
                                       values: ['/^locked/:SECURED', '/.*/:UNSECURED'],
                                       cmds: ['SECURED:lock', 'UNSECURED:unlock'], };
 
@@ -1526,16 +1469,19 @@ FHEMAccessory(accessory, s) {
       delete this.mappings.On.reading;
     else if( !this.service_name )
       this.service_name = 'switch';
+
   } else if( !this.service_name && s.Attributes.setList ) {
     var parts = s.Attributes.setList.split( ' ' );
     if( parts.length == 2 ) {
       this.service_name = 'switch';
       this.mappings.On = { reading: 'state', valueOn: parts[0], cmdOn: parts[0], cmdOff: parts[1] };
     }
+
   }
 
   if( this.service_name === undefined )
     this.service_name = genericType;
+
   if( this.service_name === undefined ) {
     this.log.error( s.Internals.NAME + ': no service type detected' );
     return {};

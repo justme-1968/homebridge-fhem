@@ -82,7 +82,7 @@ currently supported parameters for FHEM -> homekit direction are:
 
     e.g.: PositionState=motor,values=/^up/:INCREASING;/^down/:DECREASING;/.*/:STOPPED On=state,valueOn=/on|dim/,valueOff=off
 
-  the order of the transformations is as follows: eventMap, part, values, valueOn/valueOff, factor, threshold, max, maxValue/minValue/minStep, invert
+  the order of the transformations is as follows: eventMap, part, threshold, values, valueOn/valueOff, factor, max, maxValue/minValue/minStep, invert
 
   instead of using the transformation chain reading2homekit can be set to the name of a js function that is imported from a file
   named by the jsFunctions config option. relative paths are relative to the same path the config file is located in.
