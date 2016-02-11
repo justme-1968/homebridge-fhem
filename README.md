@@ -4,7 +4,7 @@ a fhem platform shim for homebridge
 uses longpoll and an internal cache to avoid roundtrips to fhem.
 a debug browser is available at port 8082.
 
-add one (or more) FHEM platforms to config.json and set the filter to a fhem devspec that
+add one (or more) FHEM platforms to config.json and set the filter(s) to a fhem devspec that
 includes the devices that should be bridged to homekit.
 
 directly (automaticaly) supports:
