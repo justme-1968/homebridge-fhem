@@ -1299,7 +1299,7 @@ Accessory(platform, s) {
     if( s.PossibleSets.match(/(^| )position\b/) ) {
       this.mappings.CurrentPosition = { reading: 'position' };
       this.mappings.TargetPosition = { reading: 'position', cmd: 'position', delay: true };
-      if( this.type == 'DUOFERN' ) {
+      if( s.Internals.TYPE == 'DUOFERN' ) {
         this.mappings.CurrentPosition.invert = true;
         this.mappings.TargetPosition.invert = true;
 
