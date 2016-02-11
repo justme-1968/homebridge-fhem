@@ -387,16 +387,15 @@ FHEM_reading2homekit_(mapping, orig)
       mapping.log.error(mapping.informId + ' not a number: ' + orig);
       return undefined;
     } else if( mapping.invert && mapping.minValue !== undefined && mapping.maxValue !== undefined ) {
-      value = mapping.maxValue - value + mapping.minValue;
-      mapping.log.debug(mapping.informId + ' value: ' + value + ' inverted to ' + mapped);
+      mapped = mapping.maxValue - value + mapping.minValue;
     } else if( mapping.invert && mapping.maxValue !== undefined ) {
-      value = mapping.maxValue - value;
-      mapping.log.debug(mapping.informId + ' value: ' + value + ' inverted to ' + mapped);
+      mapped = mapping.maxValue - value;
     } else if( mapping.invert ) {
-      value = 100 - value;
-      mapping.log.debug(mapping.informId + ' value: ' + value + ' inverted to ' + mapped);
+      mapped = 100 - value;
     }
 
+    if( value !== mapped )
+      mapping.log.debug(mapping.informId + ' value: ' + value + ' inverted to ' + mapped);
     value = mapped;
   }
 
@@ -1279,13 +1278,13 @@ Accessory(platform, s) {
   if( 0 ) {
   if( s.Readings.reachable )
     this.mappings.reachable = { reading: 'reachable' };
-  else if( s.PossibleAttrs.match(/[\^ ]disable\b/) )
+  else if( s.PossibleAttrs.match(/(^| )disable\b/) )
     this.mappings.reachable = { reading: 'reachable' };
   }
 
   else if( genericType == 'garage' ) {
     this.service_name = 'garage';
-    if( s.PossibleAttrs.match(/[\^ ]setList\b/) && !s.Attributes.setList  ) s.Attributes.setList = 'on off';
+    if( s.PossibleAttrs.match(/(^| )setList\b/) && !s.Attributes.setList  ) s.Attributes.setList = 'on off';
     var parts = s.Attributes.setList.split( ' ' );
     if( parts.length == 2 ) {
       this.mappings.CurrentDoorState = { reading: 'state', values: [parts[0]+':OPEN', parts[1]+':CLOSED'] };
@@ -1294,10 +1293,10 @@ Accessory(platform, s) {
     }
 
   } else if( genericType == 'blind'
-           || s.Attributes.subType == 'blindActuator' ) {
+             || s.Attributes.subType == 'blindActuator' ) {
     this.service_name = 'blind';
     delete this.mappings.Brightness;
-    if( s.PossibleSets.match(/[\^ ]position\b/) ) {
+    if( s.PossibleSets.match(/(^| )position\b/) ) {
       this.mappings.CurrentPosition = { reading: 'position' };
       this.mappings.TargetPosition = { reading: 'position', cmd: 'position', delay: true };
       if( this.type == 'DUOFERN' ) {
@@ -1312,6 +1311,7 @@ Accessory(platform, s) {
         //this.mappings.TargetPosition.homekit2reading = homekit2reading.bind(undefined, this.mappings.TargetPosition);
       }
     } else {
+this.log.error( s.PossibleSets );
       this.mappings.CurrentPosition = { reading: 'pct' };
       this.mappings.TargetPosition = { reading: 'pct', cmd: 'pct', delay: true };
     }
@@ -1944,32 +1944,37 @@ Accessory.prototype = {
       command = "set " + this.device + " sat " + value;
 
     } else {
-      this.log.info(this.name + ': executing set cmd for ' + mapping.characteristic_type + ' with value ' + value );
+      mapping.log.info(this.name + ': executing set cmd for ' + mapping.characteristic_type + ' with value ' + value );
 
       if( typeof mapping.homekit2reading === 'function' ) {
           try {
             value = mapping.homekit2reading(value);
           } catch(err) {
-            this.log.error( mapping.informId + ' homekit2reading: ' + err );
+            mapping.log.error( mapping.informId + ' homekit2reading: ' + err );
             return;
           }
         if( value === undefined ) {
-          this.log.info( '  converted value is unchanged ' );
+          mapping.log.info( '  converted value is unchanged ' );
           return;
 
         }
 
-        this.log.info( '  value converted to ' + value );
+        mapping.log.info( '  value converted to ' + value );
 
       } else {
         if( typeof value === 'number' ) {
-          if( mapping.invert && mapping.minValue !== undefined && mapping.maxValue !== undefined )
-            value = mapping.maxValue - value + mapping.minValue;
-          else if( mapping.invert && mapping.maxValue !== undefined )
-            value = mapping.maxValue - value;
-          else if( mapping.invert )
-            value = 100 - value;
+          var mapped = value;
+          if( mapping.invert && mapping.minValue !== undefined && mapping.maxValue !== undefined ) {
+            mapped = mapping.maxValue - value + mapping.minValue;
+          } else if( mapping.invert && mapping.maxValue !== undefined ) {
+            mapped = mapping.maxValue - value;
+          } else if( mapping.invert ) {
+            mapped = 100 - value;
           }
+          if( value !== mapped )
+            mapping.log.debug( '  value: ' + value + ' inverted to ' + mapped);
+          value = mapped;
+        }
       }
 
       if( mapping.max !== undefined && mapping.maxValue != undefined )
@@ -1987,7 +1992,7 @@ Accessory.prototype = {
         cmd = mapping.homekit2cmd[value];
 
       if( cmd === undefined ) {
-        this.log.error(this.name + ' no cmd for ' + c + ', value ' + value);
+        mapping.log.error(this.name + ' no cmd for ' + c + ', value ' + value);
         return;
       }
 
