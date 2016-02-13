@@ -1185,12 +1185,12 @@ Accessory(platform, s) {
   }
 
   if( s.Readings.volume ) {
-    this.mappings[CustomUUIDs.Volume] = { reading: 'volume', cmd: 'volume',
+    this.mappings[CustomUUIDs.Volume] = { reading: 'volume', cmd: 'volume', delay: true,
                                           name: 'Volume', format: 'UINT8', unit: 'PERCENTAGE',
                                           maxValue: 100, minValue: 0, minStep: 1  };
 
   } else if( s.Readings.Volume ) {
-    this.mappings[CustomUUIDs.Volume] = { reading: 'Volume', cmd: 'Volume', nocache: true,
+    this.mappings[CustomUUIDs.Volume] = { reading: 'Volume', cmd: 'Volume', delay: true, nocache: true,
                                           name: 'Volume', format: 'UINT8', unit: 'PERCENTAGE',
                                           maxValue: 100, minValue: 0, minStep: 1  };
     if( s.Attributes.generateVolumeEvent == 1 )
@@ -1865,7 +1865,10 @@ Accessory.prototype = {
             mapping[p[0]] = p[1].split(';');
           else if( p[0] == 'cmds' )
             mapping[p[0]] = p[1].split(';');
-          else
+          else if( p[0] == 'delay' ) {
+            mapping[p[0]] = parseInt(p[1]);
+            if( isNaN(mapping[p[0]]) ) mapping[p[0]] = true;
+          } else
             mapping[p[0]] = p[1];
 
         else if( p.length == 1 ) {
@@ -2322,8 +2325,8 @@ Accessory.prototype = {
         characteristic
           .on('set', function(mapping, value, callback, context) {
                        if( context !== 'fromFHEM' ) {
-                         if( mapping.delayed )
-                           this.delayed(mapping, value, mapping.delayed);
+                         if( mapping.delay )
+                           this.delayed(mapping, value, mapping.delay);
                          else if( mapping.cmd )
                            this.command(mapping, value);
                          else
