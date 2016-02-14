@@ -876,7 +876,7 @@ Platform.prototype = {
                                     function(result) {
                                         this.log.warn( 'genericDeviceType attribute was not known. please restart homebridge.' );
                                         process.exit(0);
-                                    } );
+                                    }.bind(this) );
                     }
 
                   }.bind(this) );
