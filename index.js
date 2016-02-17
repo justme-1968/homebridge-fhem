@@ -59,7 +59,6 @@ var tzoffset = (new Date()).getTimezoneOffset() * 60000; //offset in millisecond
 
 // cached readings from longpoll & query
 var FHEM_cached = {};
-//var FHEM_internal = {};
 function
 FHEM_update(informId, orig, no_update) {
   if( orig === undefined
@@ -941,9 +940,10 @@ Platform.prototype = {
 function
 Accessory(platform, s) {
   var CustomUUIDs = {
-       //       F H E M       h o  m e  b r i d g e
-       Volume: '4648454d-0101-686F-6D65-627269646765',
-    Actuation: '4648454d-0201-686F-6D65-627269646765',
+                   //  F H E M       h o  m e  b r i d g e
+              Volume: '4648454d-0101-686F-6D65-627269646765',
+           Actuation: '4648454d-0201-686F-6D65-627269646765',
+    ColorTemperature: '4648454d-0301-686F-6D65-627269646765',
   };
 
   this.log         = platform.log;
@@ -1032,6 +1032,38 @@ Accessory(platform, s) {
       max = match[3];
     this.mappings.Saturation = { reading: 'sat', cmd: 'sat', max: max, maxValue: 100 };
   }
+
+  /*if( match = s.PossibleSets.match(/(^| )ct(:[^\d]*([^\$ ]*))?/) ) {
+    this.service_name = 'light';
+    var minValue = 2000;
+    var maxValue = 6500;
+    if( match[3] ) {
+      var values = match[3].split(',');
+      minValue = parseInt(1000000/values[2]);
+      maxValue = parseInt(1000000/values[0]);
+    }
+    this.mappings[CustomUUIDs.ColorTemperature] = { reading: 'ct', cmd: 'ct', delay: true,
+                                                    name: 'Color Temperature', format: 'UINT16', unit: 'PERCENTAGE',
+                                                    minValue: maxValue,  maxValue: minValue, minStep: 10 };
+    var reading2homekit = function(mapping, orig) { return parseInt(1000000 / parseInt(orig)) };
+    var homekit2reading = function(mapping, orig) { return parseInt(1000000 / orig) };
+    this.mappings[CustomUUIDs.ColorTemperature].reading2homekit = reading2homekit.bind(undefined, this.mappings.color);
+    this.mappings[CustomUUIDs.ColorTemperature].reading2homekit = reading2homekit.bind(undefined, this.mappings.color);
+
+  } else if( match = s.PossibleSets.match(/(^| )color(:[^\d]*([^\$ ]*))?/) ) {
+    this.service_name = 'light';
+    var minValue = 2000;
+    var maxValue = 6500;
+    if( match[3] ) {
+      var values = match[3].split(',');
+      minValue = parseInt(values[0]);
+      maxValue = parseInt(values[2]);
+    }
+    this.mappings[CustomUUIDs.ColorTemperature] = { reading: 'color', cmd: 'color', delay: true,
+                                                    name: 'Color Temperature', format: 'UINT16', unit: 'PERCENTAGE',
+                                                    minValue: minValue,  maxValue: maxValue, minStep: 10 };
+  }*/
+
 
   if( s.PossibleSets.match(/(^| )hue\b/) && s.PossibleSets.match(/(^| )saturation\b/) && s.PossibleSets.match(/(^| )dim\b/) )  {
     // MilightDevice
@@ -1173,8 +1205,8 @@ Accessory(platform, s) {
     this.mappings.colormode = { reading: 'colormode' };
   if( s.Readings.xy )
     this.mappings.xy = { reading: 'xy' };
-  if( s.Readings.ct )
-    this.mappings.ct = { reading: 'ct' };
+  //if( s.Readings.ct )
+    //this.mappings.ct = { reading: 'ct', format: 'UINT16' };
 
   if( s.Readings['measured-temp'] ) {
     if( !this.service_name ) this.service_name = 'thermometer';
@@ -1187,12 +1219,12 @@ Accessory(platform, s) {
   if( s.Readings.volume ) {
     this.mappings[CustomUUIDs.Volume] = { reading: 'volume', cmd: 'volume', delay: true,
                                           name: 'Volume', format: 'UINT8', unit: 'PERCENTAGE',
-                                          maxValue: 100, minValue: 0, minStep: 1  };
+                                          minValue: 0, maxValue: 100, minStep: 1  };
 
   } else if( s.Readings.Volume ) {
     this.mappings[CustomUUIDs.Volume] = { reading: 'Volume', cmd: 'Volume', delay: true, nocache: true,
                                           name: 'Volume', format: 'UINT8', unit: 'PERCENTAGE',
-                                          maxValue: 100, minValue: 0, minStep: 1  };
+                                          minValue: 0, maxValue: 100, minStep: 1  };
     if( s.Attributes.generateVolumeEvent == 1 )
       delete this.mappings[CustomUUIDs.Volume].nocache;
 
@@ -1311,7 +1343,6 @@ Accessory(platform, s) {
         //this.mappings.TargetPosition.homekit2reading = homekit2reading.bind(undefined, this.mappings.TargetPosition);
       }
     } else {
-this.log.error( s.PossibleSets );
       this.mappings.CurrentPosition = { reading: 'pct' };
       this.mappings.TargetPosition = { reading: 'pct', cmd: 'pct', delay: true };
     }
@@ -1492,10 +1523,6 @@ this.log.error( s.PossibleSets );
 
   if( this.service_name !== undefined ) {
     this.log( s.Internals.NAME + ' is ' + this.service_name );
-    if( this.mappings.rgb )
-      this.log( s.Internals.NAME + ' has RGB [' + this.mappings.rgb.reading +']');
-    if( this.mappings.Brightness )
-      this.log( s.Internals.NAME + ' is dimable ['+ this.mappings.Brightness.reading +';' + this.mappings.Brightness.cmd +';0-100]' );
   } else if( this.mappings.CurrentPosition )
     this.log( s.Internals.NAME + ' is blind ['+ this.mappings.CurrentPosition.reading +']' );
   else if( this.mappings.TargetTemperature )
@@ -1523,9 +1550,8 @@ this.log.error( s.PossibleSets );
 
 
 
-  if( 0 )
+  this.log( s.Internals.NAME + ' has' );
   for( var characteristic_type in this.mappings ) {
-    this.log( s.Internals.NAME + ' has' );
     var mappings = this.mappings[characteristic_type];
     if( !Array.isArray(mappings) )
        mappings = [mappings];
@@ -1533,45 +1559,18 @@ this.log.error( s.PossibleSets );
     for( var mapping of mappings ) {
       if( characteristic_type == 'On' )
         this.log( '  ' + characteristic_type + ' [' + (mapping.device ? mapping.device +'.':'') + mapping.reading + ';' + mapping.cmdOn +',' + mapping.cmdOff + ']' );
-      else
+      else if( characteristic_type == 'Hue' || characteristic_type == 'Saturation' )
+        this.log( '  ' + characteristic_type + ' [' + (mapping.device ? mapping.device +'.':'') + mapping.reading + ';' + mapping.cmd + ';0-' + mapping.max +']' );
+      else if( mapping.name ) {
+        if( characteristic_type == CustomUUIDs.Volume )
+          this.log( '  Custom ' + mapping.name + ' [' + (mapping.device ? mapping.device +'.':'') + mapping.reading +  ';' + (mapping.nocache ? 'not cached' : 'cached' )  +']' );
+        else
+          this.log( '  Custom ' + mapping.name + ' [' + (mapping.device ? mapping.device +'.':'') + mapping.reading + ']' );
+      } else
         this.log( '  ' + characteristic_type + ' [' + (mapping.device ? mapping.device +'.':'') + mapping.reading + ']' );
     }
   }
 
-  if( this.mappings.On )
-    this.log( s.Internals.NAME + ' has On [' +  this.mappings.On.reading + ';' + this.mappings.On.cmdOn +',' + this.mappings.On.cmdOff + ']' );
-  if( this.mappings.Hue )
-    this.log( s.Internals.NAME + ' has Hue [' + this.mappings.Hue.reading + ';' + this.mappings.Hue.cmd + ';0-' + this.mappings.Hue.max +']' );
-  if( this.mappings.Saturation )
-    this.log( s.Internals.NAME + ' has Saturation [' + this.mappings.Saturation.reading +';' + this.mappings.Saturation.cmd + ';0-' + this.mappings.Saturation.max +']' );
-  if( this.mappings.colormode )
-    this.log( s.Internals.NAME + ' has colormode [' + this.mappings.colormode.reading +']' );
-  if( this.mappings.xy )
-    this.log( s.Internals.NAME + ' has xy [' + this.mappings.xy.reading +']' );
-  if( this.mappings.CurrentTemperature )
-    this.log( s.Internals.NAME + ' has CurrentTemperature ['+ this.mappings.CurrentTemperature.reading +']' );
-  if( this.mappings.TargetTemperature )
-    this.log( s.Internals.NAME + ' has TargetTemperature ['+ this.mappings.TargetTemperature.cmd +']' );
-  if( this.mappings.CurrentRelativeHumidity )
-    this.log( s.Internals.NAME + ' has CurrentRelativeHumidity ['+ this.mappings.CurrentRelativeHumidity.reading +']' );
-  if( this.mappings.CurrentAmbientLightLevel )
-    this.log( s.Internals.NAME + ' has CurrentAmbientLightLevel ['+ this.mappings.CurrentAmbientLightLevel.reading +']' );
-  if( this.mappings.AirQuality )
-    this.log( s.Internals.NAME + ' has AirQuality ['+ this.mappings.AirQuality.reading +']' );
-  if( this.mappings.PositionState )
-    this.log( s.Internals.NAME + ' has PositionState ['+ this.mappings.PositionState.reading +']' );
-  if( this.mappings.targetDoorState )
-    this.log( s.Internals.NAME + ' has TargetDoorState');
-  if( this.mappings.CurrentDoorState )
-    this.log( s.Internals.NAME + ' has CurrentDoorState ['+ this.mappings.CurrentDoorState.reading +']');
-  if( this.mappings.BatteryLevel )
-    this.log( s.Internals.NAME + ' has BatteryLevel ['+ this.mappings.BatteryLevel.reading +']' );
-  if( this.mappings.StatusLowBattery )
-    this.log( s.Internals.NAME + ' has StatusLowBattery ['+ this.mappings.StatusLowBattery.reading +']' );
-  if( this.mappings.FirmwareRevision )
-    this.log( s.Internals.NAME + ' has FirmwareRevision ['+ this.mappings.FirmwareRevision.reading +']' );
-  if( this.mappings[CustomUUIDs.Volume] )
-    this.log( s.Internals.NAME + ' has volume ['+ this.mappings[CustomUUIDs.Volume].reading + ';' + (this.mappings[CustomUUIDs.Volume].nocache ? 'not cached' : 'cached' )  +']' );
   if( this.mappings.reachable )
     this.log( s.Internals.NAME + ' has reachability ['+ this.mappings.reachable.reading +']' );
 
