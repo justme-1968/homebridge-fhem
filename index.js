@@ -1131,7 +1131,7 @@ Accessory(platform, s) {
 
     if( reading && cmd ) {
       this.mappings.Hue = { reading: reading, cmd: cmd, max: 360 };
-      accessorthis.mappings.Saturation = { reading: reading, cmd: cmd, max: 100 };
+      this.mappings.Saturation = { reading: reading, cmd: cmd, max: 100 };
       this.mappings.Brightness = { reading: reading, cmd: cmd, max:100,  delay: true };
 
       var homekit2reading = function(mapping, orig) {
@@ -1210,6 +1210,8 @@ Accessory(platform, s) {
     this.mappings.colormode = { reading: 'colormode' };
   if( s.Readings.xy )
     this.mappings.xy = { reading: 'xy' };
+  //if( s.Readings.ct && !this.mappings[CustomUUIDs.ColorTemperature] )
+  //  this.mappings.ct = { reading: 'ct' };
 
   if( s.Readings['measured-temp'] ) {
     if( !this.service_name ) this.service_name = 'thermometer';
