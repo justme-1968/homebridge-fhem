@@ -128,17 +128,17 @@ examples:
   attr <thermostat> homebridgeMapping TargetTemperature=target::target,minValue=18,maxValue=25,minStep=0.5
                                       CurrentTemperature=myTemp:temperature
 
+n devices -> 1 service (temp + hum, dummy thermostat + temp)
+  attr <tempHum> genericDeviceType thermometer
+  attr <tempHum> homebridgeMapping [CurrentTemperature=temperature1] CurrentRelativeHumidity=<device2>:humidity
+  wenn das reading temperature heisst statt temperature1 kann CurrentTemperature=temperature1 entfallen
+
 1 device -> 2 services mit identischen characteristics (thermometer)
   attr <dualTemp> genericDeviceType thermometer
   attr <dualTemp> homebridgeMapping CurrentTemperature=temperature1,minValue=-30,subtype=innen
                                     CurrentTemperature=temperature2,minValue=-30,subtype=aussen
 
-n devices -> 1 service (temp + hum, dummy thermostat + temp)
-  attr <tempHum> genericDeviceType thermometer
-  attr <tempHum> homebridgeMapping [CurrentTemperature=temperature1] CurrentRelativeHumidity=<device2>:humidity
-  wenn das reading temperature heisst statt temperature1 kann CurrentTemperature=temperature1 weg gelassen werden
-
-1 device  -> n services (1 service per harmony activity), (temp1, temp2)
+1 device  -> n services (1 service per harmony activity)
   attr <hub> genericDeviceType switch
   attr <hub> homebridgeMapping clear
                                On=activity,subtype=TV,valueOn=TV,cmdOn=activity+TV,cmdOff=off

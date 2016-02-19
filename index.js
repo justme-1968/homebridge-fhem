@@ -875,7 +875,7 @@ Platform.prototype = {
                     }
 
                     if( !result.match(/(^| )genericDeviceType\b/) ) {
-                      var cmd = '{addToAttrList( "genericDeviceType:ignore,switch,outlet,light,blind,thermostat,garage,window,lock" ) }';
+                      var cmd = '{addToAttrList( "genericDeviceType:ignore,switch,outlet,light,blind,thermometer,thermostat,garage,window,lock" ) }';
                       this.execute( cmd,
                                     function(result) {
                                         this.log.warn( 'genericDeviceType attribute was not known. please restart homebridge.' );
