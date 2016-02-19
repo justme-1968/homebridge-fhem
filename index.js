@@ -2381,7 +2381,7 @@ function FHEMdebug_handleRequest(request, response){
         derived = true;
         response.write( '&nbsp;&nbsp;' + mapping.characteristic_type + ': '+ mapping.cached + ' (' + typeof(mapping.cached)+')<br>' );
       }
-      if( derived )
+      //if( derived )
         response.write( '<br>' );
     }
     //response.write( '<br>cached: ' + util.inspect(FHEM_cached).replace(/\n/g, '<br>') );
