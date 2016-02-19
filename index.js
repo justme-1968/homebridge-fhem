@@ -1529,7 +1529,9 @@ Accessory(platform, s) {
   } else if( this.mappings.CurrentPosition )
     this.log( s.Internals.NAME + ' is blind ['+ this.mappings.CurrentPosition.reading +']' );
   else if( this.mappings.TargetTemperature )
-    this.log( s.Internals.NAME + ' is thermostat ['+ this.mappings.TargetTemperature.reading + ';' + this.mappings.TargetTemperature.minValue + '-' + this.mappings.TargetTemperature.maxValue + ':' + this.mappings.TargetTemperature.minStep +']' );
+    this.log( s.Internals.NAME + ' is thermostat ['+ this.mappings.TargetTemperature.reading
+                                                   + ';' + this.mappings.TargetTemperature.minValue + '-' + this.mappings.TargetTemperature.maxValue
+                                                   + ':' + this.mappings.TargetTemperature.minStep +']' );
   else if( this.mappings.ContactSensor )
     this.log( s.Internals.NAME + ' is contact sensor [' + this.mappings.ContactSensor.reading +']' );
   else if( this.mappings.OccupancyDetected )
@@ -2094,7 +2096,7 @@ Accessory.prototype = {
                                            thermometer: 'TemperatureSensor',
                                             thermostat: 'Thermostat',
                                                 garage: 'GarageDoorOpener',
-                                                window: 'WindowCovering',
+                                                window: 'Window',
                                                   lock: 'LockMechanism'
                                          };
 
