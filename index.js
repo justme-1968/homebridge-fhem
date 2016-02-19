@@ -17,13 +17,17 @@
 "use strict";
 
 var User;
-var Service, Characteristic;
+var Service, Characteristic, UUIDGen;
 module.exports = function(homebridge){
+  console.log("homebridge API version: " + homebridge.version);
+
 //console.log( homebridge );
 //process.exit(0);
   User = homebridge.user;
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
+  UUIDGen = homebridge.hap.uuid;
+
   homebridge.registerPlatform("homebridge-fhem", "FHEM", Platform);
 }
 
@@ -77,13 +81,14 @@ FHEM_update(informId, orig, no_update) {
         return;
 
       var mapping = subscription.characteristic.FHEM_mapping;
+      if( typeof mapping.characteristic !== 'object' )
+        return;
 
       var value = FHEM_reading2homekit(mapping, orig);
-
       if( value === undefined )
         return;
 
-      if( !no_update && typeof mapping.characteristic === 'object' )
+      if( !no_update )
         mapping.characteristic.setValue(value, undefined, 'fromFHEM');
     } );
 }
@@ -1043,7 +1048,7 @@ Accessory(platform, s) {
       maxValue = parseInt(1000000/values[0]);
     }
     this.mappings[CustomUUIDs.ColorTemperature] = { reading: 'ct', cmd: 'ct', delay: true,
-                                                    name: 'Color Temperature', format: 'UINT16', unit: 'PERCENTAGE',
+                                                    name: 'Color Temperature', format: 'UINT16',
                                                     minValue: maxValue,  maxValue: minValue, minStep: 10 };
     var reading2homekit = function(mapping, orig) { return parseInt(1000000 / parseInt(orig)) };
     var homekit2reading = function(mapping, orig) { return parseInt(1000000 / orig) };
@@ -1060,7 +1065,7 @@ Accessory(platform, s) {
       maxValue = parseInt(values[2]);
     }
     this.mappings[CustomUUIDs.ColorTemperature] = { reading: 'color', cmd: 'color', delay: true,
-                                                    name: 'Color Temperature', format: 'UINT16', unit: 'PERCENTAGE',
+                                                    name: 'Color Temperature', format: 'UINT16',
                                                     minValue: minValue,  maxValue: maxValue, minStep: 10 };
   }*/
 
@@ -1205,8 +1210,6 @@ Accessory(platform, s) {
     this.mappings.colormode = { reading: 'colormode' };
   if( s.Readings.xy )
     this.mappings.xy = { reading: 'xy' };
-  //if( s.Readings.ct )
-    //this.mappings.ct = { reading: 'ct', format: 'UINT16' };
 
   if( s.Readings['measured-temp'] ) {
     if( !this.service_name ) this.service_name = 'thermometer';
@@ -1773,7 +1776,8 @@ Accessory(platform, s) {
         if( mapping.reading && FHEM_cached[mapping.informId] === undefined )
           FHEM_update(mapping.informId, orig);
 
-        FHEM_reading2homekit(mapping, orig);
+        if( mapping.characteristic || mapping.name )
+          FHEM_reading2homekit(mapping, orig);
       }
 
     }
@@ -2135,11 +2139,6 @@ Accessory.prototype = {
     if( typeof service === 'object' )
       return service;
 
-    if( this.mappings.window ) {
-      this.log("  window service for " + this.name)
-      return new Service.Window(name);
-    }
-
     this.log("  switch service for " + this.name + ' (' + subtype + ')' )
     return new Service.Switch(name, subtype);
   },
@@ -2210,7 +2209,6 @@ Accessory.prototype = {
       this.subscribe(this.mappings.xy);
       this.subscribe(this.mappings.colormode);
 
-
       //FIXME: add colormode ct
       if( FHEM_cached[this.mappings.colormode.informId] == 'xy' ) {
         var mapping = this.mappings.xy;
@@ -2223,6 +2221,7 @@ Accessory.prototype = {
         FHEM_cached[mapping.device + '-s'] = hsv[1];
         FHEM_cached[mapping.device + '-v'] = hsv[2];
       }
+
     }
 
     var controlService = this.createDeviceService();
