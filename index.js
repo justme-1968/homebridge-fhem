@@ -1237,16 +1237,16 @@ Accessory(platform, s) {
 
   // see: https://gist.github.com/gomfunkel/b1a046d729757120907c
   if( s.Readings.voltage )
-    this.mappings['E863F10A-079E-48FF-8F27-9C2605A29F52'] = { name: 'Voltage', reading: 'voltage', format: 'UINT16', factor: 10 };
+    this.mappings['E863F10A-079E-48FF-8F27-9C2605A29F52'] = { name: 'Voltage', reading: 'voltage', format: 'UINT16', factor: 1 };
 
   if( s.Readings.current )
-    this.mappings['E863F126-079E-48FF-8F27-9C2605A29F52'] = { name: 'Current', reading: 'current', format: 'UINT16', factor: 100 };
+    this.mappings['E863F126-079E-48FF-8F27-9C2605A29F52'] = { name: 'Current', reading: 'current', format: 'UINT16', factor: 1 };
 
   if( s.Readings.power )
-    this.mappings['E863F10D-079E-48FF-8F27-9C2605A29F52'] = { name: 'Power', reading: 'power', format: 'UINT16', factor: 10 };
+    this.mappings['E863F10D-079E-48FF-8F27-9C2605A29F52'] = { name: 'Power', reading: 'power', format: 'UINT16', factor: 1 };
 
   if( s.Readings.energy )
-    this.mappings['E863F10C-079E-48FF-8F27-9C2605A29F52'] = { name: 'Energy', reading: 'energy', format: 'UINT32', factor: 1000 };
+    this.mappings['E863F10C-079E-48FF-8F27-9C2605A29F52'] = { name: 'Energy', reading: 'energy', format: 'UINT32', factor: 1 };
 
   if( s.Readings.pressure )
     this.mappings['E863F10F-079E-48FF-8F27-9C2605A29F52'] = { name: 'AirPressure', reading: 'pressure', format: 'UINT16', factor: 1 };
@@ -2095,6 +2095,7 @@ Accessory.prototype = {
                                                 outlet: 'Outlet',
                                                  light: 'Lightbulb',
                                                  blind: 'WindowCovering',
+                                               contact: 'ContactSensor',
                                            thermometer: 'TemperatureSensor',
                                             thermostat: 'Thermostat',
                                                 garage: 'GarageDoorOpener',
@@ -2350,10 +2351,6 @@ Accessory.prototype = {
   }
 
 };
-
-//module.exports.accessory = Accessory;
-//module.exports.platform = Platform;
-
 
 
 //http server for debugging
