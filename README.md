@@ -24,11 +24,12 @@ includes the devices that should be bridged to homekit.
 - probably some more ...
 
 
+##simple config
 for devices that are not correctly identified use the genericDeviceType attribute to configure the device type.
 supported values are: ignore,switch,outlet,light,blind,thermostat,garage,window,lock
 this is probably mostly used for differentiating between switches and lights.
 
-
+##enhanced config
 for devices that don't use the autodetected readings and commands or for devices that mix readings from different
 devices use the homebridgeMapping attribute. it is parsed from left to right and works as follows:
 - the genericDeviceType attribute is used to determine the service type that should be used for this device
@@ -48,7 +49,7 @@ attr <thermostat> homebridgeMapping TargetTemperature=target::target,minValue=18
 this would define a thermostat device with a command target to set the desired temperature, a reading target that indicates the desired target temperature, the desired min, max and step values and a current temeprature comming from the temperature reading of the device myTemp.
 
 
-##currently supported values for characteristic names are:
+###currently supported values for characteristic names are:
 - On
 - Brightness
 - Hue
@@ -64,7 +65,7 @@ this would define a thermostat device with a command target to set the desired t
 - FirmwareRevision
 - and all other homebridge Characteristic names
 
-##currently supported parameters for FHEM -> homekit direction are:
+###currently supported parameters for FHEM -> homekit direction are:
 - minValue, maxValue, minStep: for all int and float characteristics -> the allowed range for this value in homekit
 - max: Hue and Saturation characteristics -> the range the reading has in fhem, only if different from minValue and maxValue
 - nocache: don't cache values for this reading
@@ -99,7 +100,7 @@ for custom characterisitcs the additional parameters name, format and unit have 
 ```
 
 
-##for the homekit -> FHEM direction:
+###for the homekit -> FHEM direction:
 - delay: true/<number> -> the value ist send afer one second/<number>ms of inactivity
 - maxValue: for all int and float characteristics -> the allowed range for this value in homekit
 - max: the max value the reading has in fhem, only if different from maxValue
