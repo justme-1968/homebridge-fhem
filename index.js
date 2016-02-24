@@ -979,6 +979,14 @@ Accessory(platform, s) {
     this.log.info( 'ignoring ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without genericDeviceType' );
     return;
   }
+  if( s.Internals.TYPE === 'SVG' && genericType === undefined ) {
+    this.log.info( 'ignoring ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without genericDeviceType' );
+    return;
+  }
+  if( s.Internals.TYPE === 'THRESHOLD' && genericType === undefined ) {
+    this.log.info( 'ignoring ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without genericDeviceType' );
+    return;
+  }
 
 
   this.mappings = {};
@@ -1070,15 +1078,20 @@ Accessory(platform, s) {
   }*/
 
 
-  if( s.PossibleSets.match(/(^| )hue\b/) && s.PossibleSets.match(/(^| )saturation\b/) && s.PossibleSets.match(/(^| )dim\b/) )  {
+  if( s.Internals.TYPE == 'MilightDevice'
+      && s.PossibleSets.match(/(^| )hue\b/) && s.PossibleSets.match(/(^| )saturation\b/) && s.PossibleSets.match(/(^| )dim\b/) )  {
     // MilightDevice
+    this.service_name = 'light';
+    this.log.debug( ' detected MilightDevice' );
     this.mappings.Hue = { reading: 'hue', cmd: 'hue', max: 360 };
     this.mappings.Saturation = { reading: 'saturation', cmd: 'saturation', max: 100 };
     this.mappings.Brightness = { reading: 'brightness', cmd: 'dim', max: 100, delay: true };
 
-  } else if( s.PossibleSets.match(/(^| )HSV\b/)
+  } else if( s.Internals.TYPE == 'WifiLight' && s.PossibleSets.match(/(^| )HSV\b/)
              && s.Readings.hue !== undefined && s.Readings.saturation !== undefined && s.Readings.brightness !== undefined ) {
-    // Wifilight
+    // WifiLight
+    this.service_name = 'light';
+    this.log.debug( ' detected WifiLight' );
     this.mappings.Hue = { reading: 'hue', cmd: 'HSV', max: 360 };
     this.mappings.Saturation = { reading: 'saturation', cmd: 'HSV', max: 100 };
     this.mappings.Brightness = { reading: 'brightness', cmd: 'HSV', max: 100, delay: true };
