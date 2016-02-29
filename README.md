@@ -1,5 +1,5 @@
 # homebridge-fhem
-a fhem platform shim for homebridge
+a fhem platform plugin for homebridge
 
 uses longpoll and an internal cache to avoid roundtrips to fhem.
 a debug browser is available at port 8082.
@@ -115,7 +115,7 @@ spaces in commands have to be replaced by +
 
 e.g.:
 ```
-TargetHeatingCoolingState=...,cmds=OFF:desired-temp+off;HEAT:controllMode+day;COOL:controllMode+night;AUTO:controllMode+auto
+TargetHeatingCoolingState=...,cmds=OFF:desired-temp+off;HEAT:controlMode+day;COOL:controlMode+night;AUTO:controlMode+auto
 ```
 
 the order of the transformations is as follows: invert, max/maxValue
