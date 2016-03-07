@@ -962,9 +962,18 @@ function
 Accessory(platform, s) {
   var CustomUUIDs = {
                    //  F H E M       h o  m e  b r i d g e
-              Volume: '4648454d-0101-686F-6D65-627269646765',
+             xVolume: '4648454d-0101-686F-6D65-627269646765',
            Actuation: '4648454d-0201-686F-6D65-627269646765',
     ColorTemperature: '4648454d-0301-686F-6D65-627269646765',
+
+              Volume: '00001001-0000-1000-8000-135D67EC4377', // used in YamahaAVRPlatform, recognized by EVE
+
+                   // see: https://gist.github.com/gomfunkel/b1a046d729757120907c
+             Voltage: 'E863F10A-079E-48FF-8F27-9C2605A29F52',
+             Current: 'E863F126-079E-48FF-8F27-9C2605A29F52',
+               Power: 'E863F10D-079E-48FF-8F27-9C2605A29F52',
+              Energy: 'E863F10C-079E-48FF-8F27-9C2605A29F52',
+         AirPressure: 'E863F10F-079E-48FF-8F27-9C2605A29F52',
   };
 
   this.log         = platform.log;
@@ -1267,21 +1276,20 @@ Accessory(platform, s) {
 
   }
 
-  // see: https://gist.github.com/gomfunkel/b1a046d729757120907c
   if( s.Readings.voltage )
-    this.mappings['E863F10A-079E-48FF-8F27-9C2605A29F52'] = { name: 'Voltage', reading: 'voltage', format: 'UINT16', factor: 1 };
+    this.mappings[CustomUUIDs.Voltage] = { name: 'Voltage', reading: 'voltage', format: 'UINT16', factor: 1 };
 
   if( s.Readings.current )
-    this.mappings['E863F126-079E-48FF-8F27-9C2605A29F52'] = { name: 'Current', reading: 'current', format: 'UINT16', factor: 1 };
+    this.mappings[CustomUUIDs.Current] = { name: 'Current', reading: 'current', format: 'UINT16', factor: 1 };
 
   if( s.Readings.power )
-    this.mappings['E863F10D-079E-48FF-8F27-9C2605A29F52'] = { name: 'Power', reading: 'power', format: 'UINT16', factor: 1 };
+    this.mappings[CustomUUIDs.Power] = { name: 'Power', reading: 'power', format: 'UINT16', factor: 1 };
 
   if( s.Readings.energy )
-    this.mappings['E863F10C-079E-48FF-8F27-9C2605A29F52'] = { name: 'Energy', reading: 'energy', format: 'UINT32', factor: 1 };
+    this.mappings[CustomUUIDs.Energy] = { name: 'Energy', reading: 'energy', format: 'UINT32', factor: 1 };
 
   if( s.Readings.pressure )
-    this.mappings['E863F10F-079E-48FF-8F27-9C2605A29F52'] = { name: 'AirPressure', reading: 'pressure', format: 'UINT16', factor: 1 };
+    this.mappings[CustomUUIDs.AirPressure] = { name: 'AirPressure', reading: 'pressure', format: 'UINT16', factor: 1 };
 
   if( s.Readings.humidity ) {
     if( !this.service_name ) this.service_name = 'HumiditySensor';
