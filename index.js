@@ -2242,12 +2242,12 @@ Accessory.prototype = {
     }
 
 
-    if( this.mappings.xy
-        && this.mappings.colormode ) {
+    if( this.mappings.colormode
+        && (this.mappings.xy || this.mappings.ct) ) {
       this.subscribe(this.mappings.xy);
       this.subscribe(this.mappings.colormode);
 
-      if( FHEM_cached[this.mappings.colormode.informId] == 'xy' ) {
+      if( this.mappings.xy && FHEM_cached[this.mappings.colormode.informId] == 'xy' ) {
         var mapping = this.mappings.xy;
         var value = FHEM_cached[mapping.informId];
         var xy = value.split(',');
@@ -2258,7 +2258,7 @@ Accessory.prototype = {
         FHEM_cached[mapping.device + '-s'] = hsv[1];
         FHEM_cached[mapping.device + '-v'] = hsv[2];
 
-      } else if( FHEM_cached[this.mappings.colormode.informId] == 'ct' ) {
+      } else if( this.mappings.ct && FHEM_cached[this.mappings.colormode.informId] == 'ct' ) {
         var mapping = this.mappings.ct;
         var value = FHEM_cached[mapping.informId];
         var rgb = FHEM_ct2rgb(value);
