@@ -1050,7 +1050,7 @@ Accessory(platform, s) {
       if( orig > 97 )
         return 'on';
 
-      return 'dim ' + dim_values[Math.round(orig/6.25)];
+      return dim_values[Math.round(orig/6.25)];
     }.bind(null, this.mappings.Brightness);
 
   }
