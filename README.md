@@ -10,7 +10,7 @@ includes the devices that should be bridged to homekit.
 ##directly (automaticaly) supports:
 - switches (devices with set on and set off commands)
 - lights (devices with set on and set off commands)
-- homematc and FS20 dimmers (devices with set on, set off and set dim or set pct commands)
+- homematc,FS20 and ZWave dimmers (devices with set on, set off and set dim or set pct commands)
 - HUE, WifiLight, SWAP_0000002200000003 (hue, sat, bri, rgb)
 - homematic, max and pid20 thermostats
 - homematic, DUOFERN and FS20/IT(?) blinds

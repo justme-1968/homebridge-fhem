@@ -1019,7 +1019,21 @@ Accessory(platform, s) {
   //this.service_name = 'switch';
 
   var match;
-  if( match = s.PossibleSets.match(/(^| )pct\b/) ) {
+  if( match = s.PossibleSets.match(/(^| )dim:slider,0,1,99/) ) {
+    // ZWave dimmer
+    this.service_name = 'light';
+    this.mappings.On = { reading: 'state', valueOff: '0', cmdOn: 'on', cmdOff: 'off' };
+    this.mappings.Brightness = { reading: 'state', cmd: 'dim', delay: true };
+
+    this.mappings.Brightness.reading2homekit = function(mapping, orig) {
+      var match;
+      if( match = orig.match(/dim (\d+)/ ) )
+        return parseInt( match[1] );
+
+      return 0;
+    }.bind(null, this.mappings.Brightness);
+
+  } else if( match = s.PossibleSets.match(/(^| )pct\b/) ) {
     // HM dimmer
     this.service_name = 'light';
     this.mappings.On = { reading: 'pct', valueOff: '0', cmdOn: 'on', cmdOff: 'off' };
