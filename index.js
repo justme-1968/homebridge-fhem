@@ -2466,6 +2466,12 @@ var FHEMdebug_server = http.createServer( FHEMdebug_handleRequest );
 
 FHEMdebug_server.on('error', function (e) {
   console.log('Server error: ' + e);
+
+  if( FHEMdebug_PORT == 8082 ) {
+    FHEMdebug_PORT = 8282;
+    FHEMdebug_server.close();
+    FHEMdebug_server.listen(FHEMdebug_PORT);
+  }
 });
 
 //Lets start our server
