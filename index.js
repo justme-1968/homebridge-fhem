@@ -1997,11 +1997,11 @@ Accessory.prototype = {
 
     } else if( c == 'xhue' ) {
         value = Math.round(value * this.mappings.Hue.max / 360);
-        command = 'set ' + this.device + ' hue ' + value;
+        command = 'set ' + this.mappings.Hue.device + ' hue ' + value;
 
     } else if( c == 'xsat' ) {
       value = value / 100 * this.mappings.Saturation.max;
-      command = 'set ' + this.device + ' sat ' + value;
+      command = 'set ' + this.mappings.Saturation.device + ' sat ' + value;
 
     } else {
       mapping.log.info(this.name + ': executing set cmd for ' + mapping.characteristic_type + ' with value ' + value );
@@ -2056,7 +2056,7 @@ Accessory.prototype = {
         return;
       }
 
-      command = 'set ' + this.device + ' ' + cmd;
+      command = 'set ' + mapping.device + ' ' + cmd;
 
     }
 
