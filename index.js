@@ -251,7 +251,7 @@ FHEM_reading2homekit_(mapping, orig)
       value = mapped;
     }
 
-    if( format !== 'bool' && mapping.threshold ) {
+    if( !format.match( /bool/i ) && mapping.threshold ) {
       var mapped;
       if( value > mapping.threshold )
         mapped = 1;
@@ -284,7 +284,10 @@ FHEM_reading2homekit_(mapping, orig)
       value = mapped;
     }
 
-    if( format == 'bool' ) {
+//mapping.log.error( format );
+    if( !format ) {
+      mapping.log.error(mapping.informId + ' empty format' );
+    } else if( format.match( /bool/i ) ) {
       var mapped = undefined;;
       if( mapping.valueOn !== undefined ) {
         var match = mapping.valueOn.match('^/(.*)/$');
@@ -327,7 +330,7 @@ FHEM_reading2homekit_(mapping, orig)
         mapping.maxValue = 1;
       }
 
-    } else if( format == 'float' ) {
+    } else if( format.match( /float/i ) ) {
       var mapped = parseFloat( value );
 
       if( typeof mapped !== 'number' ) {
@@ -341,7 +344,7 @@ FHEM_reading2homekit_(mapping, orig)
         value *= mapping.factor;
       }
 
-    } else if( format && format.match(/int/i) ) {
+    } else if( format.match(/int/i) ) {
       var mapped = parseFloat( value );
 
       if( typeof mapped !== 'number' ) {
@@ -356,7 +359,7 @@ FHEM_reading2homekit_(mapping, orig)
       }
 
       value = parseInt( value + 0.5 );
-    } else if( format == 'string' ) {
+    } else if( format.match( /string/i ) ) {
     }
 
 
