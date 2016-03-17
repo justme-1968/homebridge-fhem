@@ -313,7 +313,7 @@ FHEM_reading2homekit_(mapping, orig)
         else if( value == 'off' )
           mapped = 0;
         else
-          mapped = parseInt( value );
+          mapped = value?true:false;
       }
       if( mapped !== undefined ) {
         mapping.log.debug(mapping.informId + ' valueOn/valueOff: value ' + value + ' mapped to ' + mapped);
@@ -1910,9 +1910,11 @@ Accessory.prototype = {
         mapping = this.mappings[characteristic];
       else {
         mapping = {};
-        if( this.mappings[characteristic] )
-          this.mappings[characteristic] = [this.mappings[characteristic], mapping];
-        else
+        if( this.mappings[characteristic] ) {
+          if( this.mappings[characteristic].length == undefined )
+            this.mappings[characteristic] = [this.mappings[characteristic]];
+          this.mappings[characteristic].push( mapping );
+        } else
           this.mappings[characteristic] = mapping;
       }
       seen[characteristic] = true;
