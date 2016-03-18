@@ -1074,10 +1074,10 @@ Accessory(platform, s) {
 
   if( match = s.PossibleSets.match(/(^| )hue[^\b\s]*(,(\d+)?)+\b/) ) {
     this.service_name = 'light';
-    var max = 259;
+    var max = 359;
     if( match[3] !== undefined )
       max = match[3];
-    this.mappings.Hue = { reading: 'hue', cmd: 'hue', max: max, maxValue: 259 };
+    this.mappings.Hue = { reading: 'hue', cmd: 'hue', max: max, maxValue: 359 };
   }
 
   if( match = s.PossibleSets.match(/(^| )sat[^\b\s]*(,(\d+)?)+\b/) ) {
@@ -1125,18 +1125,18 @@ Accessory(platform, s) {
     // MilightDevice
     this.service_name = 'light';
     this.log.debug( ' detected MilightDevice' );
-    this.mappings.Hue = { reading: 'hue', cmd: 'hue', max: 259 };
-    this.mappings.Saturation = { reading: 'saturation', cmd: 'saturation', max: 100 };
-    this.mappings.Brightness = { reading: 'brightness', cmd: 'dim', max: 100, delay: true };
+    this.mappings.Hue = { reading: 'hue', cmd: 'hue', max: 359, maxValue: 359 };
+    this.mappings.Saturation = { reading: 'saturation', cmd: 'saturation', max: 100, maxValue: 100 };
+    this.mappings.Brightness = { reading: 'brightness', cmd: 'dim', max: 100, maxValue: 100, delay: true };
 
   } else if( s.Internals.TYPE == 'WifiLight' && s.PossibleSets.match(/(^| )HSV\b/)
              && s.Readings.hue !== undefined && s.Readings.saturation !== undefined && s.Readings.brightness !== undefined ) {
     // WifiLight
     this.service_name = 'light';
     this.log.debug( ' detected WifiLight' );
-    this.mappings.Hue = { reading: 'hue', cmd: 'HSV', max: 259 };
-    this.mappings.Saturation = { reading: 'saturation', cmd: 'HSV', max: 100 };
-    this.mappings.Brightness = { reading: 'brightness', cmd: 'HSV', max: 100, delay: true };
+    this.mappings.Hue = { reading: 'hue', cmd: 'HSV', max: 359, maxValue: 359 };
+    this.mappings.Saturation = { reading: 'saturation', cmd: 'HSV', max: 100, maxValue: 100 };
+    this.mappings.Brightness = { reading: 'brightness', cmd: 'HSV', max: 100, maxValue: 100, delay: true };
 
     var homekit2reading = function(mapping, orig) {
       var h = FHEM_cached[mapping.device + '-hue'];
@@ -1188,9 +1188,9 @@ Accessory(platform, s) {
     }
 
     if( reading && cmd ) {
-      this.mappings.Hue = { reading: reading, cmd: cmd, max: 259 };
-      this.mappings.Saturation = { reading: reading, cmd: cmd, max: 100 };
-      this.mappings.Brightness = { reading: reading, cmd: cmd, max: 100,  delay: true };
+      this.mappings.Hue = { reading: reading, cmd: cmd, max: 359, maxValue: 359 };
+      this.mappings.Saturation = { reading: reading, cmd: cmd, max: 100, maxValue: 100 };
+      this.mappings.Brightness = { reading: reading, cmd: cmd, max: 100, maxValue: 100,  delay: true };
 
       var homekit2reading = function(mapping, orig) {
         var h = FHEM_cached[mapping.device + '-h'];
@@ -1231,7 +1231,7 @@ Accessory(platform, s) {
       if( this.mappings.Hue ) {
         this.mappings.Hue.reading2homekit = function(mapping, orig) {
           var hsv = FHEM_rgb2hsv(orig);
-          var hue = parseInt( hsv[0] * mapping.max );
+          var hue = parseInt( hsv[0] * mapping.maxValue );
 
           FHEM_cached[mapping.device + '-h'] = hsv[0];
 
@@ -1242,7 +1242,7 @@ Accessory(platform, s) {
       if( this.mappings.Saturation ) {
         this.mappings.Saturation.reading2homekit = function(mapping, orig) {
           var hsv = FHEM_rgb2hsv(orig);
-          var sat = parseInt( hsv[1] * mapping.max );
+          var sat = parseInt( hsv[1] * mapping.maxValue );
 
           FHEM_cached[mapping.device + '-s'] = hsv[1];
 
@@ -1253,7 +1253,7 @@ Accessory(platform, s) {
       if( this.mappings.Brightness ) {
         this.mappings.Brightness.reading2homekit = function(mapping, orig) {
           var hsv = FHEM_rgb2hsv(orig);
-          var bri = parseInt( hsv[2] * mapping.max );
+          var bri = parseInt( hsv[2] * mapping.maxValue );
 
           FHEM_cached[mapping.device + '-v'] = hsv[2];
 
@@ -1294,16 +1294,16 @@ Accessory(platform, s) {
   }
 
   if( s.Readings.voltage )
-    this.mappings[CustomUUIDs.Voltage] = { name: 'Voltage', reading: 'voltage', format: 'UINT16', factor: 1 };
+    this.mappings[CustomUUIDs.Voltage] = { name: 'Voltage', reading: 'voltage', format: 'FLOAT', factor: 1 };
 
   if( s.Readings.current )
-    this.mappings[CustomUUIDs.Current] = { name: 'Current', reading: 'current', format: 'UINT16', factor: 1 };
+    this.mappings[CustomUUIDs.Current] = { name: 'Current', reading: 'current', format: 'FLOAT', factor: 1 };
 
   if( s.Readings.power )
-    this.mappings[CustomUUIDs.Power] = { name: 'Power', reading: 'power', format: 'UINT16', factor: 1 };
+    this.mappings[CustomUUIDs.Power] = { name: 'Power', reading: 'power', format: 'FLOAT', factor: 1 };
 
   if( s.Readings.energy )
-    this.mappings[CustomUUIDs.Energy] = { name: 'Energy', reading: 'energy', format: 'UINT32', factor: 1 };
+    this.mappings[CustomUUIDs.Energy] = { name: 'Energy', reading: 'energy', format: 'FLOAT', factor: 1 };
 
   if( s.Readings.pressure )
     this.mappings[CustomUUIDs.AirPressure] = { name: 'AirPressure', reading: 'pressure', format: 'UINT16', factor: 1 };
@@ -1998,7 +1998,7 @@ Accessory.prototype = {
         command = 'set ' + this.device + ' toggle; sleep 1; set '+ this.device + ' toggle';
 
     } else if( c == 'xhue' ) {
-        value = Math.round(value * this.mappings.Hue.max / 360);
+        value = Math.round(value * this.mappings.Hue.max / this.mappings.Hue.maxValue);
         command = 'set ' + this.mappings.Hue.device + ' hue ' + value;
 
     } else if( c == 'xsat' ) {
