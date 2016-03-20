@@ -124,8 +124,8 @@ FHEM_reading2homekit(mapping, orig)
   }
 
   if( 0 && typeof value === 'string' ) { //FIXME: activate this ?
-    if( mapping.homekit2name === undefined ) mapping.homekit2name = {};
     if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][value] !== undefined ) {
+      if( mapping.homekit2name === undefined ) mapping.homekit2name = {};
       mapping.homekit2name[Characteristic[mapping.characteristic_type][value]] = value;
       value = Characteristic[mapping.characteristic_type][value];
     }
@@ -313,7 +313,7 @@ FHEM_reading2homekit_(mapping, orig)
         else if( value == 'off' )
           mapped = 0;
         else
-          mapped = value?true:false;
+          mapped = parseInt(value)?1:0;
       }
       if( mapped !== undefined ) {
         mapping.log.debug(mapping.informId + ' valueOn/valueOff: value ' + value + ' mapped to ' + mapped);
@@ -405,6 +405,9 @@ FHEM_reading2homekit_(mapping, orig)
       mapping.log.debug(mapping.informId + ' value: ' + value + ' inverted to ' + mapped);
     value = mapped;
   }
+
+  if( format.match( /bool/i ) )
+    value = parseInt(value)?true:false;
 
   return(value);
 }
@@ -1711,8 +1714,8 @@ Accessory(platform, s) {
       }
 
       if( mapping.default !== undefined ) {
-        if( mapping.homekit2name === undefined ) mapping.homekit2name = {};
         if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][mapping.default] !== undefined ) {
+          if( mapping.homekit2name === undefined ) mapping.homekit2name = {};
           mapping.homekit2name[Characteristic[mapping.characteristic_type][mapping.default]] = mapping.default;
           mapping.default = Characteristic[mapping.characteristic_type][mapping.default];
         }
@@ -1753,8 +1756,12 @@ Accessory(platform, s) {
            && mapping.value2homekit_re.length) this.log.debug( 'value2homekit_re: ' + util.inspect(mapping.value2homekit_re) );
         if(mapping.value2homekit
            && Object.keys(mapping.value2homekit).length) this.log.debug( 'value2homekit: ' + util.inspect(mapping.value2homekit) );
-        if(mapping.homekit2name
-           && Object.keys(mapping.homekit2name).length) this.log.debug( 'homekit2name: ' + util.inspect(mapping.homekit2name) );
+        if(mapping.homekit2name ) {
+           if(Object.keys(mapping.homekit2name).length)
+             this.log.debug( 'homekit2name: ' + util.inspect(mapping.homekit2name) );
+           else
+             delete mapping.homekit2name;
+        }
       }
 
       if( typeof mapping.cmds === 'object' ) {
