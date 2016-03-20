@@ -384,30 +384,32 @@ FHEM_reading2homekit_(mapping, orig)
         value += parseFloat(mapping.minValue);
     }
 
-    if( format.match(/int/) )
+    if( format && format.match(/int/i) )
       value = parseInt( value );
-  }
+    else if( format && format.match(/float/i) )
+      value = parseFloat( value );
 
-  if( typeof value === 'number' ) {
-    var mapped = value;
-    if( isNaN(value) ) {
-      mapping.log.error(mapping.informId + ' not a number: ' + orig);
-      return undefined;
-    } else if( mapping.invert && mapping.minValue !== undefined && mapping.maxValue !== undefined ) {
-      mapped = mapping.maxValue - value + mapping.minValue;
-    } else if( mapping.invert && mapping.maxValue !== undefined ) {
-      mapped = mapping.maxValue - value;
-    } else if( mapping.invert ) {
-      mapped = 100 - value;
+    if( typeof value === 'number' ) {
+      var mapped = value;
+      if( isNaN(value) ) {
+        mapping.log.error(mapping.informId + ' not a number: ' + orig);
+        return undefined;
+      } else if( mapping.invert && mapping.minValue !== undefined && mapping.maxValue !== undefined ) {
+        mapped = mapping.maxValue - value + mapping.minValue;
+      } else if( mapping.invert && mapping.maxValue !== undefined ) {
+        mapped = mapping.maxValue - value;
+      } else if( mapping.invert ) {
+        mapped = 100 - value;
+      }
+
+      if( value !== mapped )
+        mapping.log.debug(mapping.informId + ' value: ' + value + ' inverted to ' + mapped);
+      value = mapped;
     }
 
-    if( value !== mapped )
-      mapping.log.debug(mapping.informId + ' value: ' + value + ' inverted to ' + mapped);
-    value = mapped;
+    if( format && format.match( /bool/i ) )
+      value = parseInt(value)?true:false;
   }
-
-  if( format.match( /bool/i ) )
-    value = parseInt(value)?true:false;
 
   return(value);
 }
