@@ -726,8 +726,7 @@ FHEM_hsv2rgb(h,s,v) {
   return FHEM_rgb2hex( Math.round(r*255),Math.round(g*255),Math.round(b*255) );
 }
 function
-FHEM_ct2rgb(ct)
-{
+FHEM_ct2rgb(ct) {
   // calculation from http://www.tannerhelland.com/4435/convert-temperature-rgb-algorithm-code
 
   // kelvin -> mired
@@ -772,8 +771,7 @@ FHEM_ct2rgb(ct)
 }
 
 function
-FHEM_xyY2rgb(x,y,Y)
-{
+FHEM_xyY2rgb(x,y,Y) {
   // calculation from http://www.brucelindbloom.com/index.html
 
   var r = 0;
@@ -813,7 +811,7 @@ FHEM_xyY2rgb(x,y,Y)
 
 
 function
-FHEM_rgb2hsv(r,g,b){
+FHEM_rgb2hsv(r,g,b) {
   if( r === undefined )
     return;
 
@@ -845,7 +843,7 @@ FHEM_rgb2hsv(r,g,b){
     s = c / M;
   }
 
-  v = M/255;
+  v = M;
 
   return  [h,s,v];
 }
