@@ -304,7 +304,7 @@ FHEM_reading2homekit_(mapping, orig)
           mapped = 0;
         else if( match && value.toString().match( match[1] ) )
           mapped = 0;
-        else
+        else if( mapped === undefined )
           mapped = 1;
       }
       if( mapping.valueOn === undefined  &&  mapping.valueOff === undefined ) {

@@ -1,6 +1,6 @@
 {
   "name": "homebridge-fhem",
-  "version": "0.2.13",
+  "version": "0.2.14",
   "description": "a fhem platform plugin for homebridge",
   "author": {
     "name": "justme1968"
