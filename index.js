@@ -1563,7 +1563,7 @@ Accessory(platform, s) {
     this.mappings.On = { reading: 'state', valueOff: 'off', cmdOn: 'on', cmdOff: 'off' };
     if( !s.Readings.state )
       delete this.mappings.On.reading;
-    else if( !this.service_name )
+    else if( !this.service_name && !genericType )
       this.service_name = 'switch';
 
   } else if( !this.service_name && s.Attributes.setList ) {
