@@ -253,7 +253,7 @@ FHEM_reading2homekit_(mapping, orig)
 
     if( !format.match( /bool/i ) && mapping.threshold ) {
       var mapped;
-      if( value > mapping.threshold )
+      if( parseFloat(value) > mapping.threshold )
         mapped = 1;
       else
         mapped = 0;
