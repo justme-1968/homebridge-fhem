@@ -1154,15 +1154,21 @@ Accessory(platform, s) {
 
       if( mapping.characteristic_type == 'Hue' ) {
         h = orig;
-        FHEM_cached[mapping.device + '-Hue'] = orig;
+
+        //if( FHEM_cached[mapping.device + '-hue'] === orig ) return undefined;
+        FHEM_cached[mapping.device + '-hue'] = orig;
 
       } else if( mapping.characteristic_type == 'Saturation' ) {
         s = orig;
-        FHEM_cached[mapping.device + '-Saturation'] = orig;
+
+        //if( FHEM_cached[mapping.device + '-saturation'] === orig ) return undefined;
+        FHEM_cached[mapping.device + '-saturation'] = orig;
 
       } else if( mapping.characteristic_type == 'Brightness' ) {
         v = orig;
-        FHEM_cached[mapping.device + '-Brightness'] = orig;
+
+        //if( FHEM_cached[mapping.device + '-brightness'] === orig ) return undefined;
+        FHEM_cached[mapping.device + '-brightness'] = orig;
 
       }
       //mapping.log( ' new : [' + h + ',' + s + ',' + v + ']' );
@@ -2043,11 +2049,11 @@ Accessory.prototype = {
           if( value !== mapped )
             mapping.log.debug( '  value: ' + value + ' inverted to ' + mapped);
           value = mapped;
+
+          if( mapping.max !== undefined && mapping.maxValue != undefined )
+            value = Math.round(value * mapping.max / mapping.maxValue);
         }
       }
-
-      if( mapping.max !== undefined && mapping.maxValue != undefined )
-        value = Math.round(value * mapping.max / mapping.maxValue);
 
       var cmd = mapping.cmd + ' ' + value;
 
