@@ -825,6 +825,10 @@ FHEM_rgb2hsv(r,g,b) {
     r = parseInt( str.substr(0,2), 16 );
     g = parseInt( str.substr(2,2), 16 );
     b = parseInt( str.substr(4,2), 16 );
+
+    r /= 255;
+    g /= 255;
+    b /= 255;
   }
 
   var M = Math.max( r, g, b );
