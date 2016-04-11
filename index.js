@@ -458,9 +458,14 @@ function FHEM_startLongpoll(connection) {
                      continue;
 
                    var d;
-                   if( l.substr(0,1) == '[' )
-                     d = JSON.parse(l);
-                   else
+                   if( l.substr(0,1) == '[' ) {
+                     try {
+                       d = JSON.parse(l);
+                     } catch(err) {
+                       console.log( '  longpoll JSON.parse: ' + err );
+                       continue;
+                     }
+                   } else
                      d = l.split('<<', 3);
 //console.log(d);
 
@@ -1887,7 +1892,12 @@ Accessory.prototype = {
     this.log.info( 'homebridgeMapping: ' + homebridgeMapping );
 
     if( homebridgeMapping.match( /^{.*}$/ ) ) {
-      homebridgeMapping = JSON.parse(homebridgeMapping);
+      try {
+        homebridgeMapping = JSON.parse(homebridgeMapping);
+      } catch(err) {
+        this.log.error( '  fromHomebridgeMapping JSON.parse: ' + err );
+        return;
+      }
 
       //FIXME: handle multiple identical characteristics in this.mappings and in homebridgeMapping ?
       if( 1 )
