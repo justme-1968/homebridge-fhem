@@ -415,21 +415,25 @@ FHEM_reading2homekit_(mapping, orig)
 }
 
 
-var FHEM_lastEventTime = {};
-var FHEM_longpoll_running = {};
+var FHEM_longpoll = {};
 //FIXME: add filter
 function FHEM_startLongpoll(connection) {
-  if( FHEM_longpoll_running[connection.base_url] )
-    return;
-  FHEM_longpoll_running[connection.base_url] = true;
+  if( !FHEM_longpoll[connection.base_url] ) {
+    FHEM_longpoll[connection.base_url] = {};
+    FHEM_longpoll[connection.base_url].disconnects = 0;
+    FHEM_longpoll[connection.base_url].bytes_total = 0;
+  }
 
-  if( connection.disconnects === undefined )
-    connection.disconnects = 0;
+  if( FHEM_longpoll[connection.base_url].is_running )
+    return;
+  FHEM_longpoll[connection.base_url].is_running = true;
+  FHEM_longpoll[connection.base_url].bytes_connection = 0;
+
 
   var filter = '.*';
   var since = 'null';
-  if( FHEM_lastEventTime[connection.base_url] )
-    since = FHEM_lastEventTime[connection.base_url]/1000;
+  if( FHEM_longpoll[connection.base_url].last_event_time )
+    since = FHEM_longpoll[connection.base_url].last_event_time/1000;
   var query = '/fhem.pl?XHR=1'
               + '&inform=type=status;addglobal=1;filter='+filter+';since='+since+';fmt=JSON'
               + '&timestamp='+Date.now();
@@ -443,6 +447,10 @@ function FHEM_startLongpoll(connection) {
 //console.log( 'data: ' + data );
                  if( !data )
                    return;
+
+                 var length = data.length;
+                 FHEM_longpoll[connection.base_url].bytes_total += length;
+                 FHEM_longpoll[connection.base_url].bytes_connection += length;
 
                  input += data;
                  var lastEventTime = Date.now();
@@ -557,7 +565,7 @@ console.log( 'DELETEATTR: ' + value );
                    var subscriptions = FHEM_subscriptions[d[0]];
                    if( subscriptions ) {
                      FHEM_update( d[0], value );
-                     FHEM_lastEventTime[connection.base_url] = lastEventTime;
+                     FHEM_longpoll[connection.base_url].last_event_time = lastEventTime;
 
                      subscriptions.forEach( function(subscription) {
                        var accessory = subscription.accessory;
@@ -598,23 +606,23 @@ console.log( 'DELETEATTR: ' + value );
                  input = input.substr(FHEM_longpollOffset);
                  FHEM_longpollOffset = 0;
 
-                 connection.disconnects = 0;
+                 FHEM_longpoll[connection.base_url].disconnects = 0;
 
                } ).on( 'end', function() {
-                 FHEM_longpoll_running[connection.base_url] = false;
+                 FHEM_longpoll[connection.base_url].is_running = false;
 
-                 connection.disconnects++;
-                 var timeout = 500 * connection.disconnects - 300;
+                 FHEM_longpoll[connection.base_url].disconnects++;
+                 var timeout = 500 * FHEM_longpoll[connection.base_url].disconnects - 300;
                  if( timeout > 30000 ) timeout = 30000;
 
                  console.log( 'longpoll ended, reconnect in: ' + timeout + 'msec' );
                  setTimeout( function(){FHEM_startLongpoll(connection)}, timeout  );
 
                } ).on( 'error', function(err) {
-                 FHEM_longpoll_running[connection.base_url] = false;
+                 FHEM_longpoll[connection.base_url].is_running = false;
 
-                 connection.disconnects++;
-                 var timeout = 5000 * connection.disconnects;
+                 FHEM_longpoll[connection.base_url].disconnects++;
+                 var timeout = 5000 * FHEM_longpoll[connection.base_url].disconnects;
                  if( timeout > 30000 ) timeout = 30000;
 
                  console.log( 'longpoll error: ' + err + ', retry in: ' + timeout + 'msec' );
@@ -2452,9 +2460,14 @@ function FHEMdebug_handleRequest(request, response){
 
   if( request.url == '/cached' ) {
     response.write( '<a href="/">home</a><br><br>' );
-    if( FHEM_lastEventTime )
-      for( var key in FHEM_lastEventTime )
-        response.write( 'FHEM_lastEventTime ' + key + ': '+ new Date(FHEM_lastEventTime[key]) +'<br>' );
+    for( var key in FHEM_longpoll ) {
+      response.write( 'longpoll: ' + key + '<br>' );
+      if( FHEM_longpoll[key].last_event_time )
+        response.write( '            last event: '+ new Date(FHEM_longpoll[key].last_event_time) +'<br>' );
+      response.write( '            bytes connection: '+ FHEM_longpoll[key].bytes_connection +'<br>' );
+      response.write( '            bytes total: '+ FHEM_longpoll[key].bytes_total +'<br>' );
+      response.write( '            disconnects: '+ FHEM_longpoll[key].disconnects +'<br>' );
+     }
     response.write( '<br>' );
 
     for( var informId in FHEM_subscriptions ) {
