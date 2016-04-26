@@ -421,13 +421,13 @@ function FHEM_startLongpoll(connection) {
   if( !FHEM_longpoll[connection.base_url] ) {
     FHEM_longpoll[connection.base_url] = {};
     FHEM_longpoll[connection.base_url].disconnects = 0;
-    FHEM_longpoll[connection.base_url].bytes_total = 0;
+    FHEM_longpoll[connection.base_url].received_total = 0;
   }
 
-  if( FHEM_longpoll[connection.base_url].is_running )
+  if( FHEM_longpoll[connection.base_url].connected )
     return;
-  FHEM_longpoll[connection.base_url].is_running = true;
-  FHEM_longpoll[connection.base_url].bytes_connection = 0;
+  FHEM_longpoll[connection.base_url].received = 0;
+  FHEM_longpoll[connection.base_url].connected = true;
 
 
   var filter = '.*';
@@ -449,8 +449,8 @@ function FHEM_startLongpoll(connection) {
                    return;
 
                  var length = data.length;
-                 FHEM_longpoll[connection.base_url].bytes_total += length;
-                 FHEM_longpoll[connection.base_url].bytes_connection += length;
+                 FHEM_longpoll[connection.base_url].received += length;
+                 FHEM_longpoll[connection.base_url].received_total += length;
 
                  input += data;
                  var lastEventTime = Date.now();
@@ -609,7 +609,7 @@ console.log( 'DELETEATTR: ' + value );
                  FHEM_longpoll[connection.base_url].disconnects = 0;
 
                } ).on( 'end', function() {
-                 FHEM_longpoll[connection.base_url].is_running = false;
+                 FHEM_longpoll[connection.base_url].connected = false;
 
                  FHEM_longpoll[connection.base_url].disconnects++;
                  var timeout = 500 * FHEM_longpoll[connection.base_url].disconnects - 300;
@@ -619,7 +619,7 @@ console.log( 'DELETEATTR: ' + value );
                  setTimeout( function(){FHEM_startLongpoll(connection)}, timeout  );
 
                } ).on( 'error', function(err) {
-                 FHEM_longpoll[connection.base_url].is_running = false;
+                 FHEM_longpoll[connection.base_url].connected = false;
 
                  FHEM_longpoll[connection.base_url].disconnects++;
                  var timeout = 5000 * FHEM_longpoll[connection.base_url].disconnects;
@@ -2461,12 +2461,13 @@ function FHEMdebug_handleRequest(request, response){
   if( request.url == '/cached' ) {
     response.write( '<a href="/">home</a><br><br>' );
     for( var key in FHEM_longpoll ) {
-      response.write( 'longpoll: ' + key + '<br>' );
+      response.write( key + '<br>' );
+      response.write( '&nbsp;&nbsp;connected: ' + FHEM_longpoll[key].connected );
+      response.write( '; disconnects: ' + FHEM_longpoll[key].disconnects +'<br>' );
+      response.write( '&nbsp;&nbsp;received: '+ FHEM_longpoll[key].received );
+      response.write( '; received total: ' + FHEM_longpoll[key].received_total +'<br>' );
       if( FHEM_longpoll[key].last_event_time )
-        response.write( '            last event: '+ new Date(FHEM_longpoll[key].last_event_time) +'<br>' );
-      response.write( '            bytes connection: '+ FHEM_longpoll[key].bytes_connection +'<br>' );
-      response.write( '            bytes total: '+ FHEM_longpoll[key].bytes_total +'<br>' );
-      response.write( '            disconnects: '+ FHEM_longpoll[key].disconnects +'<br>' );
+        response.write( '&nbsp;&nbsp;last event: ' + new Date(FHEM_longpoll[key].last_event_time) +'<br>' );
      }
     response.write( '<br>' );
 
