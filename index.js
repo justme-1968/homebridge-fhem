@@ -1500,7 +1500,7 @@ Accessory(platform, s) {
     this.service_name = 'OccupancySensor';
     this.mappings.OccupancyDetected = { reading: 'state', values: ['present:OCCUPANCY_DETECTED', 'absent:OCCUPANCY_NOT_DETECTED'] };
 
-  } else if( s.Internals.TYPE == 'ROOMMATE' ) {
+  } else if( s.Internals.TYPE == 'ROOMMATE' || s.Internals.TYPE == 'GUEST' ) {
     this.service_name = 'OccupancySensor';
     this.mappings.OccupancyDetected = { reading: 'presence', values: ['present:OCCUPANCY_DETECTED', '/.*/:OCCUPANCY_NOT_DETECTED'] };
 
