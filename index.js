@@ -420,12 +420,14 @@ var FHEM_longpoll = {};
 function FHEM_startLongpoll(connection) {
   if( !FHEM_longpoll[connection.base_url] ) {
     FHEM_longpoll[connection.base_url] = {};
+    FHEM_longpoll[connection.base_url].connects = 0;
     FHEM_longpoll[connection.base_url].disconnects = 0;
     FHEM_longpoll[connection.base_url].received_total = 0;
   }
 
   if( FHEM_longpoll[connection.base_url].connected )
     return;
+  FHEM_longpoll[connection.base_url].connects++;
   FHEM_longpoll[connection.base_url].received = 0;
   FHEM_longpoll[connection.base_url].connected = true;
 
@@ -2463,7 +2465,7 @@ function FHEMdebug_handleRequest(request, response){
     for( var key in FHEM_longpoll ) {
       response.write( key + '<br>' );
       response.write( '&nbsp;&nbsp;connected: ' + FHEM_longpoll[key].connected );
-      response.write( '; disconnects: ' + FHEM_longpoll[key].disconnects +'<br>' );
+      response.write( '; connects: ' + FHEM_longpoll[key].connects +'<br>' );
       response.write( '&nbsp;&nbsp;received: '+ FHEM_longpoll[key].received );
       response.write( '; received total: ' + FHEM_longpoll[key].received_total +'<br>' );
       if( FHEM_longpoll[key].last_event_time )
