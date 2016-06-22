@@ -2081,12 +2081,17 @@ FHEMAccessory.prototype = {
             mapped = 100 - value;
           }
 
-          if( mapping.factor )
-            mapped /= mapping.factor;
-
-          if( value !== mapped )
+          if( value !== mapped ) {
             mapping.log.debug( '  value: ' + value + ' inverted to ' + mapped);
-          value = mapped;
+            value = mapped;
+          }
+
+          if( mapping.factor ) {
+            mapped /= mapping.factor;
+            mapping.log.debug( '  value: ' + value + ' mapped to ' + mapped);
+            value = mapped;
+          }
+
 
           if( mapping.max !== undefined && mapping.maxValue != undefined )
             value = Math.round(value * mapping.max / mapping.maxValue);
