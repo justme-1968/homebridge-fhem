@@ -17,18 +17,20 @@
 'use strict';
 
 var User;
-var Service, Characteristic, UUIDGen;
+var Accessory, Service, Characteristic, UUIDGen;
 module.exports = function(homebridge){
   console.log('homebridge API version: ' + homebridge.version);
 
 //console.log( homebridge );
 //process.exit(0);
   User = homebridge.user;
+
+  Accessory = homebridge.platformAccessory;
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
   UUIDGen = homebridge.hap.uuid;
 
-  homebridge.registerPlatform('homebridge-fhem', 'FHEM', Platform);
+  homebridge.registerPlatform('homebridge-fhem', 'FHEM', FHEMPlatform);
 }
 
 
@@ -636,8 +638,16 @@ console.log( 'DELETEATTR: ' + value );
 var FHEM_platforms = [];
 
 function
-Platform(log, config) {
+FHEMPlatform(log, config, api) {
   this.log         = log;
+  this.config      = config;
+
+  if( api ) {
+    this.api         = api;
+
+    //this.api.on('didFinishLaunching', this.didFinishLaunching.bind(this));
+  }
+
   this.server      = config['server'];
   this.port        = config['port'];
   this.filter      = config['filter'];
@@ -896,7 +906,7 @@ FHEM_execute(log,connection,cmd,callback) {
               .on( 'error', function(err) { log('There was a problem connecting to FHEM ('+ url +'):'+ err); } );
 }
 
-Platform.prototype = {
+FHEMPlatform.prototype = {
   execute: function(cmd,callback) {FHEM_execute(this.log, this.connection, cmd, callback)},
 
   checkAndSetGenericDeviceType: function() {
@@ -958,7 +968,7 @@ Platform.prototype = {
                        sArray.map( function(s) {
 
                          //FIXME: change to factory pattern
-                         var accessory = new Accessory(this, s);
+                         var accessory = new FHEMAccessory(this, s);
                          if( accessory && accessory.service_name ) {
                            foundAccessories.push(accessory);
                          } else {
@@ -984,7 +994,7 @@ Platform.prototype = {
 }
 
 function
-Accessory(platform, s) {
+FHEMAccessory(platform, s) {
   var CustomUUIDs = {
                    //  F H E M       h o  m e  b r i d g e
              xVolume: '4648454d-0101-686F-6D65-627269646765',
@@ -1577,7 +1587,7 @@ Accessory(platform, s) {
         this.mappings.On = [];
 
         for( var activity of match[2].split(',') ) {
-          this.mappings.On.push( {reading: 'activity', subtype:activity, valueOn: activity, cmdOn: 'activity+'+activity, cmdOff: 'off'} );
+          this.mappings.On.push( {reading: 'activity', subtype: activity, valueOn: activity, cmdOn: 'activity+'+activity, cmdOff: 'off'} );
         }
       }
     }
@@ -1879,7 +1889,7 @@ Accessory(platform, s) {
   }
 }
 
-Accessory.prototype = {
+FHEMAccessory.prototype = {
   subscribe: function(mapping, characteristic) {
     if( typeof mapping === 'object' ) {
       mapping.characteristic = characteristic;
@@ -2070,6 +2080,10 @@ Accessory.prototype = {
           } else if( mapping.invert ) {
             mapped = 100 - value;
           }
+
+          if( mapping.factor )
+            mapped /= mapping.factor;
+
           if( value !== mapped )
             mapping.log.debug( '  value: ' + value + ' inverted to ' + mapped);
           value = mapped;
@@ -2077,6 +2091,7 @@ Accessory.prototype = {
           if( mapping.max !== undefined && mapping.maxValue != undefined )
             value = Math.round(value * mapping.max / mapping.maxValue);
         }
+
       }
 
       var cmd = mapping.cmd + ' ' + value;
@@ -2129,26 +2144,34 @@ Accessory.prototype = {
     }
 
     this.log.info('query: ' + mapping.characteristic_type + ' for ' + mapping.informId);
-    var result = mapping.cached;
-    if( result !== undefined ) {
-      this.log.info('  cached: ' + result);
+    var value = mapping.cached;
+    if( typeof mapping === 'object' && value !== undefined ) {
+      var defined = undefined;
+      if( mapping.homekit2name !== undefined ) {
+        defined = mapping.homekit2name[value];
+        if( defined === undefined )
+          defined = '???';
+      }
+
+      mapping.log.info('  cached: ' + value + ' (' + 'as '+typeof(value) + (defined?'; means '+defined:'') + '\')');
+
       if( callback !== undefined )
-        callback( undefined, result );
-      return result;
+        callback( undefined, value );
+      return value;
 
     } else {
-      this.log.info('not cached; query: ' + mapping.informId);
+      /*this.log.info('not cached; query: ' + mapping.informId);
 
-      var result = FHEM_cached[mapping.informId];
-      result = FHEM_reading2homekit(mapping, result);
+      var value = FHEM_cached[mapping.informId];
+      value = FHEM_reading2homekit(mapping, value);
 
-      if( result !== undefined ) {
-        this.log.info('  cached: ' + result);
+      if( value !== undefined ) {
+        this.log.info('  cached: ' + value);
         if( callback !== undefined )
-          callback( undefined, result );
-        return result;
+          callback( undefined, value );
+        return value;
 
-      } else
+      } else*/
         this.log.info('  not cached' );
     }
 

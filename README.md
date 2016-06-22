@@ -102,6 +102,7 @@ for custom characterisitcs the additional parameters name, format and unit have 
 
 ###for the homekit -> FHEM direction:
 - delay: true/<number> -> the value ist send afer one second/<number>ms of inactivity
+- factor: divide homekit value by this factor
 - maxValue: for all int and float characteristics -> the allowed range for this value in homekit
 - max: the max value the reading has in fhem, only if different from maxValue
 - cmd: the set command to use: set <device> <cmd> <value>
@@ -118,7 +119,7 @@ e.g.:
 TargetHeatingCoolingState=...,cmds=OFF:desired-temp+off;HEAT:controlMode+day;COOL:controlMode+night;AUTO:controlMode+auto
 ```
 
-the order of the transformations is as follows: invert, max/maxValue
+the order of the transformations is as follows: invert, factor, max/maxValue
 precedence for mapping of homekit value to commands is in increasing order: cmd, cmdOn/cmdOff, cmds
 
 instead of using the transformation chain homekit2reading can be set to the name of a js function that is imported from a file
