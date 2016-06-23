@@ -16,6 +16,7 @@ includes the devices that should be bridged to homekit.
 - homematic, DUOFERN and FS20/IT(?) blinds
 - hommatic, MAX and FHTTK contact sensors (door, window)
 - HM-SEC-WIN, HM-SEC-KEY
+- HM-Sen-LI-O
 - presence, ROOMMATE, GUEST
 - SONOS (power, volume)
 - harmony scenes

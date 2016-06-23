@@ -1351,7 +1351,10 @@ FHEMAccessory(platform, s) {
     this.mappings.CurrentRelativeHumidity = { reading: 'humidity' };
   }
 
-  if( s.Readings.luminosity ) {
+  if( s.Attributes.model == 'HM-Sen-LI-O' ) {
+    this.service_name = 'LightSensor';
+    this.mappings.CurrentAmbientLightLevel = { reading: 'brightness' };
+  } else if( s.Readings.luminosity ) {
     if( !this.service_name ) this.service_name = 'LightSensor';
     this.mappings.CurrentAmbientLightLevel = { reading: 'luminosity' };
     this.mappings.CurrentAmbientLightLevel.reading2homekit = function(mapping, orig) {
@@ -2071,6 +2074,8 @@ FHEMAccessory.prototype = {
         mapping.log.info( '  value converted to ' + value );
 
       } else {
+mapping.log.error( 'typeof value: ' + typeof value );
+mapping.log.error( 'mapping: ' + mapping );
         if( typeof value === 'number' ) {
           var mapped = value;
           if( mapping.invert && mapping.minValue !== undefined && mapping.maxValue !== undefined ) {
