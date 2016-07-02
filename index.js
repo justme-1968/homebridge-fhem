@@ -100,6 +100,7 @@ FHEM_reading2homekit(mapping, orig)
 {
   var value = undefined;
   if( typeof mapping.reading2homekit === 'function' ) {
+
       try {
         value = mapping.reading2homekit(orig);
       } catch(err) {
@@ -2112,7 +2113,7 @@ mapping.log.error( 'mapping: ' + mapping );
       else if( mapping.cmdOff !== undefined && value == 0 )
         cmd = mapping.cmdOff
 
-      else if( typeof mapping.homekit2cmd === 'object' )
+      else if( typeof mapping.homekit2cmd === 'object' && mapping.homekit2cmd[value] !== undefined )
         cmd = mapping.homekit2cmd[value];
 
       if( cmd === undefined ) {
