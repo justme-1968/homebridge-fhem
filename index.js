@@ -279,6 +279,9 @@ FHEM_reading2homekit_(mapping, orig)
           mapped = mapping.value2homekit[value];
 
       if( mapped === undefined ) {
+        mapped = mapping.default;
+
+      if( mapped === undefined ) {
         mapping.log.error(mapping.informId + ' value ' + value + ' not handled in values');
         return undefined;
       }
