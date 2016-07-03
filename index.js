@@ -2075,8 +2075,6 @@ FHEMAccessory.prototype = {
         mapping.log.info( '  value converted to ' + value );
 
       } else {
-mapping.log.error( 'typeof value: ' + typeof value );
-mapping.log.error( 'mapping: ' + mapping );
         if( typeof value === 'number' ) {
           var mapped = value;
           if( mapping.invert && mapping.minValue !== undefined && mapping.maxValue !== undefined ) {
