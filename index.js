@@ -278,7 +278,7 @@ FHEM_reading2homekit_(mapping, orig)
         if( mapping.value2homekit[value] !== undefined )
           mapped = mapping.value2homekit[value];
 
-      if( mapped === undefined ) {
+      if( mapped === undefined )
         mapped = mapping.default;
 
       if( mapped === undefined ) {
