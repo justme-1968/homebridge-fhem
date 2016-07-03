@@ -2490,7 +2490,7 @@ FHEMAccessory.prototype = {
 //http server for debugging
 var http = require('http');
 
-var FHEMdebug_PORT=8082;
+var FHEMdebug_PORT=8282;
 
 function FHEMdebug_handleRequest(request, response){
   //console.log( request );
@@ -2550,8 +2550,8 @@ var FHEMdebug_server = http.createServer( FHEMdebug_handleRequest );
 FHEMdebug_server.on('error', function (e) {
   console.log('Server error: ' + e);
 
-  if( FHEMdebug_PORT == 8082 ) {
-    FHEMdebug_PORT = 8282;
+  if( FHEMdebug_PORT == 8282 ) {
+    FHEMdebug_PORT = 8283;
     FHEMdebug_server.close();
     FHEMdebug_server.listen(FHEMdebug_PORT);
   }
