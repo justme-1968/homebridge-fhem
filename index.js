@@ -868,7 +868,7 @@ FHEM_rgb2hsv(r,g,b) {
   if( c == 0 ) {
     h = 0;
   } else if( M == r ) {
-    h = ( 60 * ( ( g - b ) / c ) % 360 ) / 360;
+    h = ( ( 360 + 60 * ( ( g - b ) / c ) ) % 360 ) / 360;
   } else if( M == g ) {
     h = ( 60 * ( ( b - r ) / c ) + 120 ) / 360;
   } else if( M == b ) {
