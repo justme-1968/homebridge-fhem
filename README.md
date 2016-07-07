@@ -21,7 +21,7 @@ includes the devices that should be bridged to homekit.
 - SONOS (power, volume)
 - harmony scenes
 - temperature and humidity sensors
-- CO20 air quality sensor
+- CO20 and netatmo air quality sensor
 - probably some more ...
 
 

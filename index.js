@@ -1369,6 +1369,13 @@ FHEMAccessory(platform, s) {
   if( s.Readings.voc ) {
     if( !this.service_name ) this.service_name = 'AirQualitySensor';
     this.mappings.AirQuality = { reading: 'voc' };
+  } else if( s.Readings.co2 ) {
+    if( !this.service_name ) this.service_name = 'AirQualitySensor';
+    this.mappings.AirQuality = { reading: 'co2' };
+    this.mappings.CarbonDioxideLevel = { reading: 'co2' };
+  }
+
+  if( this.mappings.AirQuality ) 
     this.mappings.AirQuality.reading2homekit = function(mapping, orig) {
       orig = parseInt( orig );
       if( orig > 1500 )
@@ -1384,7 +1391,6 @@ FHEMAccessory(platform, s) {
       else
         return Characteristic.AirQuality.UNKNOWN;
       }.bind(null, this.mappings.AirQuality);
-  }
 
   if( s.Readings.motor )
     this.mappings.PositionState = { reading: 'motor',
