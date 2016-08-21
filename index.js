@@ -1722,8 +1722,10 @@ FHEMAccessory(platform, s) {
     this.serial = s.Internals.UDN;
   else if( this.type == 'EnOcean' )
     this.serial = this.type + '.' + s.Internals.DEF;
-  else if( this.type == 'MAX' )
+  else if( this.type == 'MAX' ) {
     this.serial = this.type + '.' + s.Internals.addr;
+    this.model = s.Internals.type;
+  }
 
   this.uuid_base = this.serial;
 
