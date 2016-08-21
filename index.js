@@ -1396,6 +1396,10 @@ FHEMAccessory(platform, s) {
     this.mappings.PositionState = { reading: 'motor',
                                     values: ['/^up/:INCREASING', '/^down/:DECREASING', '/.*/:STOPPED'] };
 
+  if( s.Readings.moving )
+    this.mappings.PositionState = { reading: 'moving',
+                                    values: ['/^up/:INCREASING', '/^down/:DECREASING', '/.*/:STOPPED'] };
+
   if( s.Readings.direction )
     this.mappings.PositionState = { reading: 'direction',
                                     values: ['/^opening/:INCREASING', '/^closing/:DECREASING', '/.*/:STOPPED'] };
