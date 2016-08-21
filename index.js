@@ -1724,6 +1724,10 @@ FHEMAccessory(platform, s) {
     this.serial = this.type + '.' + s.Internals.DEF;
   else if( this.type == 'MAX' )
     this.serial = this.type + '.' + s.Internals.addr;
+  else if( this.type == 'DUOFERN' ) {
+    this.serial = this.type + '.' + s.Internals.DEF;
+    this.model = s.Internals.SUBTYPE;
+  }
 
   this.uuid_base = this.serial;
 
