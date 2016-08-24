@@ -1726,11 +1726,12 @@ FHEMAccessory(platform, s) {
     this.serial = s.Internals.UDN;
   else if( this.type == 'EnOcean' )
     this.serial = this.type + '.' + s.Internals.DEF;
-  else if( this.type == 'MAX' )
+  else if( this.type == 'MAX' ) {
+    this.model = s.Internals.type;
     this.serial = this.type + '.' + s.Internals.addr;
-  else if( this.type == 'DUOFERN' ) {
-    this.serial = this.type + '.' + s.Internals.DEF;
+  } else if( this.type == 'DUOFERN' ) {
     this.model = s.Internals.SUBTYPE;
+    this.serial = this.type + '.' + s.Internals.DEF;
   }
 
   this.uuid_base = this.serial;
