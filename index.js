@@ -1546,17 +1546,17 @@ FHEMAccessory(platform, s) {
                                                name: 'Actuation', format: 'UINT8', unit: 'PERCENTAGE',
                                                maxValue: 100, minValue: 0, minStep: 1  };
 
-    if( match = s.PossibleSets.match(/(^| )mode($| )/) ) {
-      this.mappings.TargetHeatingCoolingState = { reading: 'mode',
-                                                  values: ['/^auto/:AUTO', '/^holiday_short/:OFF', '/.*/:HEAT'],
-                                                  cmds: ['OFF:mode holiday_short', 'HEAT:mode manual', 'COOL:mode manual', 'AUTO:mode auto'], };
-    }
-
     if( match[3] ) {
       var values = match[3].split(',');
       this.mappings.TargetTemperature.minValue = parseFloat(values[0]);
       this.mappings.TargetTemperature.maxValue = parseFloat(values[values.length-1]);
       this.mappings.TargetTemperature.minStep = values[1] - values[0];
+    }
+
+    if( match = s.PossibleSets.match(/(^| )mode($| )/) ) {
+      this.mappings.TargetHeatingCoolingState = { reading: 'mode',
+                                                  values: ['/^auto/:AUTO', '/^holiday_short/:OFF', '/.*/:HEAT'],
+                                                  cmds: ['OFF:mode holiday_short', 'HEAT:mode manual', 'COOL:mode manual', 'AUTO:mode auto'], };
     }
 
   } else if( match = s.PossibleSets.match(/(^| )desiredTemperature(:[^\d]*([^\$ ]*))?/) ) {
