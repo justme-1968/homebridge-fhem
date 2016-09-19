@@ -1373,6 +1373,12 @@ FHEMAccessory(platform, s) {
     this.mappings.CurrentAmbientLightLevel.reading2homekit = function(mapping, orig) {
       return parseFloat( orig ) / 0.265;
     }.bind(null,this.mappings.CurrentAmbientLightLevel);
+  } else if( s.Readings.luminance ) {
+    if( !this.service_name ) this.service_name = 'LightSensor';
+    this.mappings.CurrentAmbientLightLevel = { reading: 'luminance' };
+    this.mappings.CurrentAmbientLightLevel.reading2homekit = function(mapping, orig) {
+      return parseFloat( orig );
+    }.bind(null,this.mappings.CurrentAmbientLightLevel);
   }
 
   if( s.Readings.voc ) {
