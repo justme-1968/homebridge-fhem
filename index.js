@@ -280,6 +280,9 @@ FHEM_reading2homekit_(mapping, orig)
           }
         }
 
+      if( mapped === '#' )
+        mapped = value;
+
       if( typeof mapping.value2homekit === 'object' )
         if( mapping.value2homekit[value] !== undefined )
           mapped = mapping.value2homekit[value];

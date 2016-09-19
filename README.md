@@ -82,6 +82,7 @@ this would define a thermostat device with a command target to set the desired t
           each list entry consists of a : separated pair of from and to values
           each from value can be a literal value or a regex of the form /regex/
           each to value can be a literal value or a homekit defined term for this characteristic
+          if to is exaktly # then it is set to the current value. usefull for regex ranges
 - valueOn, valueOff: the reading values that are mapped to the true/false resp. on/off states in homekit. shotcut for values
                      if only one is given all values not matching this one are automaticaly mapped to the other
 - default: value to use if no reading is found or if none of values/valueOn/valueOff matches
