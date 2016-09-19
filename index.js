@@ -936,7 +936,7 @@ FHEMPlatform.prototype = {
                     }
 
                     if( !result.match(/(^| )genericDeviceType\b/) ) {
-                      var cmd = '{addToAttrList( "genericDeviceType:ignore,switch,outlet,light,blind,thermometer,thermostat,contact,garage,window,lock" ) }';
+                      var cmd = '{addToAttrList( "genericDeviceType:security,ignore,switch,outlet,light,blind,thermometer,thermostat,contact,garage,window,lock" ) }';
                       this.execute( cmd,
                                     function(result) {
                                         this.log.warn( 'genericDeviceType attribute was not known. please restart homebridge.' );
@@ -1057,7 +1057,6 @@ FHEMAccessory(platform, s) {
     this.log.info( 'ignoring ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without genericDeviceType' );
     return;
   }
-
 
   this.mappings = {};
 
@@ -1551,6 +1550,11 @@ FHEMAccessory(platform, s) {
   } else if( s.Internals.TYPE == 'ROOMMATE' || s.Internals.TYPE == 'GUEST' ) {
     this.service_name = 'OccupancySensor';
     this.mappings.OccupancyDetected = { reading: 'presence', values: ['present:OCCUPANCY_DETECTED', '/.*/:OCCUPANCY_NOT_DETECTED'] };
+
+  } else if( s.Internals.TYPE == 'RESIDENTS' ) {
+    this.service_name = 'security';
+    this.mappings.SecuritySystemCurrentState = { reading: 'state', values: ['/^home/:DISARMED', '/^gotosleep/:NIGHT_ARM', '/^absent/:STAY_ARM', '/^gone/:AWAY_ARM'] }
+    this.mappings.SecuritySystemTargetState = { reading: 'state', values: ['/^home/:DISARMED', '/^gotosleep/:NIGHT_ARM', '/^absent/:STAY_ARM', '/^gone/:AWAY_ARM'], cmds: ['STAY_ARM:home', 'AWAY_ARM:absent', 'NIGHT_ARM:gotosleep', 'DISARM:home'], delay: true }
 
   } else if( s.Attributes.model == 'fs20di' )
     this.service_name = 'light';
@@ -2261,6 +2265,7 @@ FHEMAccessory.prototype = {
 
   serviceOfName: function(service_name,subtype) {
     var serviceNameOfGenericDeviceType = {      ignore: null,
+                                              security: 'SecuritySystem',
                                                 switch: 'Switch',
                                                 outlet: 'Outlet',
                                                  light: 'Lightbulb',
