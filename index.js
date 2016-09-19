@@ -1850,6 +1850,7 @@ FHEMAccessory(platform, s) {
 
       if( typeof mapping.cmds === 'object' ) {
         mapping.homekit2cmd = {};
+        mapping.homekit2cmd_re = [];
         for( var entry of mapping.cmds ) {
           var match = entry.match('^([^:]*)(:(.*))?$');
           if( !match ) {
@@ -1859,16 +1860,17 @@ FHEMAccessory(platform, s) {
 
           var from = (match[1] === undefined || match[2] === undefined ) ? i : match[1];
           var to = match[2] !== undefined ? match[3] : match[1];
-          if( match = from.match('^/(.*)/$') ) {
-            this.log.error( 'cmds: regex not allowed' + entry );
-            continue;
-          }
 
           if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][from] !== undefined )
             from = Characteristic[mapping.characteristic_type][from];
 
-          mapping.homekit2cmd[from] = to;
+          if( match = from.match('^/(.*)/$') ) {
+            mapping.homekit2cmd_re.push( { re: match[1], to: to} );
+          } else 
+            mapping.homekit2cmd[from] = to;
         }
+        if(mapping.homekit2cmd_re
+           && mapping.homekit2cmd_re.length) this.log.debug( 'homekit2cmd_re: ' + util.inspect(mapping.homekit2cmd_re) );
         if(mapping.homekit2cmd
            && Object.keys(mapping.homekit2cmd).length) this.log.debug( 'homekit2cmd: ' + util.inspect(mapping.homekit2cmd) );
       }
@@ -2166,6 +2168,15 @@ FHEMAccessory.prototype = {
 
       else if( typeof mapping.homekit2cmd === 'object' && mapping.homekit2cmd[value] !== undefined )
         cmd = mapping.homekit2cmd[value];
+
+      else if( typeof mapping.homekit2cmd_re === 'object' ) {
+        for( var entry of mapping.homekit2cmd_re ) {
+          if( value.toString().match( entry.re ) ) {
+            cmd = entry.to;
+            break;
+          }
+        }
+      }
 
       if( cmd === undefined ) {
         mapping.log.error(this.name + ' no cmd for ' + c + ', value ' + value);
