@@ -1083,12 +1083,18 @@ FHEMAccessory(platform, s) {
     }.bind(null, this.mappings.Brightness);
 
   } else if( match = s.PossibleSets.match(/(^| )bri[^\b\s]*(,(\d+)?)+\b/) ) {
+    // Hue
     this.service_name = 'light';
     var max = 100;
     if( match[3] !== undefined )
       max = match[3];
     this.mappings.On = { reading: 'onoff', valueOff: '0', cmdOn: 'on', cmdOff: 'off' };
-    this.mappings.Brightness = { reading: 'bri', cmd: 'bri', max: max, maxValue: 100, delay: true };
+    this.mappings.Brightness = { reading: 'bri', cmd: 'pct', max: max, maxValue: 100, delay: true };
+
+    this.mappings.Brightness.reading2homekit = function(mapping, orig) {
+      return Math.round(orig * mapping.maxValue / mapping.max);
+    }.bind(null, this.mappings.Brightness);
+
 
   } else if( match = s.PossibleSets.match(/(^| )pct\b/) ) {
     // HM dimmer
