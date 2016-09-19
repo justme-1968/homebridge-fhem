@@ -1821,7 +1821,7 @@ FHEMAccessory(platform, s) {
           }
 
           var from = match[1];
-          var to = match[3] === undefined ? i : match[3];
+          var to = match[3] === undefined ? entry : match[3];
 
           if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][to] !== undefined ) {
             mapping.homekit2name[Characteristic[mapping.characteristic_type][to]] = to;
