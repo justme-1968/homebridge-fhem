@@ -1089,10 +1089,11 @@ FHEMAccessory(platform, s) {
     if( match[3] !== undefined )
       max = match[3];
     this.mappings.On = { reading: 'onoff', valueOff: '0', cmdOn: 'on', cmdOff: 'off' };
-    this.mappings.Brightness = { reading: 'bri', cmd: 'pct', max: max, maxValue: 100, delay: true };
+    //FIXME: max & maxValue are not set. they would work in both directions. but we use pct for the set cmd. not bri!
+    this.mappings.Brightness = { reading: 'bri', cmd: 'pct', delay: true };
 
     this.mappings.Brightness.reading2homekit = function(mapping, orig) {
-      return Math.round(orig * mapping.maxValue / mapping.max);
+      return Math.round(orig  / 2.54);
     }.bind(null, this.mappings.Brightness);
 
 
