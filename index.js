@@ -930,7 +930,7 @@ FHEMPlatform.prototype = {
                     }
 
                     if( !result.match(/(^| )genericDeviceType\b/) ) {
-                      var cmd = '{addToAttrList( "genericDeviceType:ignore,switch,outlet,light,blind,thermometer,thermostat,contact,garage,window,lock" ) }';
+                      var cmd = '{addToAttrList( "genericDeviceType:security,ignore,switch,outlet,light,blind,thermometer,thermostat,contact,garage,window,lock" ) }';
                       this.execute( cmd,
                                     function(result) {
                                         this.log.warn( 'genericDeviceType attribute was not known. please restart homebridge.' );
@@ -1052,8 +1052,13 @@ FHEMAccessory(platform, s) {
     return;
   }
 
-
   this.mappings = {};
+
+  if( s.Internals.TYPE === 'RESIDENTS' && genericType === undefined ) {
+    this.service_name = 'security';
+    this.mappings.SecuritySystemCurrentState = { reading: 'state', values: ['/^home/:DISARMED', '/^gotosleep/:NIGHT_ARM', '/^absent/:STAY_ARM', '/^gone/:AWAY_ARM'] }
+    this.mappings.SecuritySystemTargetState = { reading: 'state', values: ['/^home/:DISARMED', '/^gotosleep/:NIGHT_ARM', '/^absent/:STAY_ARM', '/^gone/:AWAY_ARM'], cmds: ['STAY_ARM:home', 'AWAY_ARM:absent', 'NIGHT_ARM:gotosleep', 'DISARM:home'], delay: true }
+  }
 
   //this.service_name = 'switch';
 
@@ -1375,7 +1380,7 @@ FHEMAccessory(platform, s) {
     this.mappings.CarbonDioxideLevel = { reading: 'co2' };
   }
 
-  if( this.mappings.AirQuality ) 
+  if( this.mappings.AirQuality )
     this.mappings.AirQuality.reading2homekit = function(mapping, orig) {
       orig = parseInt( orig );
       if( orig > 1500 )
@@ -2236,6 +2241,7 @@ FHEMAccessory.prototype = {
 
   serviceOfName: function(service_name,subtype) {
     var serviceNameOfGenericDeviceType = {      ignore: null,
+                                              security: 'SecuritySystem',
                                                 switch: 'Switch',
                                                 outlet: 'Outlet',
                                                  light: 'Lightbulb',

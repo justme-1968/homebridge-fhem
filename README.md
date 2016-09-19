@@ -22,6 +22,7 @@ includes the devices that should be bridged to homekit.
 - harmony scenes
 - temperature and humidity sensors
 - CO20 and netatmo air quality sensor
+- RESIDENTS module
 - probably some more ...
 
 
@@ -63,6 +64,8 @@ this would define a thermostat device with a command target to set the desired t
 - CurrentDoorState
 - OccupancyDetected
 - StatusLowBattery
+- SecuritySystemCurrentState
+- SecuritySystemTargetState
 - FirmwareRevision
 - and all other homebridge Characteristic names
 
