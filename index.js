@@ -1048,6 +1048,8 @@ FHEMAccessory(platform, s) {
     return;
   }
 
+  this.service_name = genericType;
+
   if( s.Internals.TYPE === 'structure' && genericType === undefined ) {
     this.log.info( 'ignoring ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without genericDeviceType' );
     return;
@@ -1079,6 +1081,14 @@ FHEMAccessory(platform, s) {
 
       return 0;
     }.bind(null, this.mappings.Brightness);
+
+  } else if( match = s.PossibleSets.match(/(^| )bri[^\b\s]*(,(\d+)?)+\b/) ) {
+    this.service_name = 'light';
+    var max = 100;
+    if( match[3] !== undefined )
+      max = match[3];
+    this.mappings.On = { reading: 'onoff', valueOff: '0', cmdOn: 'on', cmdOff: 'off' };
+    this.mappings.Brightness = { reading: 'bri', cmd: 'bri', max: max, maxValue: 100, delay: true };
 
   } else if( match = s.PossibleSets.match(/(^| )pct\b/) ) {
     // HM dimmer
@@ -1437,8 +1447,6 @@ FHEMAccessory(platform, s) {
     this.mappings.FirmwareRevision = { reading: 'firmware', _isInformation: true };
   //FIXME: add swversion internal for HUEDevices
 
-  this.service_name = genericType;
-
   if( 0 ) {
   if( s.Readings.reachable )
     this.mappings.reachable = { reading: 'reachable' };
@@ -1659,6 +1667,7 @@ FHEMAccessory(platform, s) {
 
   }
 
+console.log( this.service_name );
   if( this.service_name === undefined ) {
     this.log.error( s.Internals.NAME + ': no service type detected' );
     return;
@@ -1869,7 +1878,7 @@ FHEMAccessory(platform, s) {
 
           if( match = from.match('^/(.*)/$') ) {
             mapping.homekit2cmd_re.push( { re: match[1], to: to} );
-          } else 
+          } else
             mapping.homekit2cmd[from] = to;
         }
         if(mapping.homekit2cmd_re
