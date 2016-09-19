@@ -1870,16 +1870,17 @@ console.log( this.service_name );
             continue;
           }
 
-          var from = (match[1] === undefined || match[2] === undefined ) ? i : match[1];
+          var from = match[1];
           var to = match[2] !== undefined ? match[3] : match[1];
-
-          if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][from] !== undefined )
-            from = Characteristic[mapping.characteristic_type][from];
 
           if( match = from.match('^/(.*)/$') ) {
             mapping.homekit2cmd_re.push( { re: match[1], to: to} );
-          } else
+          } else {
+            if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][from] !== undefined )
+              from = Characteristic[mapping.characteristic_type][from];
+
             mapping.homekit2cmd[from] = to;
+          }
         }
         if(mapping.homekit2cmd_re
            && mapping.homekit2cmd_re.length) this.log.debug( 'homekit2cmd_re: ' + util.inspect(mapping.homekit2cmd_re) );
