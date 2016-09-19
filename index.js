@@ -1481,7 +1481,7 @@ FHEMAccessory(platform, s) {
     } else {
       this.mappings.CurrentPosition = { reading: 'pct' };
       this.mappings.TargetPosition = { reading: 'pct', cmd: 'pct', delay: true };
-      if( s.Attributes.param && s.Attributes.param.match(/levelinverse/) ) {
+      if( s.Attributes.param && s.Attributes.param.match(/levelInverse/i) ) {
         this.mappings.CurrentPosition.invert = true;
         this.mappings.TargetPosition.invert = true;
       }
