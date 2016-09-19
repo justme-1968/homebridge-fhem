@@ -1093,7 +1093,7 @@ FHEMAccessory(platform, s) {
     this.mappings.Brightness = { reading: 'bri', cmd: 'pct', delay: true };
 
     this.mappings.Brightness.reading2homekit = function(mapping, orig) {
-      return Math.round(orig  / 2.54);
+      return Math.ceil(orig  / 2.54);
     }.bind(null, this.mappings.Brightness);
 
 
