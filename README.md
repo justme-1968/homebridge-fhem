@@ -13,7 +13,7 @@ includes the devices that should be bridged to homekit.
 - homematc, FS20 and ZWave dimmers (devices with set on, set off and set dim or set pct commands)
 - HUE, WifiLight, MilightDevice, SWAP_0000002200000003 (hue, sat, bri, rgb)
 - homematic, max and pid20 thermostats
-- homematic, DUOFERN and FS20/IT(?) blinds
+- homematic, DUOFERN, SOMFY and FS20/IT(?) blinds
 - hommatic, MAX and FHTTK contact sensors (door, window)
 - HM-SEC-WIN, HM-SEC-KEY
 - HM-Sen-LI-O

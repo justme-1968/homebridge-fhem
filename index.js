@@ -163,6 +163,12 @@ FHEM_reading2homekit_(mapping, orig)
              || reading == 'desired'
              || reading == 'desiredTemperature' ) {
     value = parseFloat( value );
+    if( isNaN(value) ) {
+      if( value == 'on' )
+        value = 31.0;
+      else if( value == 'off' )
+        value = 4.0;
+    }
 
     if( mapping.minValue !== undefined && value < mapping.minValue )
       value = parseFloat(mapping.minValue);
@@ -1358,6 +1364,9 @@ FHEMAccessory(platform, s) {
   if( s.Attributes.model == 'HM-Sen-LI-O' ) {
     this.service_name = 'LightSensor';
     this.mappings.CurrentAmbientLightLevel = { reading: 'brightness' };
+  } else if( s.Readings.luminance ) {
+    if( !this.service_name ) this.service_name = 'LightSensor';
+    this.mappings.CurrentAmbientLightLevel = { reading: 'luminance' };
   } else if( s.Readings.luminosity ) {
     if( !this.service_name ) this.service_name = 'LightSensor';
     this.mappings.CurrentAmbientLightLevel = { reading: 'luminosity' };
@@ -1375,7 +1384,7 @@ FHEMAccessory(platform, s) {
     this.mappings.CarbonDioxideLevel = { reading: 'co2' };
   }
 
-  if( this.mappings.AirQuality ) 
+  if( this.mappings.AirQuality )
     this.mappings.AirQuality.reading2homekit = function(mapping, orig) {
       orig = parseInt( orig );
       if( orig > 1500 )
@@ -1426,6 +1435,8 @@ FHEMAccessory(platform, s) {
     this.mappings.FirmwareRevision = { reading: 'firmware', _isInformation: true };
   //FIXME: add swversion internal for HUEDevices
 
+  this.service_name = genericType;
+
   if( 0 ) {
   if( s.Readings.reachable )
     this.mappings.reachable = { reading: 'reachable' };
@@ -1460,10 +1471,18 @@ FHEMAccessory(platform, s) {
         //this.mappings.CurrentPosition.reading2homekit = reading2homekit.bind(null, this.mappings.CurrentPosition);
         //this.mappings.TargetPosition.reading2homekit = reading2homekit.bind(null, this.mappings.TargetPosition);
         //this.mappings.TargetPosition.homekit2reading = homekit2reading.bind(null, this.mappings.TargetPosition);
+      } else if( s.Internals.TYPE == 'SOMFY' ) {
+        this.mappings.CurrentPosition.invert = true;
+        this.mappings.TargetPosition.invert = true;
+        this.mappings.TargetPosition.cmd = 'pos';
       }
     } else {
       this.mappings.CurrentPosition = { reading: 'pct' };
       this.mappings.TargetPosition = { reading: 'pct', cmd: 'pct', delay: true };
+      if( s.Attributes.param && s.Attributes.param.match(/levelinverse/) ) {
+        this.mappings.CurrentPosition.invert = true;
+        this.mappings.TargetPosition.invert = true;
+      }
     }
 
   } else if( s.Attributes.model == 'HM-SEC-WIN' ) {
@@ -1633,14 +1652,10 @@ FHEMAccessory(platform, s) {
 
   }
 
-  if( this.service_name === undefined )
-    this.service_name = genericType;
-
   if( this.service_name === undefined ) {
     this.log.error( s.Internals.NAME + ': no service type detected' );
     return;
-  }
-  if( this.service_name === undefined )
+  } else if( this.service_name === undefined )
     this.service_name = 'switch';
 
   this.fromHomebridgeMapping( s.Attributes.homebridgeMapping );
@@ -2039,7 +2054,7 @@ FHEMAccessory.prototype = {
     }
   },
 
-  delayed: function(c,value,delay) {
+  delayed: function(mapping,value,delay) {
     if( !this.delayed_timers )
       this.delayed_timers = {};
 
@@ -2048,14 +2063,17 @@ FHEMAccessory.prototype = {
     if( delay < 500 )
       delay = 500;
 
-    var timer = this.delayed_timers[c];
+    var timer = this.delayed_timers[mapping];
     if( timer ) {
-      //this.log(this.name + ' delayed: removing old command ' + c);
+      //this.log(this.name + ' delayed: removing old command ' + mapping.characteristic_type);
       clearTimeout( timer );
     }
 
-    this.log.info(this.name + ' delaying command ' + c + ' with value ' + value);
-    this.delayed_timers[c] = setTimeout( function(){delete this.delayed_timers[c]; this.command(c,value);}.bind(this), delay );
+    this.log.info(this.name + ' delaying command ' + mapping.characteristic_type + ' with value ' + value);
+    this.delayed_timers[mapping] = setTimeout( function(){
+                                                 delete this.delayed_timers[mapping];
+                                                 this.command(mapping,value);
+                                               }.bind(this), delay );
   },
 
   command: function(mapping,value) {
@@ -2081,6 +2099,13 @@ FHEMAccessory.prototype = {
       command = 'set ' + this.mappings.Saturation.device + ' sat ' + value;
 
     } else {
+      if( mapping.characteristic_type == 'On' && value ) {
+        if( this.delayed_timers && this.delayed_timers.length ) {
+          mapping.log.info(this.name + ': skipping set cmd for ' + mapping.characteristic_type + ' with value ' + value );
+          return;
+        }
+      }
+
       mapping.log.info(this.name + ': executing set cmd for ' + mapping.characteristic_type + ' with value ' + value );
 
       if( typeof mapping.homekit2reading === 'function' ) {
