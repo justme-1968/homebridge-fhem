@@ -1070,7 +1070,7 @@ FHEMAccessory(platform, s) {
   var match;
   if( match = s.PossibleSets.match(/(^| )dim:slider,0,1,99/) ) {
     // ZWave dimmer
-    this.service_name = 'light';
+    if( !this.service_name ) this.service_name = 'light';
     this.mappings.On = { reading: 'state', valueOff: '0', cmdOn: 'on', cmdOff: 'off' };
     this.mappings.Brightness = { reading: 'state', cmd: 'dim', delay: true };
 
@@ -1084,7 +1084,7 @@ FHEMAccessory(platform, s) {
 
   } else if( match = s.PossibleSets.match(/(^| )bri[^\b\s]*(,(\d+)?)+\b/) ) {
     // Hue
-    this.service_name = 'light';
+    if( !this.service_name ) this.service_name = 'light';
     var max = 100;
     if( match[3] !== undefined )
       max = match[3];
@@ -1099,13 +1099,13 @@ FHEMAccessory(platform, s) {
 
   } else if( match = s.PossibleSets.match(/(^| )pct\b/) ) {
     // HM dimmer
-    this.service_name = 'light';
+    if( !this.service_name ) this.service_name = 'light';
     this.mappings.On = { reading: 'pct', valueOff: '0', cmdOn: 'on', cmdOff: 'off' };
     this.mappings.Brightness = { reading: 'pct', cmd: 'pct', delay: true };
 
   } else if( match = s.PossibleSets.match(/(^| )dim\d+%/) ) {
     // FS20 dimmer
-    this.service_name = 'light';
+    if( !this.service_name ) this.service_name = 'light';
     this.mappings.On = { reading: 'state', valueOff: 'off', cmdOn: 'on', cmdOff: 'off' };
     this.mappings.Brightness = { reading: 'state', cmd: ' ', delay: true };
 
@@ -1134,7 +1134,7 @@ FHEMAccessory(platform, s) {
   }
 
   if( match = s.PossibleSets.match(/(^| )hue[^\b\s]*(,(\d+)?)+\b/) ) {
-    this.service_name = 'light';
+    if( !this.service_name ) this.service_name = 'light';
     var max = 359;
     if( match[3] !== undefined )
       max = match[3];
@@ -1142,7 +1142,7 @@ FHEMAccessory(platform, s) {
   }
 
   if( match = s.PossibleSets.match(/(^| )sat[^\b\s]*(,(\d+)?)+\b/) ) {
-    this.service_name = 'light';
+    if( !this.service_name ) this.service_name = 'light';
     var max = 100;
     if( match[3] !== undefined )
       max = match[3];
@@ -1184,7 +1184,7 @@ FHEMAccessory(platform, s) {
   if( s.Internals.TYPE == 'MilightDevice'
       && s.PossibleSets.match(/(^| )hue\b/) && s.PossibleSets.match(/(^| )saturation\b/) && s.PossibleSets.match(/(^| )dim\b/) )  {
     // MilightDevice
-    this.service_name = 'light';
+    if( !this.service_name ) this.service_name = 'light';
     this.log.debug( ' detected MilightDevice' );
     this.mappings.Hue = { reading: 'hue', cmd: 'hue', max: 359, maxValue: 359 };
     this.mappings.Saturation = { reading: 'saturation', cmd: 'saturation', max: 100, maxValue: 100 };
@@ -1193,7 +1193,7 @@ FHEMAccessory(platform, s) {
   } else if( s.Internals.TYPE == 'WifiLight' && s.PossibleSets.match(/(^| )HSV\b/)
              && s.Readings.hue !== undefined && s.Readings.saturation !== undefined && s.Readings.brightness !== undefined ) {
     // WifiLight
-    this.service_name = 'light';
+    if( !this.service_name ) this.service_name = 'light';
     this.log.debug( ' detected WifiLight' );
     this.mappings.Hue = { reading: 'hue', cmd: 'HSV', max: 359, maxValue: 359 };
     this.mappings.Saturation = { reading: 'saturation', cmd: 'HSV', max: 100, maxValue: 100 };
@@ -1245,12 +1245,12 @@ FHEMAccessory(platform, s) {
     var reading = undefined;
     var cmd = undefined;
     if( s.PossibleSets.match(/(^| )rgb\b/) ) {
-      this.service_name = 'light';
+      if( !this.service_name ) this.service_name = 'light';
       reading = 'rgb'; cmd = 'rgb';
       if( s.Internals.TYPE == 'SWAP_0000002200000003' )
         reading = '0B-RGBlevel';
     } else if( s.PossibleSets.match(/(^| )RGB\b/) ) {
-      this.service_name = 'light';
+      if( !this.service_name ) this.service_name = 'light';
       reading = 'RGB'; cmd = 'RGB';
     }
 
@@ -1369,8 +1369,11 @@ FHEMAccessory(platform, s) {
   if( s.Readings.power )
     this.mappings[CustomUUIDs.Power] = { name: 'Power', reading: 'power', format: 'FLOAT', factor: 1 };
 
-  if( s.Readings.energy )
+  if( s.Readings.energy ) {
     this.mappings[CustomUUIDs.Energy] = { name: 'Energy', reading: 'energy', format: 'FLOAT', factor: 1 };
+    if( s.Readings.energy.Value.match( / Wh/ ) )
+      this.mappings[CustomUUIDs.Energy].factor = 0.001;
+  }
 
   if( s.Readings.pressure )
     this.mappings[CustomUUIDs.AirPressure] = { name: 'AirPressure', reading: 'pressure', format: 'UINT16', factor: 1 };
@@ -1473,7 +1476,7 @@ FHEMAccessory(platform, s) {
 
   } else if( genericType == 'blind'
              || s.Attributes.subType == 'blindActuator' ) {
-    this.service_name = 'blind';
+    if( !this.service_name ) this.service_name = 'blind';
     delete this.mappings.Brightness;
     if( s.PossibleSets.match(/(^| )position\b/) ) {
       this.mappings.CurrentPosition = { reading: 'position' };
@@ -1543,7 +1546,7 @@ FHEMAccessory(platform, s) {
 
   } else if( genericType == 'thermostat'
              || s.Attributes.subType == 'thermostat' ) {
-    this.service_name = 'thermostat';
+    if( !this.service_name ) this.service_name = 'thermostat';
 
   } else if( s.Internals.TYPE == 'CUL_FHTTK' ) {
     this.service_name = 'ContactSensor';
@@ -1579,7 +1582,7 @@ FHEMAccessory(platform, s) {
 
   if( match = s.PossibleSets.match(/(^| )desired-temp(:[^\d]*([^\$ ]*))?/) ) {
     //HM
-    this.service_name = 'thermostat';
+    if( !this.service_name ) this.service_name = 'thermostat';
     this.mappings.TargetTemperature = { reading: 'desired-temp', cmd: 'desired-temp', delay: true };
 
     if( s.Readings.actuator )
@@ -1602,7 +1605,7 @@ FHEMAccessory(platform, s) {
 
   } else if( match = s.PossibleSets.match(/(^| )desiredTemperature(:[^\d]*([^\$ ]*))?/) ) {
     // MAX
-    this.service_name = 'thermostat';
+    if( !this.service_name ) this.service_name = 'thermostat';
     this.mappings.TargetTemperature = { reading: 'desiredTemperature', cmd: 'desiredTemperature', delay: true };
 
     if( s.Readings.valveposition )
@@ -1619,7 +1622,7 @@ FHEMAccessory(platform, s) {
 
   } else if( match = s.PossibleSets.match(/(^| )desired(:[^\d]*([^\$ ]*))?/) ) {
     //PID20
-    this.service_name = 'thermostat';
+    if( !this.service_name ) this.service_name = 'thermostat';
     this.mappings.TargetTemperature = { reading: 'desired', cmd: 'desired', delay: true };
 
     if( s.Readings.actuation )
@@ -1644,7 +1647,7 @@ FHEMAccessory(platform, s) {
         return;
 
     } else if( !s.Attributes.homebridgeMapping ) {
-      this.service_name = 'switch';
+      if( !this.service_name ) this.service_name = 'switch';
 
       var match;
       if( match = s.PossibleSets.match(/(^| )activity:([^\s]*)/) ) {
