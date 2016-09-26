@@ -1363,15 +1363,20 @@ FHEMAccessory(platform, s) {
   if( s.Readings.voltage )
     this.mappings[CustomUUIDs.Voltage] = { name: 'Voltage', reading: 'voltage', format: 'FLOAT', factor: 1 };
 
-  if( s.Readings.current )
+  if( s.Readings.current ) {
     this.mappings[CustomUUIDs.Current] = { name: 'Current', reading: 'current', format: 'FLOAT', factor: 1 };
+    if( s.Internals.TYPE === 'HM-ES-PMSw1-Pl' )
+      this.mappings[CustomUUIDs.Current].factor = 0.001;
+  }
 
   if( s.Readings.power )
     this.mappings[CustomUUIDs.Power] = { name: 'Power', reading: 'power', format: 'FLOAT', factor: 1 };
 
   if( s.Readings.energy ) {
     this.mappings[CustomUUIDs.Energy] = { name: 'Energy', reading: 'energy', format: 'FLOAT', factor: 1 };
-    if( s.Readings.energy.Value.match( / Wh/ ) )
+    if( s.Internals.TYPE === 'HM-ES-PMSw1-Pl' )
+      this.mappings[CustomUUIDs.Energy].factor = 0.001;
+    else if( s.Readings.energy.Value.match( / Wh/ ) )
       this.mappings[CustomUUIDs.Energy].factor = 0.001;
   }
 
@@ -1665,7 +1670,7 @@ FHEMAccessory(platform, s) {
     this.mappings.On = { reading: 'state', valueOff: 'off', cmdOn: 'on', cmdOff: 'off' };
     if( !s.Readings.state )
       delete this.mappings.On.reading;
-    else if( !this.service_name && !genericType )
+    else if( !this.service_name )
       this.service_name = 'switch';
 
   } else if( !this.service_name && s.Attributes.setList ) {
@@ -1677,7 +1682,6 @@ FHEMAccessory(platform, s) {
 
   }
 
-console.log( this.service_name );
   if( this.service_name === undefined ) {
     this.log.error( s.Internals.NAME + ': no service type detected' );
     return;
