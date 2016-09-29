@@ -1338,14 +1338,6 @@ FHEMAccessory(platform, s) {
   //if( s.Readings.ct && !this.mappings[CustomUUIDs.ColorTemperature] )
   //  this.mappings.ct = { reading: 'ct' };
 
-  if( s.Readings['measured-temp'] ) {
-    if( !this.service_name ) this.service_name = 'thermometer';
-    this.mappings.CurrentTemperature = { reading: 'measured-temp', minValue: -30 };
-  } else if( s.Readings.temperature ) {
-    if( !this.service_name ) this.service_name = 'thermometer';
-    this.mappings.CurrentTemperature = { reading: 'temperature', minValue: -30 };
-  }
-
   if( s.Readings.volume ) {
     this.mappings[CustomUUIDs.Volume] = { reading: 'volume', cmd: 'volume', delay: true,
                                           name: 'Volume', format: 'UINT8', unit: 'PERCENTAGE',
@@ -1378,14 +1370,6 @@ FHEMAccessory(platform, s) {
       this.mappings[CustomUUIDs.Energy].factor = 0.001;
     else if( s.Readings.energy.Value.match( / Wh/ ) )
       this.mappings[CustomUUIDs.Energy].factor = 0.001;
-  }
-
-  if( s.Readings.pressure )
-    this.mappings[CustomUUIDs.AirPressure] = { name: 'AirPressure', reading: 'pressure', format: 'UINT16', factor: 1 };
-
-  if( s.Readings.humidity ) {
-    if( !this.service_name ) this.service_name = 'HumiditySensor';
-    this.mappings.CurrentRelativeHumidity = { reading: 'humidity' };
   }
 
   if( s.Attributes.model == 'HM-Sen-LI-O' ) {
@@ -1643,6 +1627,22 @@ FHEMAccessory(platform, s) {
       this.mappings.CurrentTemperature = { reading: 'measured' };
 
   }
+
+  if( s.Readings['measured-temp'] ) {
+    if( !this.service_name ) this.service_name = 'thermometer';
+    this.mappings.CurrentTemperature = { reading: 'measured-temp', minValue: -30 };
+  } else if( s.Readings.temperature ) {
+    if( !this.service_name ) this.service_name = 'thermometer';
+    this.mappings.CurrentTemperature = { reading: 'temperature', minValue: -30 };
+  }
+
+  if( s.Readings.humidity ) {
+    if( !this.service_name ) this.service_name = 'HumiditySensor';
+    this.mappings.CurrentRelativeHumidity = { reading: 'humidity' };
+  }
+
+  if( s.Readings.pressure )
+    this.mappings[CustomUUIDs.AirPressure] = { name: 'AirPressure', reading: 'pressure', format: 'UINT16', factor: 1 };
 
   if( s.Internals.TYPE == 'SONOSPLAYER' ) { //FIXME: use sets [Pp]lay/[Pp]ause/[Ss]top
     this.service_name = 'switch';
