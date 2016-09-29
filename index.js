@@ -1594,6 +1594,10 @@ FHEMAccessory(platform, s) {
       this.mappings[CustomUUIDs.Actuation] = { reading: 'actuator',
                                                name: 'Actuation', format: 'UINT8', unit: 'PERCENTAGE',
                                                maxValue: 100, minValue: 0, minStep: 1  };
+    else if( s.Readings.ValvePosition )
+      this.mappings[CustomUUIDs.Actuation] = { reading: 'ValvePosition',
+                                               name: 'Actuation', format: 'UINT8', unit: 'PERCENTAGE',
+                                               maxValue: 100, minValue: 0, minStep: 1  };
 
     if( match[3] ) {
       var values = match[3].split(',');
