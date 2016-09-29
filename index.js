@@ -162,13 +162,12 @@ FHEM_reading2homekit_(mapping, orig)
              || reading == 'desired-temp'
              || reading == 'desired'
              || reading == 'desiredTemperature' ) {
-    value = parseFloat( value );
-    if( isNaN(value) ) {
-      if( value == 'on' )
-        value = 31.0;
-      else if( value == 'off' )
-        value = 4.0;
-    }
+    if( value == 'on' )
+      value = 31.0;
+    else if( value == 'off' )
+      value = 4.0;
+    else
+      value = parseFloat( value );
 
     if( mapping.minValue !== undefined && value < mapping.minValue )
       value = parseFloat(mapping.minValue);
