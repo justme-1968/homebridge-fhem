@@ -28,7 +28,7 @@ includes the devices that should be bridged to homekit.
 
 ##simple config
 for devices that are not correctly identified use the genericDeviceType attribute to configure the device type.
-supported values are: ignore,switch,outlet,light,blind,thermostat,garage,window,lock
+supported values are: security,ignore,switch,outlet,light,blind,thermometer,thermostat,contact,garage,window,lock
 this is probably mostly used for differentiating between switches and lights.
 
 ##enhanced config
