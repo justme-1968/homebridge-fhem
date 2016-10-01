@@ -50,6 +50,8 @@ attr <thermostat> homebridgeMapping TargetTemperature=target::target,minValue=18
 
 this would define a thermostat device with a command target to set the desired temperature, a reading target that indicates the desired target temperature, the desired min, max and step values and a current temeprature comming from the temperature reading of the device myTemp.
 
+the names for the stadard service and characteristic types can be found here: .../hap-nodejs/lib/gen/HomeKitTypes.js
+
 
 ###currently supported values for characteristic names are:
 - On
