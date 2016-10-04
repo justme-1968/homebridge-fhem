@@ -1081,12 +1081,13 @@ FHEMAccessory(platform, s) {
       return 0;
     }.bind(null, this.mappings.Brightness);
 
-  } else if( match = s.PossibleSets.match(/(^| )bri[^\b\s]*(,(\d+)?)+\b/) ) {
+  } else if( match = s.PossibleSets.match(/(^| )bri(:[^\b\s]*(,(\d+))+)?\b/) ) {
     // Hue
     if( !this.service_name ) this.service_name = 'light';
+    this.log.debug( 'detected HUEDevice' );
     var max = 100;
-    if( match[3] !== undefined )
-      max = match[3];
+    if( match[4] !== undefined )
+      max = match[4];
     this.mappings.On = { reading: 'onoff', valueOff: '0', cmdOn: 'on', cmdOff: 'off' };
     //FIXME: max & maxValue are not set. they would work in both directions. but we use pct for the set cmd. not bri!
     this.mappings.Brightness = { reading: 'bri', cmd: 'pct', delay: true };
@@ -1132,19 +1133,19 @@ FHEMAccessory(platform, s) {
 
   }
 
-  if( match = s.PossibleSets.match(/(^| )hue[^\b\s]*(,(\d+)?)+\b/) ) {
+  if( match = s.PossibleSets.match(/(^| )hue(:[^\b\s]*(,(\d+))+)?\b/) ) {
     if( !this.service_name ) this.service_name = 'light';
     var max = 359;
-    if( match[3] !== undefined )
-      max = match[3];
+    if( match[4] !== undefined )
+      max = match[4];
     this.mappings.Hue = { reading: 'hue', cmd: 'hue', max: max, maxValue: 359 };
   }
 
-  if( match = s.PossibleSets.match(/(^| )sat[^\b\s]*(,(\d+)?)+\b/) ) {
+  if( match = s.PossibleSets.match(/(^| )sat(:[^\b\s]*(,(\d+))+)?\b/) ) {
     if( !this.service_name ) this.service_name = 'light';
     var max = 100;
-    if( match[3] !== undefined )
-      max = match[3];
+    if( match[4] !== undefined )
+      max = match[4];
     this.mappings.Saturation = { reading: 'sat', cmd: 'sat', max: max, maxValue: 100 };
   }
 
@@ -1184,7 +1185,7 @@ FHEMAccessory(platform, s) {
       && s.PossibleSets.match(/(^| )hue\b/) && s.PossibleSets.match(/(^| )saturation\b/) && s.PossibleSets.match(/(^| )dim\b/) )  {
     // MilightDevice
     if( !this.service_name ) this.service_name = 'light';
-    this.log.debug( ' detected MilightDevice' );
+    this.log.debug( 'detected MilightDevice' );
     this.mappings.Hue = { reading: 'hue', cmd: 'hue', max: 359, maxValue: 359 };
     this.mappings.Saturation = { reading: 'saturation', cmd: 'saturation', max: 100, maxValue: 100 };
     this.mappings.Brightness = { reading: 'brightness', cmd: 'dim', max: 100, maxValue: 100, delay: true };
@@ -1193,7 +1194,7 @@ FHEMAccessory(platform, s) {
              && s.Readings.hue !== undefined && s.Readings.saturation !== undefined && s.Readings.brightness !== undefined ) {
     // WifiLight
     if( !this.service_name ) this.service_name = 'light';
-    this.log.debug( ' detected WifiLight' );
+    this.log.debug( 'detected WifiLight' );
     this.mappings.Hue = { reading: 'hue', cmd: 'HSV', max: 359, maxValue: 359 };
     this.mappings.Saturation = { reading: 'saturation', cmd: 'HSV', max: 100, maxValue: 100 };
     this.mappings.Brightness = { reading: 'brightness', cmd: 'HSV', max: 100, maxValue: 100, delay: true };
