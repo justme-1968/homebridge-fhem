@@ -1374,13 +1374,13 @@ FHEMAccessory(platform, s) {
 
   if( s.Attributes.model == 'HM-Sen-LI-O' ) {
     this.service_name = 'LightSensor';
-    this.mappings.CurrentAmbientLightLevel = { reading: 'brightness' };
+    this.mappings.CurrentAmbientLightLevel = { reading: 'brightness', minValue: 0 };
   } else if( s.Readings.luminance ) {
     if( !this.service_name ) this.service_name = 'LightSensor';
-    this.mappings.CurrentAmbientLightLevel = { reading: 'luminance' };
+    this.mappings.CurrentAmbientLightLevel = { reading: 'luminance', minValue: 0 };
   } else if( s.Readings.luminosity ) {
     if( !this.service_name ) this.service_name = 'LightSensor';
-    this.mappings.CurrentAmbientLightLevel = { reading: 'luminosity' };
+    this.mappings.CurrentAmbientLightLevel = { reading: 'luminosity', minValue: 0 };
     this.mappings.CurrentAmbientLightLevel.reading2homekit = function(mapping, orig) {
       return parseFloat( orig ) / 0.265;
     }.bind(null,this.mappings.CurrentAmbientLightLevel);
@@ -2067,21 +2067,26 @@ FHEMAccessory.prototype = {
             mapping[p[0]] = p[1];
 
         else if( p.length == 1 ) {
-          var p = param.split(':');
+          if( this.mappings[param] !== undefined ) {
+            mapping = Object.assign({}, this.mappings[param]);
+            this.mappings[characteristic] = mapping;
 
-          var reading = p[p.length-1];
-          var device = p.length > 1 ? p[p.length-2] : undefined;
-          var cmd = p.length > 2 ? p[p.length-3] : undefined;
+          } else {
+            var p = param.split(':');
 
-          if( reading )
-            mapping.reading = reading;
+            var reading = p[p.length-1];
+            var device = p.length > 1 ? p[p.length-2] : undefined;
+            var cmd = p.length > 2 ? p[p.length-3] : undefined;
 
-          if( device )
-            mapping.device = device;
+            if( reading )
+              mapping.reading = reading;
 
-          if( cmd )
-            mapping.cmd = cmd;
+            if( device )
+              mapping.device = device;
 
+            if( cmd )
+              mapping.cmd = cmd;
+          }
 
         } else {
           this.log.error( '  wrong syntax: ' + param );
