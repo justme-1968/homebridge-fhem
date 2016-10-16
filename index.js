@@ -1573,6 +1573,8 @@ FHEMAccessory(platform, s) {
     //HM & Comet DECT
     if( !this.service_name ) this.service_name = 'thermostat';
     this.mappings.TargetTemperature = { reading: 'desired-temp', cmd: 'desired-temp', delay: true };
+    if( s.Readings['desired-temp'] === undefined ) //Comet DECT
+      this.mappings.TargetTemperature.reading = 'temperature';
 
     if( s.Readings.actuator )
       this.mappings[CustomUUIDs.Actuation] = { reading: 'actuator',
@@ -2074,7 +2076,14 @@ FHEMAccessory.prototype = {
 
         else if( p.length == 1 ) {
           if( this.mappings[param] !== undefined ) {
-            mapping = Object.assign({}, this.mappings[param]);
+            try {
+              mapping = Object.assign({}, this.mappings[param]);
+            } catch(err) {
+              console.log(this.mappings[param]);
+              for( var x in this.mappings[param] ) {
+                mapping[x] = this.mappings[param][x]
+              }
+            }
             this.mappings[characteristic] = mapping;
 
           } else {

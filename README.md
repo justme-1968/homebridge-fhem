@@ -38,8 +38,11 @@ devices use the homebridgeMapping attribute. it is parsed from left to right and
   in addition to the symbolic names above all homekit Service names are recognized
 - the homebridgeMapping attribute containts a space separated list of characteristic descriptions
 - each description consists of the characteristic name followed by a = followed by a komma separated list of parameters
-- each parameter can be of the form <command>:<device>:<reading> where parts can be omitted from left to right
-  or of the form <name>=<value> or the special clear to clear the mappings for the current characteristic
+- each parameter can be of the form
+  <command>:<device>:<reading> where parts can be omitted from left to right or
+  <name>=<value> or
+  the name of an already mapped characteristic to copy the configuration from there
+  the special clear to clear the mappings for the current characteristic
 - the following special values for a description are recognized: clear -> clears all mappings for this device
 
 e.g:
