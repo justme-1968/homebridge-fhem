@@ -1570,7 +1570,7 @@ FHEMAccessory(platform, s) {
     this.service_name = 'light';
 
   if( match = s.PossibleSets.match(/(^| )desired-temp(:[^\d]*([^\$ ]*))?/) ) {
-    //HM
+    //HM & Comet DECT
     if( !this.service_name ) this.service_name = 'thermostat';
     this.mappings.TargetTemperature = { reading: 'desired-temp', cmd: 'desired-temp', delay: true };
 
@@ -1585,9 +1585,15 @@ FHEMAccessory(platform, s) {
 
     if( match[3] ) {
       var values = match[3].split(',');
-      this.mappings.TargetTemperature.minValue = parseFloat(values[0]);
-      this.mappings.TargetTemperature.maxValue = parseFloat(values[values.length-1]);
-      this.mappings.TargetTemperature.minStep = values[1] - values[0];
+      if( s.PossibleSets.match(/slider/ ) ) {
+        this.mappings.TargetTemperature.minValue = parseFloat(values[0]);
+        this.mappings.TargetTemperature.maxValue = parseFloat(values[2]);
+        this.mappings.TargetTemperature.minStep = values[1];
+      } else {
+        this.mappings.TargetTemperature.minValue = parseFloat(values[0]);
+        this.mappings.TargetTemperature.maxValue = parseFloat(values[values.length-1]);
+        this.mappings.TargetTemperature.minStep = values[1] - values[0];
+      }
     }
 
     if( match = s.PossibleSets.match(/(^| )mode($| )/) ) {

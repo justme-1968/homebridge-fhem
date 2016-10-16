@@ -12,7 +12,7 @@ includes the devices that should be bridged to homekit.
 - lights (devices with set on and set off commands)
 - homematc, FS20 and ZWave dimmers (devices with set on, set off and set dim or set pct commands)
 - HUE, WifiLight, MilightDevice, SWAP_0000002200000003 (hue, sat, bri, rgb)
-- homematic, max and pid20 thermostats
+- homematic, max, pid20 and comet dect  thermostats
 - homematic, DUOFERN, SOMFY and FS20/IT(?) blinds
 - hommatic, MAX and FHTTK contact sensors (door, window)
 - HM-SEC-WIN, HM-SEC-KEY
@@ -151,21 +151,21 @@ examples:
                                       CurrentTemperature=myTemp:temperature
 ```
 
-- n devices -> 1 service (temp + hum, dummy thermostat + temp)
+- n devices -> 1 service, n characteristics (temp + hum, dummy thermostat + temp)
 ```
   attr <tempHum> genericDeviceType thermometer
   attr <tempHum> homebridgeMapping [CurrentTemperature=temperature1] CurrentRelativeHumidity=<device2>:humidity
 ```
   wenn das reading temperature heisst statt temperature1 kann CurrentTemperature=temperature1 entfallen
 
-- 1 device -> 2 services mit identischen characteristics (thermometer)
+- 1 device -> 2 services, 1 identical characteristics each (thermometer)
 ```
   attr <dualTemp> genericDeviceType thermometer
   attr <dualTemp> homebridgeMapping CurrentTemperature=temperature1,minValue=-30,subtype=innen
                                     CurrentTemperature=temperature2,minValue=-30,subtype=aussen
 ```
 
-- 1 device  -> n services (1 service per harmony activity)
+- 1 device  -> n service with 1 identical characteristic each (1 service per harmony activity)
 ```
   attr <hub> genericDeviceType switch
   attr <hub> homebridgeMapping clear
