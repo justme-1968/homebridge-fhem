@@ -170,16 +170,16 @@ FHEM_reading2homekit_(mapping, orig)
       value = parseFloat( value );
 
     if( mapping.minValue !== undefined && value < mapping.minValue )
-      value = parseFloat(mapping.minValue);
+      value = mapping.minValue;
     else if( mapping.maxValue !== undefined && value > mapping.maxValue )
-      value = parseFloat(mapping.maxValue);
+      value = mapping.maxValue;
 
     if( mapping.minStep ) {
       if( mapping.minValue )
-        value -= parseFloat(mapping.minValue);
+        value -= mapping.minValue;
       value = parseFloat( (Math.round(value / mapping.minStep) * mapping.minStep).toFixed(1) );
       if( mapping.minValue )
-        value += parseFloat(mapping.minValue);
+        value += mapping.minValue;
     }
 
   } else if( reading == 'humidity' ) {
@@ -384,18 +384,18 @@ FHEM_reading2homekit_(mapping, orig)
 
     if( mapping.minValue !== undefined && value < mapping.minValue ) {
       mapping.log.debug(mapping.informId + ' value ' + value + ' clipped to minValue: ' + mapping.minValue);
-      value = parseFloat(mapping.minValue);
+      value = mapping.minValue;
     } else if( mapping.maxValue !== undefined && value > mapping.maxValue ) {
       mapping.log.debug(mapping.informId + ' value ' + value + ' clipped to maxValue: ' + mapping.maxValue);
-      value = parseFloat(mapping.maxValue);
+      value = mapping.maxValue;
     }
 
     if( mapping.minStep ) {
       if( mapping.minValue )
-        value -= parseFloat(mapping.minValue);
+        value -= mapping.minValue;
       value = parseFloat( (Math.round(value / mapping.minStep) * mapping.minStep).toFixed(1) );
       if( mapping.minValue )
-        value += parseFloat(mapping.minValue);
+        value += mapping.minValue;
     }
 
     if( format && format.match(/int/i) )
@@ -2071,7 +2071,9 @@ FHEMAccessory.prototype = {
           else if( p[0] == 'delay' ) {
             mapping[p[0]] = parseInt(p[1]);
             if( isNaN(mapping[p[0]]) ) mapping[p[0]] = true;
-          } else
+          } else if( p[0] === 'minValue' || p[0] === 'maxValue' || p[0] === 'minStep' || p[0] === 'min' || p[0] === 'max'  )
+            mapping[p[0]] = parseFloat(p[1]);
+          else
             mapping[p[0]] = p[1];
 
         else if( p.length == 1 ) {
@@ -2554,9 +2556,9 @@ FHEMAccessory.prototype = {
 
         if( mapping.format !== undefined ) characteristic.setProps( { format: Characteristic.Formats[mapping.format] } );
         if( mapping.unit !== undefined ) characteristic.setProps( { unit: Characteristic.Units[mapping.unit] } );
-        if( mapping.minValue !== undefined ) characteristic.setProps( { minValue: parseFloat(mapping.minValue) } );
-        if( mapping.maxValue !== undefined ) characteristic.setProps( { maxValue: parseFloat(mapping.maxValue) } );
-        if( mapping.minStep !== undefined ) characteristic.setProps( { minStep: parseFloat(mapping.minStep) } );
+        if( mapping.minValue !== undefined ) characteristic.setProps( { minValue: mapping.minValue } );
+        if( mapping.maxValue !== undefined ) characteristic.setProps( { maxValue: mapping.maxValue } );
+        if( mapping.minStep !== undefined ) characteristic.setProps( { minStep: mapping.minStep } );
 
         if( characteristic_type.match( /-/ ) ) {
           //characteristic.readable = true;
