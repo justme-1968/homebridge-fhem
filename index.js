@@ -1070,7 +1070,7 @@ FHEMAccessory(platform, s) {
   if( match = s.PossibleSets.match(/(^| )dim:slider,0,1,99/) ) {
     // ZWave dimmer
     if( !this.service_name ) this.service_name = 'light';
-    this.mappings.On = { reading: 'state', valueOff: '0', cmdOn: 'on', cmdOff: 'off' };
+    this.mappings.On = { reading: 'state', valueOff: '/^(dim )?0$/', cmdOn: 'on', cmdOff: 'off' };
     this.mappings.Brightness = { reading: 'state', cmd: 'dim', delay: true };
 
     this.mappings.Brightness.reading2homekit = function(mapping, orig) {
