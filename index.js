@@ -259,7 +259,8 @@ FHEM_reading2homekit_(mapping, orig)
       value = mapped;
     }
 
-    if( !format.match( /bool/i ) && mapping.threshold ) {
+    if( mapping.threshold ) {
+    //if( !format.match( /bool/i ) && mapping.threshold ) {
       var mapped;
       if( parseFloat(value) > mapping.threshold )
         mapped = 1;
@@ -1636,22 +1637,6 @@ FHEMAccessory(platform, s) {
 
   }
 
-  if( s.Readings['measured-temp'] ) {
-    if( !this.service_name ) this.service_name = 'thermometer';
-    this.mappings.CurrentTemperature = { reading: 'measured-temp', minValue: -30 };
-  } else if( s.Readings.temperature ) {
-    if( !this.service_name ) this.service_name = 'thermometer';
-    this.mappings.CurrentTemperature = { reading: 'temperature', minValue: -30 };
-  }
-
-  if( s.Readings.humidity ) {
-    if( !this.service_name ) this.service_name = 'HumiditySensor';
-    this.mappings.CurrentRelativeHumidity = { reading: 'humidity' };
-  }
-
-  if( s.Readings.pressure )
-    this.mappings[CustomUUIDs.AirPressure] = { name: 'AirPressure', reading: 'pressure', format: 'UINT16', factor: 1 };
-
   if( s.Internals.TYPE == 'SONOSPLAYER' ) { //FIXME: use sets [Pp]lay/[Pp]ause/[Ss]top
     this.service_name = 'switch';
     this.mappings.On = { reading: 'transportState', valueOn: 'PLAYING', cmdOn: 'play', cmdOff: 'pause' };
@@ -1693,6 +1678,23 @@ FHEMAccessory(platform, s) {
     }
 
   }
+
+  if( s.Readings['measured-temp'] ) {
+    if( !this.service_name ) this.service_name = 'thermometer';
+    this.mappings.CurrentTemperature = { reading: 'measured-temp', minValue: -30 };
+  } else if( s.Readings.temperature ) {
+    if( !this.service_name ) this.service_name = 'thermometer';
+    this.mappings.CurrentTemperature = { reading: 'temperature', minValue: -30 };
+  }
+
+  if( s.Readings.humidity ) {
+    if( !this.service_name ) this.service_name = 'HumiditySensor';
+    this.mappings.CurrentRelativeHumidity = { reading: 'humidity' };
+  }
+
+  if( s.Readings.pressure )
+    this.mappings[CustomUUIDs.AirPressure] = { name: 'AirPressure', reading: 'pressure', format: 'UINT16', factor: 1 };
+
 
   if( this.service_name === undefined ) {
     this.log.error( s.Internals.NAME + ': no service type detected' );
