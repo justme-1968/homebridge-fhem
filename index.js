@@ -1815,7 +1815,7 @@ FHEMAccessory(platform, s) {
       else
         device = mapping.device;
 
-      if( mapping.reading === undefined )
+      if( mapping.reading === undefined && mapping.default === undefined )
         mapping.reading = 'state';
 
       mapping.characteristic = this.characteristicOfName(characteristic_type);
