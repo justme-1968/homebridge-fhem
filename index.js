@@ -2073,7 +2073,9 @@ FHEMAccessory.prototype = {
           else if( p[0] == 'delay' ) {
             mapping[p[0]] = parseInt(p[1]);
             if( isNaN(mapping[p[0]]) ) mapping[p[0]] = true;
-          } else if( p[0] === 'minValue' || p[0] === 'maxValue' || p[0] === 'minStep' || p[0] === 'min' || p[0] === 'max'  )
+          } else if( p[0] === 'minValue' || p[0] === 'maxValue' || p[0] === 'minStep'
+                     || p[0] === 'min' || p[0] === 'max'
+                     || p[0] === 'default'  )
             mapping[p[0]] = parseFloat(p[1]);
           else
             mapping[p[0]] = p[1];
