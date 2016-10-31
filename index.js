@@ -2079,9 +2079,11 @@ FHEMAccessory.prototype = {
             if( isNaN(mapping[p[0]]) ) mapping[p[0]] = true;
           } else if( p[0] === 'minValue' || p[0] === 'maxValue' || p[0] === 'minStep'
                      || p[0] === 'min' || p[0] === 'max'
-                     || p[0] === 'default'  )
+                     || p[0] === 'default'  ) {
             mapping[p[0]] = parseFloat(p[1]);
-          else
+            if( isNaN(mapping[p[0]]) )
+              mapping[p[0]] = p[1];
+          } else
             mapping[p[0]] = p[1];
 
         else if( p.length == 1 ) {
@@ -2271,7 +2273,7 @@ FHEMAccessory.prototype = {
     } else
       reading = mapping;
 
-    if( reading === undefined ) {
+    if( reading === undefined && mapping.default === undefined ) {
       if( callback !== undefined )
         callback( 1 );
       return;
