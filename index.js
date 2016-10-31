@@ -1696,6 +1696,10 @@ FHEMAccessory(platform, s) {
     this.mappings[CustomUUIDs.AirPressure] = { name: 'AirPressure', reading: 'pressure', format: 'UINT16', factor: 1 };
 
 
+  if( this.service_name === 'thermostat' )
+    this.mappings.CurrentHeatingCoolingState = { default: 'HEAT' };
+
+
   if( this.service_name === undefined ) {
     this.log.error( s.Internals.NAME + ': no service type detected' );
     return;
