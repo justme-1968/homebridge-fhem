@@ -192,9 +192,9 @@ FHEM_reading2homekit_(mapping, orig)
     value = parseInt( value );
     //value = parseInt( value ) == true;
 
-  } else if( reading == 'state' && (typeof mapping.values !== 'object'
-                                    && mapping.reading2homekit !== undefined
-                                    && mapping.valueOn === undefined && mapping.valueOff === undefined ) ) {
+  } else if( reading === 'state' && ( typeof mapping.values !== 'object'
+                                      && mapping.reading2homekit === undefined
+                                      && mapping.valueOn === undefined && mapping.valueOff === undefined ) ) {
     if( value.match(/^set-/ ) )
       return undefined;
     if( value.match(/^set_/ ) )
@@ -210,7 +210,7 @@ FHEM_reading2homekit_(mapping, orig)
       value = 0;
     else if( value == '000000' )
       value = 0;
-    else if( value.match( /^[A-D]0$/ ) ) //FIXME: not necessary any more. handled by event_map now.
+    else if( value.match( /^[A-D]0$/ ) )
       value = 0;
     else
       value = 1;
@@ -1664,7 +1664,7 @@ FHEMAccessory(platform, s) {
   } else if( !this.mappings.On
              && s.PossibleSets.match(/(^| )on\b/)
              && s.PossibleSets.match(/(^| )off\b/) ) {
-    this.mappings.On = { reading: 'state', valueOff: 'off', cmdOn: 'on', cmdOff: 'off' };
+    this.mappings.On = { reading: 'state', valueOff: '/off|A0|000000/', cmdOn: 'on', cmdOff: 'off' };
     if( !s.Readings.state )
       delete this.mappings.On.reading;
     else if( !this.service_name )
