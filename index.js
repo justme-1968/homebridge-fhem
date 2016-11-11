@@ -37,7 +37,7 @@ module.exports = function(homebridge){
 var util = require('util');
 
 
-// subscriptions to fhem longpoll evens
+// subscriptions to fhem longpoll events
 var FHEM_subscriptions = {};
 function
 FHEM_subscribe(accessory, informId, characteristic) {
@@ -942,7 +942,7 @@ FHEMPlatform.prototype = {
                       var cmd = '{addToAttrList( "genericDeviceType:security,ignore,switch,outlet,light,blind,thermometer,thermostat,contact,garage,window,lock" ) }';
                       this.execute( cmd,
                                     function(result) {
-                                        this.log.warn( 'genericDeviceType attribute was not known. please restart homebridge.' );
+                                        this.log.warn( 'genericDeviceType attribute was not known. please restart.' );
                                         process.exit(0);
                                     }.bind(this) );
                     }
@@ -1555,15 +1555,15 @@ FHEMAccessory(platform, s) {
     this.mappings.CurrentDoorState = { reading: 'contact', values: ['/^closed/:CLOSED', '/.*/:OPEN'] };
 
   } else if( s.Internals.TYPE == 'PRESENCE' ) {
-    this.service_name = 'OccupancySensor';
+    if( !this.service_name ) this.service_name = 'OccupancySensor';
     this.mappings.OccupancyDetected = { reading: 'state', values: ['present:OCCUPANCY_DETECTED', 'absent:OCCUPANCY_NOT_DETECTED'] };
 
   } else if( s.Internals.TYPE == 'ROOMMATE' || s.Internals.TYPE == 'GUEST' ) {
-    this.service_name = 'OccupancySensor';
+    if( !this.service_name ) this.service_name = 'OccupancySensor';
     this.mappings.OccupancyDetected = { reading: 'presence', values: ['present:OCCUPANCY_DETECTED', '/.*/:OCCUPANCY_NOT_DETECTED'] };
 
   } else if( s.Internals.TYPE == 'RESIDENTS' ) {
-    this.service_name = 'security';
+    if( !this.service_name ) this.service_name = 'security';
     this.mappings.SecuritySystemCurrentState = { reading: 'state', values: ['/^home/:DISARMED', '/^gotosleep/:NIGHT_ARM', '/^absent/:STAY_ARM', '/^gone/:AWAY_ARM'] }
     this.mappings.SecuritySystemTargetState = { reading: 'state', values: ['/^home/:DISARMED', '/^gotosleep/:NIGHT_ARM', '/^absent/:STAY_ARM', '/^gone/:AWAY_ARM'], cmds: ['STAY_ARM:home', 'AWAY_ARM:absent', 'NIGHT_ARM:gotosleep', 'DISARM:home'], delay: true }
 
