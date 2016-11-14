@@ -192,7 +192,8 @@ FHEM_reading2homekit_(mapping, orig)
     value = parseInt( value );
     //value = parseInt( value ) == true;
 
-  } else if( reading === 'state' && ( typeof mapping.values !== 'object'
+  } else if( reading === 'state' && ( mapping.On
+                                      && typeof mapping.values !== 'object'
                                       && mapping.reading2homekit === undefined
                                       && mapping.valueOn === undefined && mapping.valueOff === undefined ) ) {
     if( value.match(/^set-/ ) )
@@ -1775,6 +1776,7 @@ FHEMAccessory(platform, s) {
                                            : (s.Attributes.model ? s.Attributes.model
                                                                  : ( s.Internals.model ? s.Internals.model : '<unknown>' ) );
   this.PossibleSets     = s.PossibleSets;
+  this.room		= s.Attributes.room;
 
   if( this.type == 'CUL_HM' ) {
     this.serial = this.type + '.' + s.Internals.DEF;
