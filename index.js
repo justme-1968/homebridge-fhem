@@ -1770,6 +1770,7 @@ FHEMAccessory(platform, s) {
   // device info
   this.name		= s.Internals.NAME;
   this.alias		= s.Attributes.alias ? s.Attributes.alias : s.Internals.NAME;
+  this.siriName         = s.Attributes.siriName ? s.Attributes.siriName : this.alias;
   this.device		= s.Internals.NAME;
   this.type             = s.Internals.TYPE;
   this.model            = s.Readings.model ? s.Readings.model.Value
@@ -2359,11 +2360,9 @@ FHEMAccessory.prototype = {
 
     var service = Service[service_name];
     if( typeof service === 'function' ) {
-      //var name = this.alias + ' (' + this.name + ')';
-      var name = this.alias;
+      var name = this.siriName;
       if( subtype )
-        //name = subtype + ' (' + this.name + ')';
-        name = subtype + ' (' + this.alias + ')';
+        name = subtype + ' (' + this.siriName + ')';
 
       this.service_name = service_name;
       this.log('  ' + service_name + ' service for ' + this.name + (subtype?' (' + subtype + ')':'') );
@@ -2385,11 +2384,9 @@ FHEMAccessory.prototype = {
   },
 
   createDeviceService: function(subtype) {
-    //var name = this.alias + ' (' + this.name + ')';
-    var name = this.alias;
+    var name = this.siriName;
     if( subtype )
-      //name = subtype + ' (' + this.name + ')';
-      name = subtype + ' (' + this.alias + ')';
+      name = subtype + ' (' + this.siriName + ')';
 
     var service = this.serviceOfName(this.service_name,subtype);
     if( typeof service === 'object' )
