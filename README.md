@@ -2,7 +2,7 @@
 a fhem platform plugin for homebridge
 
 uses longpoll and an internal cache to avoid roundtrips to fhem.
-a debug browser is available at port 8082.
+a debug browser is available at port 8282 (or 8283).
 
 add one (or more) FHEM platforms to config.json and set the filter(s) to a fhem devspec that
 includes the devices that should be bridged to homekit.
@@ -179,7 +179,7 @@ examples:
 
 
 instead of the format described above homebridgeMapping can also contain the same data encoded as json
-this hast to be used if any of the separators above are used in an command or value. at the moment the
+this has to be used if any of the separators above are used in an command or value. at the moment the
 json version replaces all build in defaults for a device. e.g.:
 ```
 { "PositionState": { "reading": "motor", "values": [...] }, "On": { "reading": "state", "valueOn": "/on|dim/", "valueOff": "off" } }
