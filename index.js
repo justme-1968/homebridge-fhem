@@ -1007,24 +1007,24 @@ FHEMPlatform.prototype = {
   }
 }
 
+var CustomUUIDs = {
+                 //  F H E M       h o  m e  b r i d g e
+           xVolume: '4648454d-0101-686F-6D65-627269646765',
+         Actuation: '4648454d-0201-686F-6D65-627269646765',
+  ColorTemperature: '4648454d-0301-686F-6D65-627269646765',
+
+            Volume: '00001001-0000-1000-8000-135D67EC4377', // used in YamahaAVRPlatform, recognized by EVE
+
+                 // see: https://gist.github.com/gomfunkel/b1a046d729757120907c
+           Voltage: 'E863F10A-079E-48FF-8F27-9C2605A29F52',
+           Current: 'E863F126-079E-48FF-8F27-9C2605A29F52',
+             Power: 'E863F10D-079E-48FF-8F27-9C2605A29F52',
+            Energy: 'E863F10C-079E-48FF-8F27-9C2605A29F52',
+       AirPressure: 'E863F10F-079E-48FF-8F27-9C2605A29F52',
+};
+
 function
 FHEMAccessory(platform, s) {
-  var CustomUUIDs = {
-                   //  F H E M       h o  m e  b r i d g e
-             xVolume: '4648454d-0101-686F-6D65-627269646765',
-           Actuation: '4648454d-0201-686F-6D65-627269646765',
-    ColorTemperature: '4648454d-0301-686F-6D65-627269646765',
-
-              Volume: '00001001-0000-1000-8000-135D67EC4377', // used in YamahaAVRPlatform, recognized by EVE
-
-                   // see: https://gist.github.com/gomfunkel/b1a046d729757120907c
-             Voltage: 'E863F10A-079E-48FF-8F27-9C2605A29F52',
-             Current: 'E863F126-079E-48FF-8F27-9C2605A29F52',
-               Power: 'E863F10D-079E-48FF-8F27-9C2605A29F52',
-              Energy: 'E863F10C-079E-48FF-8F27-9C2605A29F52',
-         AirPressure: 'E863F10F-079E-48FF-8F27-9C2605A29F52',
-  };
-
   this.log         = platform.log;
   this.connection  = platform.connection;
   this.jsFunctions = platform.jsFunctions;
@@ -1037,7 +1037,6 @@ FHEMAccessory(platform, s) {
   if( s.Attributes.disable == 1 ) {
     this.log.info( s.Internals.NAME + ' is disabled');
     //return;
-
   }
 
   var genericType = s.Attributes.genericDeviceType;
@@ -2521,14 +2520,20 @@ FHEMAccessory.prototype = {
         }
 
         var characteristic = undefined;
-        if( !mapping.characteristic && mapping.name !== undefined ) {
-          characteristic = new Characteristic(mapping.name, mapping.characteristic_type );
-          controlService.addCharacteristic(characteristic);
-          mapping.characteristic_type = 'Custom ' + mapping.name;
+        if( !mapping.characteristic ) {
+          if( CustomUUIDs[mapping.characteristic_type] ) {
+            if(!mapping.name) mapping.name = mapping.characteristic_type;
+            mapping.characteristic_type = CustomUUIDs[mapping.characteristic_type];
+          }
+          if( mapping.name !== undefined ) {
+            characteristic = new Characteristic(mapping.name, mapping.characteristic_type );
+            controlService.addCharacteristic(characteristic);
+            mapping.characteristic_type = 'Custom ' + mapping.name;
+          }
 
         } else
           characteristic = controlService.getCharacteristic(mapping.characteristic)
-                             || controlService.addCharacteristic(mapping.characteristic)
+                           || controlService.addCharacteristic(mapping.characteristic)
 
         if( characteristic == undefined ) {
           this.log.error(this.name + ': no '+ characteristic_type + ' characteristic available for service ' + this.service_name);
