@@ -16,10 +16,13 @@
 // ],
 'use strict';
 
+var version = require('./lib/version');
+
 var User;
 var Accessory, Service, Characteristic, UUIDGen;
 module.exports = function(homebridge){
   console.log('homebridge API version: ' + homebridge.version);
+  console.info( 'this homebridge-fhem '+ version );
 
 //console.log( homebridge );
 //process.exit(0);
@@ -35,7 +38,7 @@ module.exports = function(homebridge){
 
 
 var util = require('util');
-
+var events = require('events');
 
 // subscriptions to fhem longpoll events
 var FHEM_subscriptions = {};
@@ -45,6 +48,26 @@ FHEM_subscribe(accessory, informId, characteristic) {
     FHEM_subscriptions[informId] = [];
 
   FHEM_subscriptions[informId].push( { accessory: accessory, characteristic: characteristic } );
+}
+function
+FHEM_unsubscribe(accessory, informId, characteristic) {
+  var subscriptions = FHEM_subscriptions[informId];
+  if( subscriptions ) {
+    for( var i = 0; i < subscriptions.length; ++i  ) {
+      var subscription = subscriptions[i];
+      if( subscription.accessory !== accessory )
+        continue;
+
+      if( subscription.characteristic !== characteristic )
+        continue;
+
+      delete subscriptions[i];
+    }
+
+    FHEM_subscriptions[informId] = subscriptions.filter( function(n){ return n !== undefined } );
+    if( !FHEM_subscriptions[informId].length )
+      delete FHEM_subscriptions[informId] ;
+  }
 }
 
 function
@@ -101,12 +124,13 @@ FHEM_reading2homekit(mapping, orig)
   var value = undefined;
   if( typeof mapping.reading2homekit === 'function' ) {
 
-      try {
-        value = mapping.reading2homekit(orig);
-      } catch(err) {
-        mapping.log.error( mapping.informId + ' reading2homekit: ' + err );
-        return undefined;
-      }
+    try {
+      value = mapping.reading2homekit(orig);
+    } catch(err) {
+      mapping.log.error( mapping.informId + ' reading2homekit: ' + err );
+      return undefined;
+    }
+
     if( typeof value === 'number' && isNaN(value) ) {
       mapping.log.error(mapping.informId + ' not a number: ' + orig);
       return undefined;
@@ -653,6 +677,8 @@ var FHEM_platforms = [];
 
 function
 FHEMPlatform(log, config, api) {
+  events.EventEmitter.call(this);
+
   this.log         = log;
   this.config      = config;
 
@@ -702,8 +728,13 @@ FHEMPlatform(log, config, api) {
 
   FHEM_platforms.push(this);
 
+  if( !FHEM_longpoll[this.connection.base_url] ) {
+    this.checkAndSetGenericDeviceType();
+  }
+
   FHEM_startLongpoll( this.connection );
 }
+util.inherits(FHEMPlatform, events.EventEmitter);
 
 function
 FHEM_sortByKey(array, key) {
@@ -899,7 +930,7 @@ FHEM_rgb2hsv(r,g,b) {
 function
 FHEM_execute(log,connection,cmd,callback) {
   var url = encodeURI( connection.base_url + '/fhem?cmd=' + cmd + '&XHR=1');
-  log( '  executing: ' + url );
+  log.info( '  executing: ' + url );
 
   connection.request
               .get( { url: url, gzip: true },
@@ -924,10 +955,9 @@ FHEMPlatform.prototype = {
   execute: function(cmd,callback) {FHEM_execute(this.log, this.connection, cmd, callback)},
 
   checkAndSetGenericDeviceType: function() {
-    this.log('Checking genericDeviceType...');
+    this.log('Checking devices and attributes...');
 
     var cmd = '{AttrVal("global","userattr","")}';
-
     this.execute( cmd,
                   function(result) {
                     //if( result === undefined )
@@ -950,10 +980,26 @@ FHEMPlatform.prototype = {
 
                   }.bind(this) );
 
+    if( !this.siri_device );
+      this.execute( 'jsonlist2 TYPE=siri',
+                    function(result) {
+                      try {
+                        var d = JSON.parse( result );
+                        if( d.totalResultsReturned === 1 ) {
+                          this.siri_device = d.Results[0].Name;
+                          this.log.info( 'siri device is ' + this.siri_device );
+                          this.execute( '{$defs{'+ this.siri_device +'}->{"homebridge-fhem version"} = "'+ version +'"}' );
+                        } else
+                          this.log.warn( 'no siri device found. please define it.' );
+
+                      } catch(err) {
+                        this.log.error( 'failed to parse ' + result );
+                      }
+                    }.bind(this) );
   },
 
   accessories: function(callback) {
-    this.checkAndSetGenericDeviceType();
+    //this.checkAndSetGenericDeviceType();
 
     this.log.info('Fetching FHEM devices...');
 
@@ -2000,6 +2046,26 @@ FHEMAccessory.prototype = {
 
     }
   },
+  unsubscribe: function(mapping, characteristic) {
+    if( mapping === undefined ) {
+      for( var characteristic_type in this.mappings ) {
+        var mapping = this.mappings[characteristic_type];
+        FHEM_unsubscribe(this, mapping.informId, characteristic);
+      }
+
+    } else if( typeof mapping === 'object' ) {
+      mapping.characteristic = characteristic;
+
+      if( characteristic )
+        characteristic.FHEM_mapping = mapping;
+
+      FHEM_unsubscribe(this, mapping.informId, characteristic);
+
+    } else {
+      FHEM_unsubscribe(this, mapping, characteristic);
+
+    }
+  },
 
   fromHomebridgeMapping: function(homebridgeMapping) {
     if( !homebridgeMapping )
@@ -2339,6 +2405,22 @@ FHEMAccessory.prototype = {
                 }.bind(this) );
   },
 
+  isInRoom: function(room) {
+    if( !room ) return false;
+    if( !this.room ) return false;
+    if( this.room.toLowerCase() === room ) return true;
+    if( this.room.toLowerCase().match( '(^|,)('+room+')(,|\$)' ) ) return true;
+    return false;
+  },
+
+  isOfType: function(type) {
+    if( !type ) return false;
+    if( this.service_name === type ) return true;
+    return false;
+  },
+
+
+  // for homebridge
   serviceOfName: function(service_name,subtype) {
     var serviceNameOfGenericDeviceType = {      ignore: null,
                                               security: 'SecuritySystem',
