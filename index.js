@@ -1228,14 +1228,15 @@ FHEMAccessory(platform, s) {
   }*/
 
 
-  if( s.Internals.TYPE == 'MilightDevice'
-      && s.PossibleSets.match(/(^| )hue\b/) && s.PossibleSets.match(/(^| )saturation\b/) && s.PossibleSets.match(/(^| )dim\b/) )  {
+  if( s.Internals.TYPE == 'MilightDevice' && s.PossibleSets.match(/(^| )dim\b/) )  {
     // MilightDevice
     if( !this.service_name ) this.service_name = 'light';
     this.log.debug( 'detected MilightDevice' );
-    this.mappings.Hue = { reading: 'hue', cmd: 'hue', max: 359, maxValue: 359 };
-    this.mappings.Saturation = { reading: 'saturation', cmd: 'saturation', max: 100, maxValue: 100 };
     this.mappings.Brightness = { reading: 'brightness', cmd: 'dim', max: 100, maxValue: 100, delay: true };
+    if( s.PossibleSets.match(/(^| )hue\b/) && s.PossibleSets.match(/(^| )saturation\b/) )  {
+      this.mappings.Hue = { reading: 'hue', cmd: 'hue', max: 359, maxValue: 359 };
+      this.mappings.Saturation = { reading: 'saturation', cmd: 'saturation', max: 100, maxValue: 100 };
+    }
 
   } else if( s.Internals.TYPE == 'WifiLight' && s.PossibleSets.match(/(^| )HSV\b/)
              && s.Readings.hue !== undefined && s.Readings.saturation !== undefined && s.Readings.brightness !== undefined ) {
