@@ -1426,12 +1426,12 @@ FHEMAccessory(platform, s) {
   } else if( s.Readings.luminance ) {
     if( !this.service_name ) this.service_name = 'LightSensor';
     this.mappings.CurrentAmbientLightLevel = { reading: 'luminance', minValue: 0 };
+  } else if( s.Readings.illuminance ) {
+    if( !this.service_name ) this.service_name = 'LightSensor';
+    this.mappings.CurrentAmbientLightLevel = { reading: 'illuminance', minValue: 0 };
   } else if( s.Readings.luminosity ) {
     if( !this.service_name ) this.service_name = 'LightSensor';
-    this.mappings.CurrentAmbientLightLevel = { reading: 'luminosity', minValue: 0 };
-    this.mappings.CurrentAmbientLightLevel.reading2homekit = function(mapping, orig) {
-      return parseFloat( orig ) / 0.265;
-    }.bind(null,this.mappings.CurrentAmbientLightLevel);
+    this.mappings.CurrentAmbientLightLevel = { reading: 'luminosity', minValue: 0, factor: 1/0.265 };
   }
 
   if( s.Readings.voc ) {
@@ -1685,7 +1685,7 @@ FHEMAccessory(platform, s) {
   }
 
   if( s.Internals.TYPE == 'SONOSPLAYER' ) { //FIXME: use sets [Pp]lay/[Pp]ause/[Ss]top
-    this.service_name = 'switch';
+    if( !this.service_name ) this.service_name = 'switch';
     this.mappings.On = { reading: 'transportState', valueOn: 'PLAYING', cmdOn: 'play', cmdOff: 'pause' };
 
   } else if( s.Internals.TYPE == 'harmony' ) {
