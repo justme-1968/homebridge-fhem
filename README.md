@@ -92,6 +92,8 @@ the names for the stadard service and characteristic types can be found here: ..
                      if only one is given all values not matching this one are automaticaly mapped to the other
 - default: value to use if no reading is found or if none of values/valueOn/valueOff matches
 - timeout: timeout in ms after which the homebridge value is reset to the default value -> used to simulate push buttons
+- valid: a ; separated list of valid values for this characteristic,
+         each to value can be a literal value or a homekit defined term for this characteristic
 
 e.g.:
 ```

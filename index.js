@@ -1941,6 +1941,35 @@ FHEMAccessory(platform, s) {
         }
       }
 
+      if( typeof mapping.valid === 'object' ) {
+        this.log.debug( 'valid: ' + util.inspect(mapping.valid) );
+        var valid = [];
+        for( var value of mapping.valid ) {
+          var mapped = undefined;
+          if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][value] !== undefined ) {
+            mapped = Characteristic[mapping.characteristic_type][value];
+          } else if( Characteristic[mapping.characteristic_type] ) {
+            for( var defined in Characteristic[mapping.characteristic_type] ) {
+              if( value == Characteristic[mapping.characteristic_type][defined] ) {
+                mapped = defined;
+                break;
+              }
+            }
+          }
+
+          if( mapped !== undefined ) {
+            this.log.debug( '  '+ value +' -> '+ mapped );
+            value = mapped;
+          } else
+            value = parseInt( value );
+
+          valid.push( value );
+        }
+        mapping.valid = valid.sort();
+
+        this.log.debug( 'valid: ' + util.inspect(mapping.valid) );
+      }
+
       if( typeof mapping.cmds === 'object' ) {
         mapping.homekit2cmd = {};
         mapping.homekit2cmd_re = [];
@@ -2140,6 +2169,8 @@ FHEMAccessory.prototype = {
         var p = param.split('=');
         if( p.length == 2 )
           if( p[0] == 'values' )
+            mapping[p[0]] = p[1].split(';');
+          else if( p[0] == 'valid' )
             mapping[p[0]] = p[1].split(';');
           else if( p[0] == 'cmds' )
             mapping[p[0]] = p[1].split(';');
@@ -2656,6 +2687,7 @@ FHEMAccessory.prototype = {
         if( mapping.minValue !== undefined ) characteristic.setProps( { minValue: mapping.minValue } );
         if( mapping.maxValue !== undefined ) characteristic.setProps( { maxValue: mapping.maxValue } );
         if( mapping.minStep !== undefined ) characteristic.setProps( { minStep: mapping.minStep } );
+        if( mapping.valid !== undefined ) characteristic.setProps( { validValues: mapping.valid } );
 
         if( characteristic_type.match( /-/ ) ) {
           //characteristic.readable = true;
@@ -2667,7 +2699,6 @@ FHEMAccessory.prototype = {
           }
           //characteristic.supportsEventNotification = true;
         }
-
 
 
         this.log.debug('      props: ' + util.inspect(characteristic.props) );
