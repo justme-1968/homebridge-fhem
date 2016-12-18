@@ -693,6 +693,8 @@ FHEMPlatform(log, config, api) {
   this.filter      = config['filter'];
   this.jsFunctions = config['jsFunctions'];
 
+  this.scope        = config['scope'];
+
   if( this.jsFunctions !== undefined ) {
     try {
       var path = this.jsFunctions;
@@ -724,7 +726,7 @@ FHEMPlatform(log, config, api) {
     request = request.defaults( { auth: auth, rejectUnauthorized: false } );
   }
 
-  this.connection = { base_url: base_url, request: request };
+  this.connection = { base_url: base_url, request: request, fhem: this };
 
   FHEM_platforms.push(this);
 
@@ -1030,6 +1032,13 @@ FHEMPlatform.prototype = {
                          //FIXME: change to factory pattern
                          var accessory = new FHEMAccessory(this, s);
                          if( accessory && accessory.service_name ) {
+                           accessory.fhem = this.connection.fhem;
+
+                           if( !accessory.isInScope('siri') ) {
+                             this.log.info( 'ignoring '+ accessory.name +' for siri' );
+                             return;
+                           }
+
                            foundAccessories.push(accessory);
                          } else {
                            this.log.info( 'no accessory created for ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ')' );
@@ -1387,9 +1396,9 @@ FHEMAccessory(platform, s) {
   //  this.mappings.ct = { reading: 'ct' };
 
   if( s.Readings.volume ) {
-    this.mappings[CustomUUIDs.Volume] = { reading: 'volume', cmd: 'volume', delay: true,
-                                          name: 'Volume', format: 'UINT8', unit: 'PERCENTAGE',
-                                          minValue: 0, maxValue: 100, minStep: 1  };
+    this.mappings[CustomUUDs.Volume] = { reading: 'volume', cmd: 'volume', delay: true,
+                                         name: 'Volume', format: 'UINT8', unit: 'PERCENTAGE',
+                                         minValue: 0, maxValue: 100, minStep: 1  };
 
   } else if( s.Readings.Volume ) {
     this.mappings[CustomUUIDs.Volume] = { reading: 'Volume', cmd: 'Volume', delay: true, nocache: true,
@@ -2135,14 +2144,15 @@ FHEMAccessory.prototype = {
         continue;
       }
 
-      var parts = mapping.split('=');
-      if( parts.length < 2 || !parts[1] ) {
+      var match = mapping.match(/(^.*?)(:|=)(.*)/);
+      if( match.length < 4 || !match[3] ) {
         this.log.error( '  wrong syntax: ' + mapping );
         continue;
       }
 
-      var characteristic = parts[0];
-      var params = parts.slice(1).join('=');
+      var characteristic = match[1];
+      var params = match[3];
+
 
       var mapping;
       if( !seen[characteristic] && this.mappings[characteristic] !== undefined )
@@ -2448,6 +2458,19 @@ FHEMAccessory.prototype = {
   isOfType: function(type) {
     if( !type ) return false;
     if( this.service_name === type ) return true;
+    return false;
+  },
+
+  isInScope: function(scope) {
+    if( this.fhem === undefined ) return true;
+    if( this.fhem.scope === undefined ) return true;
+
+    if( typeof this.fhem.scope === 'object' ) {
+      if( this.fhem.scope.grep(scope) != -1 ) return true;
+    } else if( this.fhem.scope !== undefined ) {
+      if( this.fhem.scope.match( '(^|,)('+scope+')(,|\$)' ) ) return true;
+    }
+
     return false;
   },
 
