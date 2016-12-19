@@ -487,14 +487,16 @@ function FHEM_startLongpoll(connection) {
   var input = '';
   connection.request.get( { url: url } ).on( 'data', function(data) {
 //console.log( 'data: ' + data );
-                 if( !data )
-                   return;
+               if( !data )
+                 return;
 
-                 var length = data.length;
-                 FHEM_longpoll[connection.base_url].received += length;
-                 FHEM_longpoll[connection.base_url].received_total += length;
+               var length = data.length;
+               FHEM_longpoll[connection.base_url].received += length;
+               FHEM_longpoll[connection.base_url].received_total += length;
 
-                 input += data;
+               input += data;
+
+               try {
                  var lastEventTime = Date.now();
                  for(;;) {
                    var nOff = input.indexOf('\n', FHEM_longpollOffset);
@@ -645,32 +647,37 @@ console.log( 'DELETEATTR: ' + value );
                    }
                  }
 
-                 input = input.substr(FHEM_longpollOffset);
-                 FHEM_longpollOffset = 0;
+             } catch(err) {
+               connection.log.error( '  error in longpoll connection: ' + err );
 
-                 FHEM_longpoll[connection.base_url].disconnects = 0;
+             }
 
-               } ).on( 'end', function() {
-                 FHEM_longpoll[connection.base_url].connected = false;
+             input = input.substr(FHEM_longpollOffset);
+             FHEM_longpollOffset = 0;
 
-                 FHEM_longpoll[connection.base_url].disconnects++;
-                 var timeout = 500 * FHEM_longpoll[connection.base_url].disconnects - 300;
-                 if( timeout > 30000 ) timeout = 30000;
+             FHEM_longpoll[connection.base_url].disconnects = 0;
 
-                 console.log( 'longpoll ended, reconnect in: ' + timeout + 'msec' );
-                 setTimeout( function(){FHEM_startLongpoll(connection)}, timeout  );
+           } ).on( 'end', function() {
+             FHEM_longpoll[connection.base_url].connected = false;
 
-               } ).on( 'error', function(err) {
-                 FHEM_longpoll[connection.base_url].connected = false;
+             FHEM_longpoll[connection.base_url].disconnects++;
+             var timeout = 500 * FHEM_longpoll[connection.base_url].disconnects - 300;
+             if( timeout > 30000 ) timeout = 30000;
 
-                 FHEM_longpoll[connection.base_url].disconnects++;
-                 var timeout = 5000 * FHEM_longpoll[connection.base_url].disconnects;
-                 if( timeout > 30000 ) timeout = 30000;
+             console.log( 'longpoll ended, reconnect in: ' + timeout + 'msec' );
+             setTimeout( function(){FHEM_startLongpoll(connection)}, timeout  );
 
-                 console.log( 'longpoll error: ' + err + ', retry in: ' + timeout + 'msec' );
-                 setTimeout( function(){FHEM_startLongpoll(connection)}, timeout );
+           } ).on( 'error', function(err) {
+             FHEM_longpoll[connection.base_url].connected = false;
 
-               } );
+             FHEM_longpoll[connection.base_url].disconnects++;
+             var timeout = 5000 * FHEM_longpoll[connection.base_url].disconnects;
+             if( timeout > 30000 ) timeout = 30000;
+
+             console.log( 'longpoll error: ' + err + ', retry in: ' + timeout + 'msec' );
+             setTimeout( function(){FHEM_startLongpoll(connection)}, timeout );
+
+           } );
 }
 
 var FHEM_platforms = [];
@@ -2139,6 +2146,9 @@ FHEMAccessory.prototype = {
       if( !mapping )
         continue;
 
+      if( mapping.match( /^#/ ) )
+        continue;
+
       if( mapping == 'clear' ) {
         this.mappings = {};
         continue;
@@ -2207,6 +2217,9 @@ FHEMAccessory.prototype = {
               }
             }
             this.mappings[characteristic] = mapping;
+
+          } else if( p === 'invert' ) {
+            mapping[p] = 1;
 
           } else {
             var p = param.split(':');
