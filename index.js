@@ -1156,7 +1156,7 @@ FHEMAccessory(platform, s) {
     this.mappings.Brightness = { reading: 'bri', cmd: 'pct', delay: true };
 
     this.mappings.Brightness.reading2homekit = function(mapping, orig) {
-      return Math.ceil(orig  / 2.54);
+      return Math.round(orig  / 2.54);
     }.bind(null, this.mappings.Brightness);
 
 
@@ -2204,7 +2204,7 @@ FHEMAccessory.prototype = {
             if( isNaN(mapping[p[0]]) )
               mapping[p[0]] = p[1];
           } else
-            mapping[p[0]] = p[1];
+            mapping[p[0]] = p[1].replace( /\+/g, ' ' );
 
         else if( p.length == 1 ) {
           if( this.mappings[param] !== undefined ) {
