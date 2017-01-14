@@ -1403,9 +1403,9 @@ FHEMAccessory(platform, s) {
   //  this.mappings.ct = { reading: 'ct' };
 
   if( s.Readings.volume ) {
-    this.mappings[CustomUUDs.Volume] = { reading: 'volume', cmd: 'volume', delay: true,
-                                         name: 'Volume', format: 'UINT8', unit: 'PERCENTAGE',
-                                         minValue: 0, maxValue: 100, minStep: 1  };
+    this.mappings[CustomUUIDs.Volume] = { reading: 'volume', cmd: 'volume', delay: true,
+                                          name: 'Volume', format: 'UINT8', unit: 'PERCENTAGE',
+                                          minValue: 0, maxValue: 100, minStep: 1  };
 
   } else if( s.Readings.Volume ) {
     this.mappings[CustomUUIDs.Volume] = { reading: 'Volume', cmd: 'Volume', delay: true, nocache: true,
