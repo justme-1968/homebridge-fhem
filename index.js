@@ -2378,6 +2378,9 @@ FHEMAccessory.prototype = {
       return;
     }
 
+    if( mapping.commandSuffix !== undefined )
+      command += ' ' + mapping.commandSuffix;
+
     this.execute(command);
   },
 
