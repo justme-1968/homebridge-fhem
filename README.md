@@ -123,7 +123,7 @@ for custom characterisitcs the additional parameters name, format and unit have 
         each list entry consists of a : separated pair of from and to values
         each from value can be a literal value or a homekit defined term for this characteristic or a regex of the form /regex/
         each to value has to be a literal value
--commandSuffix: is appended to the set command
+-cmdSuffix: is appended to the set command
 
 spaces in commands have to be replaced by +
 

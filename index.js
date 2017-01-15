@@ -2378,7 +2378,9 @@ FHEMAccessory.prototype = {
       return;
     }
 
-    if( mapping.commandSuffix !== undefined )
+    if( mapping.cmdSuffix !== undefined )
+      command += ' ' + mapping.cmdSuffix;
+    else if( mapping.commandSuffix !== undefined )
       command += ' ' + mapping.commandSuffix;
 
     this.execute(command);
