@@ -17,6 +17,7 @@
 'use strict';
 
 var version = require('./lib/version');
+//var FHEM = require('./lib/fhem').FHEM;
 
 var User;
 var Accessory, Service, Characteristic, UUIDGen;
@@ -2155,7 +2156,7 @@ FHEMAccessory.prototype = {
       }
 
       var match = mapping.match(/(^.*?)(:|=)(.*)/);
-      if( match.length < 4 || !match[3] ) {
+      if( match === undefined || match.length < 4 || !match[3] ) {
         this.log.error( '  wrong syntax: ' + mapping );
         continue;
       }
