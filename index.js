@@ -1097,6 +1097,16 @@ FHEMAccessory(platform, s) {
     return;
   }
 
+  if( !s.Readings ) {
+    this.log.error( 'ignoring ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without readings' );
+    return;
+  }
+  if( !s.Attributes ) {
+    this.log.error( 'ignoring ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without attributes' );
+    return;
+  }
+
+
   if( s.Attributes.disable == 1 ) {
     this.log.info( s.Internals.NAME + ' is disabled');
     //return;
