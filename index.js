@@ -6,10 +6,11 @@
 //     {
 //         "platform": "FHEM",
 //         "name": "FHEM",
-//         "server": "127.0.0.1",
-//         "port": 8083,
 //         "ssl": true,
 //         "auth": {"user": "fhem", "pass": "fhempassword"},
+//         "server": "127.0.0.1",
+//         "port": 8083,
+//         "webname": fhem,
 //         "jsFunctions": "myFunctions",
 //         "filter": "room=xyz"
 //     }
@@ -457,6 +458,7 @@ FHEM_reading2homekit_(mapping, orig)
 
 
 var FHEM_longpoll = {};
+var FHEM_csrfToken = {};
 //FIXME: add filter
 function FHEM_startLongpoll(connection) {
   if( !FHEM_longpoll[connection.base_url] ) {
@@ -477,7 +479,7 @@ function FHEM_startLongpoll(connection) {
   var since = 'null';
   if( FHEM_longpoll[connection.base_url].last_event_time )
     since = FHEM_longpoll[connection.base_url].last_event_time/1000;
-  var query = '/fhem.pl?XHR=1'
+  var query = '?XHR=1'
               + '&inform=type=status;addglobal=1;filter='+filter+';since='+since+';fmt=JSON'
               + '&timestamp='+Date.now();
 
@@ -658,6 +660,14 @@ console.log( 'DELETEATTR: ' + value );
 
              FHEM_longpoll[connection.base_url].disconnects = 0;
 
+           } ).on( 'response', function(response) {
+             if( response.headers && response.headers['x-fhem-csrftoken'] )
+               FHEM_csrfToken[connection.base_url] = response.headers['x-fhem-csrftoken'];
+             else
+               FHEM_csrfToken[connection.base_url] = '';
+
+             connection.fhem.checkAndSetGenericDeviceType();
+
            } ).on( 'end', function() {
              FHEM_longpoll[connection.base_url].connected = false;
 
@@ -725,6 +735,12 @@ FHEMPlatform(log, config, api) {
   }
   base_url += this.server + ':' + this.port;
 
+  if( config.webname ) {
+    base_url += '/'+config.webname;
+  } else {
+    base_url += '/fhem';
+  }
+
   var request = require('request');
   var auth = config['auth'];
   if( auth ) {
@@ -734,13 +750,9 @@ FHEMPlatform(log, config, api) {
     request = request.defaults( { auth: auth, rejectUnauthorized: false } );
   }
 
-  this.connection = { base_url: base_url, request: request, fhem: this };
+  this.connection = { base_url: base_url, request: request, log: log, fhem: this };
 
   FHEM_platforms.push(this);
-
-  if( !FHEM_longpoll[this.connection.base_url] ) {
-    this.checkAndSetGenericDeviceType();
-  }
 
   FHEM_startLongpoll( this.connection );
 }
@@ -939,7 +951,10 @@ FHEM_rgb2hsv(r,g,b) {
 
 function
 FHEM_execute(log,connection,cmd,callback) {
-  var url = encodeURI( connection.base_url + '/fhem?cmd=' + cmd + '&XHR=1');
+  if( FHEM_csrfToken[connection.base_url] )
+    cmd += '&fwcsrf='+FHEM_csrfToken[connection.base_url];
+  cmd += '&XHR=1';
+  var url = encodeURI( connection.base_url + '?cmd=' + cmd );
   log.info( '  executing: ' + url );
 
   connection.request
@@ -1019,10 +1034,17 @@ FHEMPlatform.prototype = {
     var asyncCalls = 0;
     function callbackLater() { if (--asyncCalls == 0) callback(foundAccessories); }
 
+   if( FHEM_csrfToken[this.connection.base_url] === undefined ) {
+     setTimeout( function(){this.connection.fhem.accessories(callback)}.bind(this), 500  );
+     return;
+   }
+
     var cmd = 'jsonlist2';
     if( this.filter )
       cmd += ' ' + this.filter;
-    var url = encodeURI( this.connection.base_url + '/fhem?cmd=' + cmd + '&XHR=1');
+    if( FHEM_csrfToken[this.connection.base_url] )
+      cmd += '&fwcsrf='+FHEM_csrfToken[this.connection.base_url];
+    var url = encodeURI( this.connection.base_url + '?cmd=' + cmd + '&XHR=1');
     this.log.info( 'fetching: ' + url );
 
 
@@ -1030,7 +1052,7 @@ FHEMPlatform.prototype = {
 
     this.connection.request.get( { url: url, json: true, gzip: true },
                  function(err, response, json) {
-                   if( !err && response.statusCode == 200 ) {
+                   if( !err && response.statusCode == 200 && json ) {
 //console.log("got json: " + util.inspect(json) );
                      this.log.info( 'got: ' + json['totalResultsReturned'] + ' results' );
                      if( json['totalResultsReturned'] ) {
@@ -2200,11 +2222,11 @@ FHEMAccessory.prototype = {
         var p = param.split('=');
         if( p.length == 2 )
           if( p[0] == 'values' )
-            mapping[p[0]] = p[1].split(';');
+            mapping[p[0]] = p[1].replace( /\+/g, ' ' ).split(';');
           else if( p[0] == 'valid' )
             mapping[p[0]] = p[1].split(';');
           else if( p[0] == 'cmds' )
-            mapping[p[0]] = p[1].split(';');
+            mapping[p[0]] = p[1].replace( /\+/g, ' ' ).split(';');
           else if( p[0] == 'delay' ) {
             mapping[p[0]] = parseInt(p[1]);
             if( isNaN(mapping[p[0]]) ) mapping[p[0]] = true;
