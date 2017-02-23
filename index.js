@@ -2099,7 +2099,7 @@ FHEMAccessory(platform, s) {
         delete mapping.informId;
 
       } else {
-        if( mapping.reading && FHEM_cached[mapping.informId] === undefined )
+        if( !mapping.nocache && mapping.reading && FHEM_cached[mapping.informId] === undefined )
           FHEM_update(mapping.informId, orig);
 
         if( mapping.characteristic || mapping.name )
@@ -2178,7 +2178,6 @@ FHEMAccessory.prototype = {
     for( var mapping of homebridgeMapping.split(/ |\n/) ) {
       if( !mapping )
         continue;
-
       if( mapping.match( /^#/ ) )
         continue;
 
@@ -2188,7 +2187,7 @@ FHEMAccessory.prototype = {
       }
 
       var match = mapping.match(/(^.*?)(:|=)(.*)/);
-      if( match === undefined || match.length < 4 || !match[3] ) {
+      if( !match || match.length < 4 || !match[3] ) {
         this.log.error( '  wrong syntax: ' + mapping );
         continue;
       }
