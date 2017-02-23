@@ -1592,7 +1592,7 @@ FHEMAccessory(platform, s) {
     }
 
   } else if( s.Attributes.model == 'HM-SEC-WIN' ) {
-    this.service_name = 'window';
+    if( !this.service_name ) this.service_name = 'window';
     this.mappings.CurrentPosition = { reading: 'state' };
     this.mappings.TargetPosition = { reading: 'state', cmd: ' ', delay: true };
 
@@ -1614,7 +1614,7 @@ FHEMAccessory(platform, s) {
                                                    }.bind(null, this.mappings.TargetPosition);
 
   } else if( s.Attributes.model && s.Attributes.model.match(/^HM-SEC-KEY/ ) ) {
-    this.service_name = 'lock';
+    if( !this.service_name ) this.service_name = 'lock';
     this.mappings.TargetDoorState = { reading:'', default:'CLOSED', timeout:500, cmds: ['OPEN:open'] };
     this.mappings.LockCurrentState = { reading: 'lock',
                                        values: ['/uncertain/:UNKNOWN', '/^locked/:SECURED', '/.*/:UNSECURED'] };
