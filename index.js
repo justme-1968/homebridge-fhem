@@ -2033,12 +2033,12 @@ FHEMAccessory(platform, s) {
           var to = match[2] !== undefined ? match[3] : match[1];
 
           if( match = from.match('^/(.*)/$') ) {
-            mapping.homekit2cmd_re.push( { re: match[1], to: to} );
+            mapping.homekit2cmd_re.push( { re: match[1], to: to.replace( /\+/g, ' ' )} );
           } else {
             if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][from] !== undefined )
               from = Characteristic[mapping.characteristic_type][from];
 
-            mapping.homekit2cmd[from] = to;
+            mapping.homekit2cmd[from.replace( /\+/g, ' ' )] = to.replace( /\+/g, ' ' );
           }
         }
         if(mapping.homekit2cmd_re
@@ -2225,7 +2225,7 @@ FHEMAccessory.prototype = {
           else if( p[0] == 'valid' )
             mapping[p[0]] = p[1].split(';');
           else if( p[0] == 'cmds' )
-            mapping[p[0]] = p[1].replace( /\+/g, ' ' ).split(';');
+            mapping[p[0]] = p[1].split(';');
           else if( p[0] == 'delay' ) {
             mapping[p[0]] = parseInt(p[1]);
             if( isNaN(mapping[p[0]]) ) mapping[p[0]] = true;
