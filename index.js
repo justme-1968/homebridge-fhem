@@ -1960,7 +1960,7 @@ FHEMAccessory(platform, s) {
           }
 
           var from = match[1];
-          var to = match[3] === undefined ? entry : match[3];
+          var to = match[3] === undefined ? entry.replace( /\+/g, ' ' ) : match[3].replace( /\+/g, ' ' );
 
           if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][to] !== undefined ) {
             mapping.homekit2name[Characteristic[mapping.characteristic_type][to]] = to;
@@ -1974,9 +1974,9 @@ FHEMAccessory(platform, s) {
 
           var match;
           if( match = from.match('^/(.*)/$') )
-            mapping.value2homekit_re.push( { re: match[1], to: to.replace( /\+/g, ' ' )} );
+            mapping.value2homekit_re.push( { re: match[1], to: to} );
           else
-            mapping.value2homekit[from.replace( /\+/g, ' ' )] = to.replace( /\+/g, ' ' );
+            mapping.value2homekit[from.replace( /\+/g, ' ' )] = to;
         }
         if(mapping.value2homekit_re
            && mapping.value2homekit_re.length) this.log.debug( 'value2homekit_re: ' + util.inspect(mapping.value2homekit_re) );
@@ -2030,15 +2030,15 @@ FHEMAccessory(platform, s) {
           }
 
           var from = match[1];
-          var to = match[2] !== undefined ? match[3] : match[1];
+          var to = match[2] !== undefined ? match[3].replace( /\+/g, ' ' ) : match[1].replace( /\+/g, ' ' );
 
           if( match = from.match('^/(.*)/$') ) {
-            mapping.homekit2cmd_re.push( { re: match[1], to: to.replace( /\+/g, ' ' )} );
+            mapping.homekit2cmd_re.push( { re: match[1], to: to} );
           } else {
             if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][from] !== undefined )
               from = Characteristic[mapping.characteristic_type][from];
 
-            mapping.homekit2cmd[from.replace( /\+/g, ' ' )] = to.replace( /\+/g, ' ' );
+            mapping.homekit2cmd[from.replace( /\+/g, ' ' )] = to;
           }
         }
         if(mapping.homekit2cmd_re
