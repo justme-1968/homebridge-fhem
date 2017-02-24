@@ -1978,7 +1978,7 @@ FHEMAccessory(platform, s) {
             mapping.value2homekit_re.push( { re: match[1], to: to} );
           else {
             from = from.replace( /\+/g, ' ' );
-            mapping.value2homekit[from.replace( /\+/g, ' ' )] = to;
+            mapping.value2homekit[from] = to;
           }
         }
         if(mapping.value2homekit_re
