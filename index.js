@@ -1974,9 +1974,9 @@ FHEMAccessory(platform, s) {
 
           var match;
           if( match = from.match('^/(.*)/$') )
-            mapping.value2homekit_re.push( { re: match[1], to: to} );
+            mapping.value2homekit_re.push( { re: match[1], to: to.replace( /\+/g, ' ' )} );
           else
-            mapping.value2homekit[from] = to;
+            mapping.value2homekit[from.replace( /\+/g, ' ' )] = to.replace( /\+/g, ' ' );
         }
         if(mapping.value2homekit_re
            && mapping.value2homekit_re.length) this.log.debug( 'value2homekit_re: ' + util.inspect(mapping.value2homekit_re) );
@@ -2221,7 +2221,7 @@ FHEMAccessory.prototype = {
         var p = param.split('=');
         if( p.length == 2 )
           if( p[0] == 'values' )
-            mapping[p[0]] = p[1].replace( /\+/g, ' ' ).split(';');
+            mapping[p[0]] = p[1].split(';');
           else if( p[0] == 'valid' )
             mapping[p[0]] = p[1].split(';');
           else if( p[0] == 'cmds' )
