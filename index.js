@@ -24,7 +24,7 @@ var User;
 var Accessory, Service, Characteristic, UUIDGen;
 module.exports = function(homebridge){
   console.log('homebridge API version: ' + homebridge.version);
-  console.info( 'this homebridge-fhem '+ version );
+  console.info( 'this is homebridge-fhem '+ version );
 
 //console.log( homebridge );
 //process.exit(0);
@@ -2455,7 +2455,7 @@ FHEMAccessory.prototype = {
           defined = '???';
       }
 
-      mapping.log.info('  cached: ' + value + ' (' + 'as '+typeof(value) + (defined?'; means '+defined:'') + '\')');
+      mapping.log.info('  cached: ' + value + ' (as '+typeof(value) + (defined?'; means '+defined:'') + ')');
 
       if( callback !== undefined )
         callback( undefined, value );
