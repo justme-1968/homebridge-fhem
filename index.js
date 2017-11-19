@@ -1880,19 +1880,15 @@ FHEMAccessory(platform, s) {
       this.serial = s.Attributes.serialNr;
     else if( s.Readings['D-serialNr'] && s.Readings['D-serialNr'].Value )
       this.serial = s.Readings['D-serialNr'].Value;
-  } else if( this.type == 'CUL_WS' )
-    this.serial = this.type + '.' + s.Internals.DEF;
-  else if( this.type == 'FS20' )
-    this.serial = this.type + '.' + s.Internals.DEF;
-  else if( this.type == 'IT' )
+  } else if( this.type == 'CUL_WS' || this.type == 'Siro' || this.type == 'FS20' || this.type == 'IT' || this.type == 'EnOcean')
     this.serial = this.type + '.' + s.Internals.DEF;
   else if( this.type == 'HUEDevice' ) {
     if( s.Internals.uniqueid && s.Internals.uniqueid != 'ff:ff:ff:ff:ff:ff:ff:ff-0b' )
       this.serial = s.Internals.uniqueid;
   } else if( this.type == 'SONOSPLAYER' )
     this.serial = s.Internals.UDN;
-  else if( this.type == 'EnOcean' )
-    this.serial = this.type + '.' + s.Internals.DEF;
+  else if( this.type == 'WOL' )
+    this.serial = this.type + '.' + s.Internals.MAC;
   else if( this.type == 'MAX' ) {
     this.model = s.Internals.type;
     this.serial = this.type + '.' + s.Internals.addr;
@@ -1900,6 +1896,7 @@ FHEMAccessory(platform, s) {
     this.model = s.Internals.SUBTYPE;
     this.serial = this.type + '.' + s.Internals.DEF;
   }
+
 
   this.uuid_base = this.serial;
 
