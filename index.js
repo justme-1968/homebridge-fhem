@@ -1093,19 +1093,23 @@ FHEMPlatform.prototype = {
 }
 
 var CustomUUIDs = {
-                 //  F H E M       h o  m e  b r i d g e
-           xVolume: '4648454d-0101-686F-6D65-627269646765',
-         Actuation: '4648454d-0201-686F-6D65-627269646765',
-  ColorTemperature: '4648454d-0301-686F-6D65-627269646765',
+                  //  F H E M       h o  m e  b r i d g e
+            xVolume: '4648454d-0101-686F-6D65-627269646765',
+          Actuation: '4648454d-0201-686F-6D65-627269646765',
+   //ColorTemperature: '4648454d-0301-686F-6D65-627269646765',
 
-            Volume: '00001001-0000-1000-8000-135D67EC4377', // used in YamahaAVRPlatform, recognized by EVE
+                 // see: https://github.com/ebaauw/homebridge-hue/wiki/Characteristics
+                 CT: 'E887EF67-509A-552D-A138-3DA215050F46',
+   ColorTemperature: 'A18E5901-CFA1-4D37-A10F-0071CEEEEEBD',
 
-                 // see: https://gist.github.com/gomfunkel/b1a046d729757120907c
-           Voltage: 'E863F10A-079E-48FF-8F27-9C2605A29F52',
-           Current: 'E863F126-079E-48FF-8F27-9C2605A29F52',
-             Power: 'E863F10D-079E-48FF-8F27-9C2605A29F52',
-            Energy: 'E863F10C-079E-48FF-8F27-9C2605A29F52',
-       AirPressure: 'E863F10F-079E-48FF-8F27-9C2605A29F52',
+             Volume: '00001001-0000-1000-8000-135D67EC4377', // used in YamahaAVRPlatform, recognized by EVE
+
+                  // see: https://gist.github.com/gomfunkel/b1a046d729757120907c
+            Voltage: 'E863F10A-079E-48FF-8F27-9C2605A29F52',
+            Current: 'E863F126-079E-48FF-8F27-9C2605A29F52',
+              Power: 'E863F10D-079E-48FF-8F27-9C2605A29F52',
+             Energy: 'E863F10C-079E-48FF-8F27-9C2605A29F52',
+        AirPressure: 'E863F10F-079E-48FF-8F27-9C2605A29F52',
 };
 
 function
@@ -1245,7 +1249,7 @@ FHEMAccessory(platform, s) {
     this.mappings.Saturation = { reading: 'sat', cmd: 'sat', max: max, maxValue: 100 };
   }
 
-  /*if( match = s.PossibleSets.match(/(^| )ct(:[^\d]*([^\$ ]*))?/) ) {
+  if( match = s.PossibleSets.match(/(^| )ct(:[^\d]*([^\$ ]*))?/) ) {
     this.service_name = 'light';
     var minValue = 2000;
     var maxValue = 6500;
@@ -1255,7 +1259,7 @@ FHEMAccessory(platform, s) {
       maxValue = parseInt(1000000/values[0]);
     }
     this.mappings[CustomUUIDs.ColorTemperature] = { reading: 'ct', cmd: 'ct', delay: true,
-                                                    name: 'Color Temperature', format: 'UINT16',
+                                                    name: 'Color Temperature', format: 'INT', unit: 'K',
                                                     minValue: maxValue,  maxValue: minValue, minStep: 10 };
     var reading2homekit = function(mapping, orig) { return parseInt(1000000 / parseInt(orig)) };
     var homekit2reading = function(mapping, orig) { return parseInt(1000000 / orig) };
@@ -1272,9 +1276,9 @@ FHEMAccessory(platform, s) {
       maxValue = parseInt(values[2]);
     }
     this.mappings[CustomUUIDs.ColorTemperature] = { reading: 'color', cmd: 'color', delay: true,
-                                                    name: 'Color Temperature', format: 'UINT16',
+                                                    name: 'Color Temperature', format: 'INT', unit: 'K',
                                                     minValue: minValue,  maxValue: maxValue, minStep: 10 };
-  }*/
+  }
 
 
   if( s.Internals.TYPE == 'MilightDevice' && s.PossibleSets.match(/(^| )dim\b/) )  {
@@ -1635,7 +1639,7 @@ FHEMAccessory(platform, s) {
     if( !this.service_name ) this.service_name = 'thermostat';
 
   } else if( s.Internals.TYPE == 'CUL_FHTTK' ) {
-    this.service_name = 'ContactSensor';
+    if( !this.service_name ) this.service_name = 'ContactSensor';
     this.mappings.ContactSensorState = { reading: 'Window', values: ['/^Closed/:CONTACT_DETECTED', '/.*/:CONTACT_NOT_DETECTED'] };
     this.mappings.CurrentDoorState = { reading: 'Window', values: ['/^Closed/:CLOSED', '/.*/:OPEN'] };
 
@@ -1646,7 +1650,7 @@ FHEMAccessory(platform, s) {
     this.mappings.CurrentDoorState = { reading: 'state', values: ['closed:CLOSED', '/.*/:OPEN']  };
 
   } else if( s.Attributes.subType == 'threeStateSensor' ) {
-    this.service_name = 'ContactSensor';
+    if( !this.service_name ) this.service_name = 'ContactSensor';
     this.mappings.ContactSensorState = { reading: 'contact', values: ['/^closed/:CONTACT_DETECTED', '/.*/:CONTACT_NOT_DETECTED'] };
     this.mappings.CurrentDoorState = { reading: 'contact', values: ['/^closed/:CLOSED', '/.*/:OPEN'] };
 
