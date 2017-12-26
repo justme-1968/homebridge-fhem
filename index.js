@@ -1582,8 +1582,10 @@ FHEMAccessory(platform, s) {
         //this.mappings.TargetPosition.reading2homekit = reading2homekit.bind(null, this.mappings.TargetPosition);
         //this.mappings.TargetPosition.homekit2reading = homekit2reading.bind(null, this.mappings.TargetPosition);
       } else if( s.Internals.TYPE == 'SOMFY' ) {
-        this.mappings.CurrentPosition.invert = true;
-        this.mappings.TargetPosition.invert = true;
+        if( !s.Attributes.positionInverse || s.Attributes.positionInverse != '1' ) {
+          this.mappings.CurrentPosition.invert = true;
+          this.mappings.TargetPosition.invert = true;
+        }
         this.mappings.TargetPosition.cmd = 'pos';
       }
     } else {
