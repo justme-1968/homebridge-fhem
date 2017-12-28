@@ -2228,7 +2228,7 @@ FHEMAccessory.prototype = {
           this.mappings[characteristic] = mapping
 
         var p = param.split('=');
-        if( p.length == 2 )
+        if( p.length == 2 ) {
           if( p[0] == 'values' )
             mapping[p[0]] = p[1].split(';');
           else if( p[0] == 'valid' )
@@ -2247,7 +2247,7 @@ FHEMAccessory.prototype = {
           } else
             mapping[p[0]] = p[1].replace( /\+/g, ' ' );
 
-        else if( p.length == 1 ) {
+        } else if( p.length == 1 ) {
           if( this.mappings[param] !== undefined ) {
             try {
               mapping = Object.assign({}, this.mappings[param]);
@@ -2571,6 +2571,9 @@ FHEMAccessory.prototype = {
   },
 
   characteristicOfName: function(name) {
+    var parts = name.split('#');
+    if( parts[1] ) name = parts[1];
+
     var characteristic = Characteristic[name];
     if( typeof characteristic === 'function' )
       return characteristic;
@@ -2578,12 +2581,12 @@ FHEMAccessory.prototype = {
     return undefined;
   },
 
-  createDeviceService: function(subtype) {
+  createDeviceService: function(service_name,subtype) {
     var name = this.siriName;
     if( subtype )
       name = subtype + ' (' + this.siriName + ')';
 
-    var service = this.serviceOfName(this.service_name,subtype);
+    var service = this.serviceOfName(service_name,subtype);
     if( typeof service === 'object' )
       return service;
 
@@ -2681,10 +2684,12 @@ FHEMAccessory.prototype = {
 
     }
 
-    var controlService = this.createDeviceService();
+    var controlService = this.createDeviceService(this.service_name);
     services.push( controlService );
 
     var seen = {};
+    var services_hash = {};
+    services_hash[this.service_name] = controlService;
     for( var characteristic_type in this.mappings ) {
       var mappings = this.mappings[characteristic_type];
       if( !Array.isArray(mappings) )
@@ -2699,13 +2704,30 @@ FHEMAccessory.prototype = {
           continue;
         }
 
-        if( seen[characteristic_type] ) {
+        var service_name = this.service_name;
+
+        var parts = characteristic_type.split('#');
+        if( parts[1] ) {
+          service_name = parts[0]
+          characteristic_type = parts[1]
+          //mapping.characteristic_type = parts[1]
+
+          if( services_hash[service_name] )
+            controlService = services_hash[service_name];
+          else {
+            controlService = this.createDeviceService(service_name);
+            services.push( controlService );
+            services_hash[service_name] = controlService;
+          }
+        }
+
+        if( seen[service_name +'#'+ characteristic_type] ) {
           if( mapping.subtype === undefined ) {
             this.log.error(this.name + ': '+ characteristic_type + ' characteristic already defined for service ' + this.name + ' and no subtype given');
             //continue;
           }
 
-          controlService = this.createDeviceService( mapping.subtype );
+          controlService = this.createDeviceService( service_name, mapping.subtype );
           controlService.getCharacteristic(Characteristic.Name).setValue(mapping.subtype);
           services.push( controlService );
 
@@ -2732,10 +2754,10 @@ FHEMAccessory.prototype = {
                            || controlService.addCharacteristic(mapping.characteristic)
 
         if( characteristic == undefined ) {
-          this.log.error(this.name + ': no '+ characteristic_type + ' characteristic available for service ' + this.service_name);
+          this.log.error(this.name + ': no '+ characteristic_type + ' characteristic available for service ' + service_name);
           continue;
         }
-        seen[characteristic_type] = true;
+        seen[service_name +'#'+ characteristic_type] = true;
 
         this.log('    ' + mapping.characteristic_type + (mapping.subtype?':'+mapping.subtype:'')
                         + ' characteristic for ' + mapping.device + ':' + mapping.reading);
