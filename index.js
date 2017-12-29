@@ -1928,6 +1928,11 @@ FHEMAccessory(platform, s) {
       mapping.characteristic_type = characteristic_type;
       mapping.log = this.log;
 
+      var parts = characteristic_type.split('#');
+      if( parts[1] ) {
+        characteristic_type = parts[1]
+      }
+
       //FIXME: better integrate eventMap
       if( s.Attributes.eventMap ) {
         for( var part of s.Attributes.eventMap.split( ' ' ) ) {
@@ -1943,10 +1948,10 @@ FHEMAccessory(platform, s) {
       }
 
       if( mapping.default !== undefined ) {
-        if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][mapping.default] !== undefined ) {
+        if( Characteristic[characteristic_type] && Characteristic[characteristic_type][mapping.default] !== undefined ) {
           if( mapping.homekit2name === undefined ) mapping.homekit2name = {};
-          mapping.homekit2name[Characteristic[mapping.characteristic_type][mapping.default]] = mapping.default;
-          mapping.default = Characteristic[mapping.characteristic_type][mapping.default];
+          mapping.homekit2name[Characteristic[characteristic_type][mapping.default]] = mapping.default;
+          mapping.default = Characteristic[characteristic_type][mapping.default];
         }
         this.log.debug( 'default: ' + mapping.default );
       }
@@ -1966,12 +1971,12 @@ FHEMAccessory(platform, s) {
           var to = match[3] === undefined ? entry : match[3];
           to = to.replace( /\+/g, ' ' );
 
-          if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][to] !== undefined ) {
-            mapping.homekit2name[Characteristic[mapping.characteristic_type][to]] = to;
-            to = Characteristic[mapping.characteristic_type][to];
-          } else if( Characteristic[mapping.characteristic_type] ) {
-            for( var defined in Characteristic[mapping.characteristic_type] ) {
-              if( to == Characteristic[mapping.characteristic_type][defined] )
+          if( Characteristic[characteristic_type] && Characteristic[characteristic_type][to] !== undefined ) {
+            mapping.homekit2name[Characteristic[characteristic_type][to]] = to;
+            to = Characteristic[characteristic_type][to];
+          } else if( Characteristic[characteristic_type] ) {
+            for( var defined in Characteristic[characteristic_type] ) {
+              if( to == Characteristic[characteristic_type][defined] )
                 mapping.homekit2name[to] = defined;
             }
           }
@@ -2001,11 +2006,11 @@ FHEMAccessory(platform, s) {
         var valid = [];
         for( var value of mapping.valid ) {
           var mapped = undefined;
-          if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][value] !== undefined ) {
-            mapped = Characteristic[mapping.characteristic_type][value];
-          } else if( Characteristic[mapping.characteristic_type] ) {
-            for( var defined in Characteristic[mapping.characteristic_type] ) {
-              if( value == Characteristic[mapping.characteristic_type][defined] ) {
+          if( Characteristic[characteristic_type] && Characteristic[characteristic_type][value] !== undefined ) {
+            mapped = Characteristic[characteristic_type][value];
+          } else if( Characteristic[characteristic_type] ) {
+            for( var defined in Characteristic[characteristic_type] ) {
+              if( value == Characteristic[characteristic_type][defined] ) {
                 mapped = defined;
                 break;
               }
@@ -2042,8 +2047,8 @@ FHEMAccessory(platform, s) {
           if( match = from.match('^/(.*)/$') ) {
             mapping.homekit2cmd_re.push( { re: match[1], to: to} );
           } else {
-            if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][from] !== undefined )
-              from = Characteristic[mapping.characteristic_type][from];
+            if( Characteristic[characteristic_type] && Characteristic[characteristic_type][from] !== undefined )
+              from = Characteristic[characteristic_type][from];
             else
               from = from.replace( /\+/g, ' ' );
 
