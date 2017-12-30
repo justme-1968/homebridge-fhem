@@ -1249,7 +1249,7 @@ FHEMAccessory(platform, s) {
     this.mappings.Saturation = { reading: 'sat', cmd: 'sat', max: max, maxValue: 100 };
   }
 
-  if( match = s.PossibleSets.match(/(^| )ct(:[^\d]*([^\$ ]*))?/) ) {
+  /*if( match = s.PossibleSets.match(/(^| )ct(:[^\d]*([^\$ ]*))?/) ) {
     this.service_name = 'light';
     var minValue = 2000;
     var maxValue = 6500;
@@ -1278,7 +1278,7 @@ FHEMAccessory(platform, s) {
     this.mappings[CustomUUIDs.ColorTemperature] = { reading: 'color', cmd: 'color', delay: true,
                                                     name: 'Color Temperature', format: 'INT', unit: 'K',
                                                     minValue: minValue,  maxValue: maxValue, minStep: 10 };
-  }
+  }*/
 
 
   if( s.Internals.TYPE == 'MilightDevice' && s.PossibleSets.match(/(^| )dim\b/) )  {
