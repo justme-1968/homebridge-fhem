@@ -1093,19 +1093,23 @@ FHEMPlatform.prototype = {
 }
 
 var CustomUUIDs = {
-                 //  F H E M       h o  m e  b r i d g e
-           xVolume: '4648454d-0101-686F-6D65-627269646765',
-         Actuation: '4648454d-0201-686F-6D65-627269646765',
-  ColorTemperature: '4648454d-0301-686F-6D65-627269646765',
+                  //  F H E M       h o  m e  b r i d g e
+            xVolume: '4648454d-0101-686F-6D65-627269646765',
+          Actuation: '4648454d-0201-686F-6D65-627269646765',
+   //ColorTemperature: '4648454d-0301-686F-6D65-627269646765',
 
-            Volume: '00001001-0000-1000-8000-135D67EC4377', // used in YamahaAVRPlatform, recognized by EVE
+                 // see: https://github.com/ebaauw/homebridge-hue/wiki/Characteristics
+                 CT: 'E887EF67-509A-552D-A138-3DA215050F46',
+   ColorTemperature: 'A18E5901-CFA1-4D37-A10F-0071CEEEEEBD',
 
-                 // see: https://gist.github.com/gomfunkel/b1a046d729757120907c
-           Voltage: 'E863F10A-079E-48FF-8F27-9C2605A29F52',
-           Current: 'E863F126-079E-48FF-8F27-9C2605A29F52',
-             Power: 'E863F10D-079E-48FF-8F27-9C2605A29F52',
-            Energy: 'E863F10C-079E-48FF-8F27-9C2605A29F52',
-       AirPressure: 'E863F10F-079E-48FF-8F27-9C2605A29F52',
+             Volume: '00001001-0000-1000-8000-135D67EC4377', // used in YamahaAVRPlatform, recognized by EVE
+
+                  // see: https://gist.github.com/gomfunkel/b1a046d729757120907c
+            Voltage: 'E863F10A-079E-48FF-8F27-9C2605A29F52',
+            Current: 'E863F126-079E-48FF-8F27-9C2605A29F52',
+              Power: 'E863F10D-079E-48FF-8F27-9C2605A29F52',
+             Energy: 'E863F10C-079E-48FF-8F27-9C2605A29F52',
+        AirPressure: 'E863F10F-079E-48FF-8F27-9C2605A29F52',
 };
 
 function
@@ -1255,7 +1259,7 @@ FHEMAccessory(platform, s) {
       maxValue = parseInt(1000000/values[0]);
     }
     this.mappings[CustomUUIDs.ColorTemperature] = { reading: 'ct', cmd: 'ct', delay: true,
-                                                    name: 'Color Temperature', format: 'UINT16',
+                                                    name: 'Color Temperature', format: 'INT', unit: 'K',
                                                     minValue: maxValue,  maxValue: minValue, minStep: 10 };
     var reading2homekit = function(mapping, orig) { return parseInt(1000000 / parseInt(orig)) };
     var homekit2reading = function(mapping, orig) { return parseInt(1000000 / orig) };
@@ -1272,7 +1276,7 @@ FHEMAccessory(platform, s) {
       maxValue = parseInt(values[2]);
     }
     this.mappings[CustomUUIDs.ColorTemperature] = { reading: 'color', cmd: 'color', delay: true,
-                                                    name: 'Color Temperature', format: 'UINT16',
+                                                    name: 'Color Temperature', format: 'INT', unit: 'K',
                                                     minValue: minValue,  maxValue: maxValue, minStep: 10 };
   }*/
 
@@ -1578,8 +1582,10 @@ FHEMAccessory(platform, s) {
         //this.mappings.TargetPosition.reading2homekit = reading2homekit.bind(null, this.mappings.TargetPosition);
         //this.mappings.TargetPosition.homekit2reading = homekit2reading.bind(null, this.mappings.TargetPosition);
       } else if( s.Internals.TYPE == 'SOMFY' ) {
-        this.mappings.CurrentPosition.invert = true;
-        this.mappings.TargetPosition.invert = true;
+        if( !s.Attributes.positionInverse || s.Attributes.positionInverse != '1' ) {
+          this.mappings.CurrentPosition.invert = true;
+          this.mappings.TargetPosition.invert = true;
+        }
         this.mappings.TargetPosition.cmd = 'pos';
       }
     } else {
@@ -1635,7 +1641,7 @@ FHEMAccessory(platform, s) {
     if( !this.service_name ) this.service_name = 'thermostat';
 
   } else if( s.Internals.TYPE == 'CUL_FHTTK' ) {
-    this.service_name = 'ContactSensor';
+    if( !this.service_name ) this.service_name = 'ContactSensor';
     this.mappings.ContactSensorState = { reading: 'Window', values: ['/^Closed/:CONTACT_DETECTED', '/.*/:CONTACT_NOT_DETECTED'] };
     this.mappings.CurrentDoorState = { reading: 'Window', values: ['/^Closed/:CLOSED', '/.*/:OPEN'] };
 
@@ -1646,7 +1652,7 @@ FHEMAccessory(platform, s) {
     this.mappings.CurrentDoorState = { reading: 'state', values: ['closed:CLOSED', '/.*/:OPEN']  };
 
   } else if( s.Attributes.subType == 'threeStateSensor' ) {
-    this.service_name = 'ContactSensor';
+    if( !this.service_name ) this.service_name = 'ContactSensor';
     this.mappings.ContactSensorState = { reading: 'contact', values: ['/^closed/:CONTACT_DETECTED', '/.*/:CONTACT_NOT_DETECTED'] };
     this.mappings.CurrentDoorState = { reading: 'contact', values: ['/^closed/:CLOSED', '/.*/:OPEN'] };
 
@@ -1880,19 +1886,15 @@ FHEMAccessory(platform, s) {
       this.serial = s.Attributes.serialNr;
     else if( s.Readings['D-serialNr'] && s.Readings['D-serialNr'].Value )
       this.serial = s.Readings['D-serialNr'].Value;
-  } else if( this.type == 'CUL_WS' )
-    this.serial = this.type + '.' + s.Internals.DEF;
-  else if( this.type == 'FS20' )
-    this.serial = this.type + '.' + s.Internals.DEF;
-  else if( this.type == 'IT' )
+  } else if( this.type == 'CUL_WS' || this.type == 'Siro' || this.type == 'FS20' || this.type == 'IT' || this.type == 'EnOcean')
     this.serial = this.type + '.' + s.Internals.DEF;
   else if( this.type == 'HUEDevice' ) {
     if( s.Internals.uniqueid && s.Internals.uniqueid != 'ff:ff:ff:ff:ff:ff:ff:ff-0b' )
       this.serial = s.Internals.uniqueid;
   } else if( this.type == 'SONOSPLAYER' )
     this.serial = s.Internals.UDN;
-  else if( this.type == 'EnOcean' )
-    this.serial = this.type + '.' + s.Internals.DEF;
+  else if( this.type == 'WOL' )
+    this.serial = this.type + '.' + s.Internals.MAC;
   else if( this.type == 'MAX' ) {
     this.model = s.Internals.type;
     this.serial = this.type + '.' + s.Internals.addr;
@@ -1900,6 +1902,7 @@ FHEMAccessory(platform, s) {
     this.model = s.Internals.SUBTYPE;
     this.serial = this.type + '.' + s.Internals.DEF;
   }
+
 
   this.uuid_base = this.serial;
 
@@ -1925,6 +1928,11 @@ FHEMAccessory(platform, s) {
       mapping.characteristic_type = characteristic_type;
       mapping.log = this.log;
 
+      var parts = characteristic_type.split('#');
+      if( parts[1] ) {
+        characteristic_type = parts[1]
+      }
+
       //FIXME: better integrate eventMap
       if( s.Attributes.eventMap ) {
         for( var part of s.Attributes.eventMap.split( ' ' ) ) {
@@ -1940,10 +1948,10 @@ FHEMAccessory(platform, s) {
       }
 
       if( mapping.default !== undefined ) {
-        if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][mapping.default] !== undefined ) {
+        if( Characteristic[characteristic_type] && Characteristic[characteristic_type][mapping.default] !== undefined ) {
           if( mapping.homekit2name === undefined ) mapping.homekit2name = {};
-          mapping.homekit2name[Characteristic[mapping.characteristic_type][mapping.default]] = mapping.default;
-          mapping.default = Characteristic[mapping.characteristic_type][mapping.default];
+          mapping.homekit2name[Characteristic[characteristic_type][mapping.default]] = mapping.default;
+          mapping.default = Characteristic[characteristic_type][mapping.default];
         }
         this.log.debug( 'default: ' + mapping.default );
       }
@@ -1963,12 +1971,12 @@ FHEMAccessory(platform, s) {
           var to = match[3] === undefined ? entry : match[3];
           to = to.replace( /\+/g, ' ' );
 
-          if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][to] !== undefined ) {
-            mapping.homekit2name[Characteristic[mapping.characteristic_type][to]] = to;
-            to = Characteristic[mapping.characteristic_type][to];
-          } else if( Characteristic[mapping.characteristic_type] ) {
-            for( var defined in Characteristic[mapping.characteristic_type] ) {
-              if( to == Characteristic[mapping.characteristic_type][defined] )
+          if( Characteristic[characteristic_type] && Characteristic[characteristic_type][to] !== undefined ) {
+            mapping.homekit2name[Characteristic[characteristic_type][to]] = to;
+            to = Characteristic[characteristic_type][to];
+          } else if( Characteristic[characteristic_type] ) {
+            for( var defined in Characteristic[characteristic_type] ) {
+              if( to == Characteristic[characteristic_type][defined] )
                 mapping.homekit2name[to] = defined;
             }
           }
@@ -1998,11 +2006,11 @@ FHEMAccessory(platform, s) {
         var valid = [];
         for( var value of mapping.valid ) {
           var mapped = undefined;
-          if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][value] !== undefined ) {
-            mapped = Characteristic[mapping.characteristic_type][value];
-          } else if( Characteristic[mapping.characteristic_type] ) {
-            for( var defined in Characteristic[mapping.characteristic_type] ) {
-              if( value == Characteristic[mapping.characteristic_type][defined] ) {
+          if( Characteristic[characteristic_type] && Characteristic[characteristic_type][value] !== undefined ) {
+            mapped = Characteristic[characteristic_type][value];
+          } else if( Characteristic[characteristic_type] ) {
+            for( var defined in Characteristic[characteristic_type] ) {
+              if( value == Characteristic[characteristic_type][defined] ) {
                 mapped = defined;
                 break;
               }
@@ -2039,8 +2047,8 @@ FHEMAccessory(platform, s) {
           if( match = from.match('^/(.*)/$') ) {
             mapping.homekit2cmd_re.push( { re: match[1], to: to} );
           } else {
-            if( Characteristic[mapping.characteristic_type] && Characteristic[mapping.characteristic_type][from] !== undefined )
-              from = Characteristic[mapping.characteristic_type][from];
+            if( Characteristic[characteristic_type] && Characteristic[characteristic_type][from] !== undefined )
+              from = Characteristic[characteristic_type][from];
             else
               from = from.replace( /\+/g, ' ' );
 
@@ -2225,7 +2233,7 @@ FHEMAccessory.prototype = {
           this.mappings[characteristic] = mapping
 
         var p = param.split('=');
-        if( p.length == 2 )
+        if( p.length == 2 ) {
           if( p[0] == 'values' )
             mapping[p[0]] = p[1].split(';');
           else if( p[0] == 'valid' )
@@ -2244,7 +2252,7 @@ FHEMAccessory.prototype = {
           } else
             mapping[p[0]] = p[1].replace( /\+/g, ' ' );
 
-        else if( p.length == 1 ) {
+        } else if( p.length == 1 ) {
           if( this.mappings[param] !== undefined ) {
             try {
               mapping = Object.assign({}, this.mappings[param]);
@@ -2568,6 +2576,9 @@ FHEMAccessory.prototype = {
   },
 
   characteristicOfName: function(name) {
+    var parts = name.split('#');
+    if( parts[1] ) name = parts[1];
+
     var characteristic = Characteristic[name];
     if( typeof characteristic === 'function' )
       return characteristic;
@@ -2575,12 +2586,12 @@ FHEMAccessory.prototype = {
     return undefined;
   },
 
-  createDeviceService: function(subtype) {
+  createDeviceService: function(service_name,subtype) {
     var name = this.siriName;
     if( subtype )
       name = subtype + ' (' + this.siriName + ')';
 
-    var service = this.serviceOfName(this.service_name,subtype);
+    var service = this.serviceOfName(service_name,subtype);
     if( typeof service === 'object' )
       return service;
 
@@ -2678,10 +2689,12 @@ FHEMAccessory.prototype = {
 
     }
 
-    var controlService = this.createDeviceService();
+    var controlService = this.createDeviceService(this.service_name);
     services.push( controlService );
 
     var seen = {};
+    var services_hash = {};
+    services_hash[this.service_name] = controlService;
     for( var characteristic_type in this.mappings ) {
       var mappings = this.mappings[characteristic_type];
       if( !Array.isArray(mappings) )
@@ -2696,13 +2709,30 @@ FHEMAccessory.prototype = {
           continue;
         }
 
-        if( seen[characteristic_type] ) {
+        var service_name = this.service_name;
+
+        var parts = characteristic_type.split('#');
+        if( parts[1] ) {
+          service_name = parts[0]
+          characteristic_type = parts[1]
+          //mapping.characteristic_type = parts[1]
+
+          if( services_hash[service_name] )
+            controlService = services_hash[service_name];
+          else {
+            controlService = this.createDeviceService(service_name);
+            services.push( controlService );
+            services_hash[service_name] = controlService;
+          }
+        }
+
+        if( seen[service_name +'#'+ characteristic_type] ) {
           if( mapping.subtype === undefined ) {
             this.log.error(this.name + ': '+ characteristic_type + ' characteristic already defined for service ' + this.name + ' and no subtype given');
             //continue;
           }
 
-          controlService = this.createDeviceService( mapping.subtype );
+          controlService = this.createDeviceService( service_name, mapping.subtype );
           controlService.getCharacteristic(Characteristic.Name).setValue(mapping.subtype);
           services.push( controlService );
 
@@ -2729,10 +2759,10 @@ FHEMAccessory.prototype = {
                            || controlService.addCharacteristic(mapping.characteristic)
 
         if( characteristic == undefined ) {
-          this.log.error(this.name + ': no '+ characteristic_type + ' characteristic available for service ' + this.service_name);
+          this.log.error(this.name + ': no '+ characteristic_type + ' characteristic available for service ' + service_name);
           continue;
         }
-        seen[characteristic_type] = true;
+        seen[service_name +'#'+ characteristic_type] = true;
 
         this.log('    ' + mapping.characteristic_type + (mapping.subtype?':'+mapping.subtype:'')
                         + ' characteristic for ' + mapping.device + ':' + mapping.reading);

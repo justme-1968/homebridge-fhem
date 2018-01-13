@@ -94,6 +94,7 @@ the names for the stadard service and characteristic types can be found here: ..
 - timeout: timeout in ms after which the homebridge value is reset to the default value -> used to simulate push buttons
 - valid: a ; separated list of valid values for this characteristic,
          each to value can be a literal value or a homekit defined term for this characteristic
+- characteristic names can be given as <service_name>#<characteristic_name> to create multiple services for a device
 
 e.g.:
 ```
@@ -178,6 +179,15 @@ examples:
                                On=activity,subtype=TV,valueOn=TV,cmdOn=activity+TV,cmdOff=off
                                On=activity,subtype=DVD,valueOn=/DVD/,cmdOn=activity+DVD,cmdOff=off
                                On=activity,subtype=Off,valueOn=PowerOff,valueOff=PowerOff,cmd=off
+```
+
+- 1 device -> n services: give characteristic names as <service_name>#<characteristic_name>
+```
+  attr <name> genericDeviceType switch
+  attr <name> homebridgeMapping On=state,cmdOn=on,cmdOff=off
+                                BatteryService#BatteryLevel=battery
+                                BatteryService#StatusLowBattery=battery,threshold=20,values=0:BATTERY_LEVEL_LOW;;1:BATTERY_LEVEL_NORMAL
+                                BatteryService#ChargingState=charging
 ```
 
 
