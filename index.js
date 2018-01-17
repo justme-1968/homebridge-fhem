@@ -1772,7 +1772,7 @@ FHEMAccessory(platform, s) {
     else if( !this.service_name )
       this.service_name = 'switch';
 
-  } else if( !this.service_name && s.Attributes.setList ) {
+  } else if( (!this.service_name || this.service_name === 'switch') && s.Attributes.setList ) {
     var parts = s.Attributes.setList.split( ' ' );
     if( parts.length == 2 ) {
       this.service_name = 'switch';
