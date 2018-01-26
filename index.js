@@ -995,7 +995,7 @@ FHEMPlatform.prototype = {
                     }
 
                     if( !result.match(/(^| )genericDeviceType\b/) ) {
-                      var cmd = '{addToAttrList( "genericDeviceType:security,ignore,switch,outlet,light,blind,thermometer,thermostat,contact,garage,window,lock" ) }';
+                      var cmd = '{addToAttrList( "genericDeviceType:security,ignore,switch,outlet,light,blind,thermometer,thermostat,contact,garage,window,lock,HumiditySensor" ) }';
                       this.execute( cmd,
                                     function(result) {
                                         this.log.warn( 'genericDeviceType attribute was not known. please restart.' );
