@@ -2338,7 +2338,7 @@ FHEMAccessory.prototype = {
 
   command: function(mapping,value) {
     if( mapping.readOnly ) {
-      this.log.info(this.name + ' NOT sending command ' + c + ' with value ' + value + 'for readOnly device');
+      this.log.info(this.name + ' NOT sending command ' + c + ' with value ' + value + 'for readOnly characteristic');
       return;
     }
 
