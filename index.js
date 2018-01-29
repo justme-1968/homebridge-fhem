@@ -21,7 +21,7 @@ var version = require('./lib/version');
 //var FHEM = require('./lib/fhem').FHEM;
 
 var User;
-var Accessory, Service, Characteristic, UUIDGen;
+var Accessory, Service, Characteristic, UUIDGen, FakeGatoHistoryService;
 module.exports = function(homebridge){
   console.log('homebridge API version: ' + homebridge.version);
   console.info( 'this is homebridge-fhem '+ version );
@@ -34,6 +34,16 @@ module.exports = function(homebridge){
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
   UUIDGen = homebridge.hap.uuid;
+
+  try {
+    FakeGatoHistoryService = require('fakegato-history')(homebridge);
+  } catch(e) {
+    if (e.code !== 'MODULE_NOT_FOUND') {
+      throw e;
+    }
+
+    console.log( 'error: fakegato-history not installed' );
+  }
 
   homebridge.registerPlatform('homebridge-fhem', 'FHEM', FHEMPlatform);
 }
@@ -114,6 +124,16 @@ FHEM_update(informId, orig, no_update) {
       var value = FHEM_reading2homekit(mapping, orig);
       if( value === undefined )
         return;
+
+      if( subscription.accessory && subscription.accessory.loggingService ) {
+        //const moment = require('moment');
+
+        //var entry = {time: moment().unix()};
+        var entry = {time: Date.now()};
+        if( mapping.CurrentTemperature )
+          entry.temp = value;
+        subscription.accessory.loggingService.addEntry(entry);
+      }
 
       if( !no_update )
         mapping.characteristic.setValue(value, undefined, 'fromFHEM');
@@ -1775,7 +1795,7 @@ FHEMAccessory(platform, s) {
   } else if( (!this.service_name || this.service_name === 'switch') && s.Attributes.setList ) {
     var parts = s.Attributes.setList.split( ' ' );
     if( parts.length == 2 ) {
-      this.service_name = 'switch';
+      if( !this.service_name ) this.service_name = 'switch';
       this.mappings.On = { reading: 'state', valueOn: parts[0], cmdOn: parts[0], cmdOff: parts[1] };
     }
 
@@ -1853,6 +1873,8 @@ FHEMAccessory(platform, s) {
         this.log( '  ' + characteristic_type + ' [' + (mapping.device ? mapping.device +'.':'') + mapping.reading + ';' + mapping.cmdOn +',' + mapping.cmdOff + ']' );
       else if( characteristic_type == 'Hue' || characteristic_type == 'Saturation' )
         this.log( '  ' + characteristic_type + ' [' + (mapping.device ? mapping.device +'.':'') + mapping.reading + ';' + mapping.cmd + ';0-' + mapping.max +']' );
+      else if( characteristic_type == 'history' ) 
+        this.log( '  ' + characteristic_type + ' [' + (mapping.type ? mapping.type:'thermo') +';'+ (mapping.size ? mapping.size:1024) + ']' );
       else if( mapping.name ) {
         if( characteristic_type == CustomUUIDs.Volume )
           this.log( '  Custom ' + mapping.name + ' [' + (mapping.device ? mapping.device +'.':'') + mapping.reading +  ';' + (mapping.nocache ? 'not cached' : 'cached' )  +']' );
@@ -2315,6 +2337,11 @@ FHEMAccessory.prototype = {
   },
 
   command: function(mapping,value) {
+    if( mapping.readOnly ) {
+      this.log.info(this.name + ' NOT sending command ' + c + ' with value ' + value + 'for readOnly device');
+      return;
+    }
+
     var c = mapping;
     if( typeof mapping === 'object' )
       c = mapping.cmd;
@@ -2703,6 +2730,18 @@ FHEMAccessory.prototype = {
       for( var mapping of mappings ) {
         if( mapping._isInformation )
           continue;
+
+        if( characteristic_type === 'history' ) {
+          if( !FakeGatoHistoryService ) {
+            this.log.error( this.name + ': fakegato-history not installed' );
+            continue;
+          }
+        
+console.log(mapping);
+          this.loggingService = new FakeGatoHistoryService( mapping.type?mapping.type:'thermo', this, mapping.size?mapping.size:1024 );
+          services.push( this.loggingService );
+          continue;
+        }
 
         if( !mapping.characteristic && mapping.name === undefined ) {
           //this.log.error(this.name + ': '+ ' no such characteristic: ' + characteristic_type );
