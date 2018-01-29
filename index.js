@@ -36,7 +36,7 @@ module.exports = function(homebridge){
   UUIDGen = homebridge.hap.uuid;
 
   try {
-    FakeGatoHistoryService = require('fakegato-history')(homebridge);
+    //FakeGatoHistoryService = require('fakegato-history')(homebridge);
   } catch(e) {
     if (e.code !== 'MODULE_NOT_FOUND') {
       throw e;
@@ -2737,7 +2737,6 @@ FHEMAccessory.prototype = {
             continue;
           }
         
-console.log(mapping);
           this.loggingService = new FakeGatoHistoryService( mapping.type?mapping.type:'thermo', this, mapping.size?mapping.size:1024 );
           services.push( this.loggingService );
           continue;
