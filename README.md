@@ -94,7 +94,7 @@ the names for the stadard service and characteristic types can be found here: ..
 - timeout: timeout in ms after which the homebridge value is reset to the default value -> used to simulate push buttons
 - valid: a ; separated list of valid values for this characteristic,
          each to value can be a literal value or a homekit defined term for this characteristic
-- readOnly: if set to true: make this device is readOnly. ignore any changes made by homekit
+- readOnly: if set to true: make this charateristic read only. ignore any changes made by homekit
 - characteristic names can be given as <service_name>#<characteristic_name> to create multiple services for a device
 
 e.g.:
