@@ -203,11 +203,11 @@ FHEM_reading2homekit_(mapping, orig)
   var reading = mapping.reading;
 
   if( reading == 'temperature'
-             || reading == 'measured'
-             || reading == 'measured-temp'
-             || reading == 'desired-temp'
-             || reading == 'desired'
-             || reading == 'desiredTemperature' ) {
+      || reading == 'measured'
+      || reading == 'measured-temp'
+      || reading == 'desired-temp'
+      || reading == 'desired'
+      || reading == 'desiredTemperature' ) {
     if( value == 'on' )
       value = 31.0;
     else if( value == 'off' )
@@ -2646,9 +2646,12 @@ FHEMAccessory.prototype = {
 
     this.log('    manufacturer, model and serial number characteristics for ' + this.name)
     informationService
-      .setCharacteristic(Characteristic.Manufacturer, 'FHEM:' + this.type)
-      .setCharacteristic(Characteristic.Model, 'FHEM:' + (this.model ? this.model : '<unknown>') )
-      .setCharacteristic(Characteristic.SerialNumber, this.serial ? this.serial : '<unknown>');
+      .setCharacteristic(Characteristic.Manufacturer, this.mappings.Manufacturer
+                                                      ?this.mappings.Manufacturer:('FHEM:' + this.type) )
+      .setCharacteristic(Characteristic.Model, this.mappings.Model
+                                               ?this.mappings.Model:('FHEM:' + (this.model ? this.model : '<unknown>')) )
+      .setCharacteristic(Characteristic.SerialNumber, this.mappings.SerialNumber
+                                                      ?this.mappings.SerialNumber:(this.serial ? this.serial : '<unknown>') );
 
 
     if( this.mappings.FirmwareRevision ) {
