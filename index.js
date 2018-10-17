@@ -1873,7 +1873,7 @@ FHEMAccessory(platform, s) {
         this.log( '  ' + characteristic_type + ' [' + (mapping.device ? mapping.device +'.':'') + mapping.reading + ';' + mapping.cmdOn +',' + mapping.cmdOff + ']' );
       else if( characteristic_type == 'Hue' || characteristic_type == 'Saturation' )
         this.log( '  ' + characteristic_type + ' [' + (mapping.device ? mapping.device +'.':'') + mapping.reading + ';' + mapping.cmd + ';0-' + mapping.max +']' );
-      else if( characteristic_type == 'history' ) 
+      else if( characteristic_type == 'history' )
         this.log( '  ' + characteristic_type + ' [' + (mapping.type ? mapping.type:'thermo') +';'+ (mapping.size ? mapping.size:1024) + ']' );
       else if( mapping.name ) {
         if( characteristic_type == CustomUUIDs.Volume )
@@ -1923,6 +1923,8 @@ FHEMAccessory(platform, s) {
   } else if( this.type == 'DUOFERN' ) {
     this.model = s.Internals.SUBTYPE;
     this.serial = this.type + '.' + s.Internals.DEF;
+  } else if( this.type == 'ZWave' ) {
+    this.serial = this.type + '.' + s.Internals.DEF.replace(/ /, '-');
   }
 
 
@@ -2739,7 +2741,7 @@ FHEMAccessory.prototype = {
             this.log.error( this.name + ': fakegato-history not installed' );
             continue;
           }
-        
+
           this.loggingService = new FakeGatoHistoryService( mapping.type?mapping.type:'thermo', this, mapping.size?mapping.size:1024 );
           services.push( this.loggingService );
           continue;
