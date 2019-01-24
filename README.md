@@ -7,7 +7,7 @@ a debug browser is available at port 8282 (or 8283).
 add one (or more) FHEM platforms to config.json and set the filter(s) to a fhem devspec that
 includes the devices that should be bridged to homekit.
 
-##directly (automaticaly) supports:
+## directly (automaticaly) supports:
 - switches (devices with set on and set off commands)
 - lights (devices with set on and set off commands)
 - homematc, FS20 and ZWave dimmers (devices with set on, set off and set dim or set pct commands)
@@ -26,12 +26,12 @@ includes the devices that should be bridged to homekit.
 - probably some more ...
 
 
-##simple config
+## simple config
 for devices that are not correctly identified use the genericDeviceType attribute to configure the device type.
 supported values are: security,ignore,switch,outlet,light,blind,thermometer,thermostat,contact,garage,window,lock
 this is probably mostly used for differentiating between switches and lights.
 
-##enhanced config
+## enhanced config
 for devices that don't use the autodetected readings and commands or for devices that mix readings from different
 devices use the homebridgeMapping attribute. it is parsed from left to right and works as follows:
 - the genericDeviceType attribute is used to determine the service type that should be used for this device
@@ -56,7 +56,7 @@ this would define a thermostat device with a command target to set the desired t
 the names for the stadard service and characteristic types can be found here: .../hap-nodejs/lib/gen/HomeKitTypes.js
 
 
-###currently supported values for characteristic names are:
+### Currently supported values for Characteristic names are:
 - On
 - Brightness
 - Hue
@@ -74,7 +74,7 @@ the names for the stadard service and characteristic types can be found here: ..
 - FirmwareRevision
 - and all other homebridge Characteristic names
 
-###currently supported parameters for FHEM -> homekit direction are:
+### FHEM -> Homekit parameters:
 - minValue, maxValue, minStep: for all int and float characteristics -> the allowed range for this value in homekit
 - max: Hue and Saturation characteristics -> the range the reading has in fhem, only if different from minValue and maxValue
 - nocache: don't cache values for this reading
@@ -114,7 +114,7 @@ for custom characterisitcs the additional parameters name, format and unit have 
 ```
 
 
-###for the homekit -> FHEM direction:
+### Homekit -> FHEM parameters:
 - delay: true/<number> -> the value ist send afer one second/<number>ms of inactivity
 - factor: divide homekit value by this factor
 - maxValue: for all int and float characteristics -> the allowed range for this value in homekit
