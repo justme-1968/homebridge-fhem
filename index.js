@@ -1577,11 +1577,13 @@ FHEMAccessory(platform, s) {
   else if( genericType == 'garage' ) {
     this.service_name = 'garage';
     if( s.PossibleAttrs.match(/(^| )setList\b/) && !s.Attributes.setList  ) s.Attributes.setList = 'on off';
-    var parts = s.Attributes.setList.split( ' ' );
-    if( parts.length == 2 ) {
-      this.mappings.CurrentDoorState = { reading: 'state', values: [parts[0]+':OPEN', parts[1]+':CLOSED'] };
-      this.mappings.TargetDoorState = { reading: 'state', values: [parts[0]+':OPEN', parts[1]+':CLOSED'],
-                                                          cmds: ['OPEN:'+parts[0], 'CLOSED:'+parts[1]] };
+    if( s.Attributes.setList ) {
+      var parts = s.Attributes.setList.split( ' ' );
+      if( parts.length == 2 ) {
+        this.mappings.CurrentDoorState = { reading: 'state', values: [parts[0]+':OPEN', parts[1]+':CLOSED'] };
+        this.mappings.TargetDoorState = { reading: 'state', values: [parts[0]+':OPEN', parts[1]+':CLOSED'],
+                                                            cmds: ['OPEN:'+parts[0], 'CLOSED:'+parts[1]] };
+      }
     }
 
   } else if( genericType == 'blind'
