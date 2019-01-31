@@ -1710,7 +1710,7 @@ FHEMAccessory(platform, s) {
 
     if( match[3] ) {
       var values = match[3].split(',');
-      if( s.PossibleSets.match(/slider/ ) ) {
+      if( match[3].match(/slider/ ) ) {
         this.mappings.TargetTemperature.minValue = parseFloat(values[0]);
         this.mappings.TargetTemperature.maxValue = parseFloat(values[2]);
         this.mappings.TargetTemperature.minStep = values[1];
@@ -1925,6 +1925,13 @@ FHEMAccessory(platform, s) {
     this.serial = this.type + '.' + s.Internals.DEF;
   } else if( this.type == 'ZWave' ) {
     this.serial = this.type + '.' + s.Internals.DEF.replace(/ /, '-');
+  }
+
+  if( this.mappings.SerialNumber !== undefined ) {
+    if( this.mappings.SerialNumber.serial != undefined )
+      this.serial = this.mappings.SerialNumber.serial;
+    else if( this.mappings.SerialNumber.value != undefined )
+      this.serial = this.mappings.SerialNumber.value;
   }
 
 
@@ -2249,10 +2256,14 @@ FHEMAccessory.prototype = {
       seen[characteristic] = true;
 
       for( var param of params.split(',') ) {
-        if( param == 'clear' ) {
+        if( param === 'clear' ) {
           mapping = {};
           delete this.mappings[characteristic];
           continue;
+        //} else if( characteristic === 'SerialNumber' ) {
+        //  delete this.mappings[characteristic];
+        //  this.mappings[characteristic] = param;
+        //  continue;
         } else if( !this.mappings[characteristic] )
           this.mappings[characteristic] = mapping
 
