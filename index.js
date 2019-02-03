@@ -2222,6 +2222,7 @@ FHEMAccessory.prototype = {
     }
 
     var seen = {};
+    var service = undefined;
     for( var mapping of homebridgeMapping.split(/ |\n/) ) {
       if( !mapping )
         continue;
@@ -2241,6 +2242,13 @@ FHEMAccessory.prototype = {
 
       var characteristic = match[1];
       var params = match[3];
+
+
+      var parts = characteristic.split('#');
+      if( parts[1] )
+        service = parts[0];
+      else if( service !== undefined )
+        characteristic = service +'#'+ characteristic;
 
 
       var mapping;
@@ -2606,7 +2614,7 @@ FHEMAccessory.prototype = {
       if( subtype )
         name = subtype + ' (' + this.siriName + ')';
 
-      this.service_name = service_name;
+      //this.service_name = service_name;
       this.log('  ' + service_name + ' service for ' + this.name + (subtype?' (' + subtype + ')':'') );
       return new service(name,subtype);
     }
@@ -2734,12 +2742,14 @@ FHEMAccessory.prototype = {
 
     }
 
-    var controlService = this.createDeviceService(this.service_name);
+    var service_name = this.service_name;
+
+    var controlService = this.createDeviceService(service_name);
     services.push( controlService );
 
     var seen = {};
     var services_hash = {};
-    services_hash[this.service_name] = controlService;
+    services_hash[service_name] = controlService;
     for( var characteristic_type in this.mappings ) {
       var mappings = this.mappings[characteristic_type];
       if( !Array.isArray(mappings) )
@@ -2764,8 +2774,6 @@ FHEMAccessory.prototype = {
           //this.log.error(this.name + ': '+ ' no such characteristic: ' + characteristic_type );
           continue;
         }
-
-        var service_name = this.service_name;
 
         var parts = characteristic_type.split('#');
         if( parts[1] ) {
@@ -2802,12 +2810,12 @@ FHEMAccessory.prototype = {
         if( !mapping.characteristic ) {
           if( CustomUUIDs[mapping.characteristic_type] ) {
             if(!mapping.name) mapping.name = mapping.characteristic_type;
-            mapping.characteristic_type = CustomUUIDs[mapping.characteristic_type];
+            characteristic_type = CustomUUIDs[mapping.characteristic_type];
           }
           if( mapping.name !== undefined ) {
             characteristic = new Characteristic(mapping.name, mapping.characteristic_type );
             controlService.addCharacteristic(characteristic);
-            mapping.characteristic_type = 'Custom ' + mapping.name;
+            characteristic_type = 'Custom ' + mapping.name;
           }
 
         } else
@@ -2820,7 +2828,7 @@ FHEMAccessory.prototype = {
         }
         seen[service_name +'#'+ characteristic_type] = true;
 
-        this.log('    ' + mapping.characteristic_type + (mapping.subtype?':'+mapping.subtype:'')
+        this.log('    ' + characteristic_type + (mapping.subtype?':'+mapping.subtype:'')
                         + ' characteristic for ' + mapping.device + ':' + mapping.reading);
 
         this.subscribe(mapping, characteristic);
