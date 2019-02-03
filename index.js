@@ -2859,7 +2859,12 @@ FHEMAccessory.prototype = {
         }
 
         if( mapping.format !== undefined ) characteristic.setProps( { format: Characteristic.Formats[mapping.format] } );
-        if( mapping.unit !== undefined ) characteristic.setProps( { unit: Characteristic.Units[mapping.unit] } );
+        if( mapping.unit !== undefined ) {
+          if( Characteristic.Units[mapping.unit] )
+            characteristic.setProps( { unit: Characteristic.Units[mapping.unit] } );
+          else
+            characteristic.setProps( { unit: mapping.unit } );
+        }
         if( mapping.minValue !== undefined ) characteristic.setProps( { minValue: mapping.minValue } );
         if( mapping.maxValue !== undefined ) characteristic.setProps( { maxValue: mapping.maxValue } );
         if( mapping.minStep !== undefined ) characteristic.setProps( { minStep: mapping.minStep } );
