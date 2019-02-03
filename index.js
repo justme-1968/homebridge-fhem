@@ -1894,6 +1894,7 @@ FHEMAccessory(platform, s) {
 
   // device info
   this.name		= s.Internals.NAME;
+  this.fuuid            = s.Internals.FUUID;
   this.alias		= s.Attributes.alias ? s.Attributes.alias : s.Internals.NAME;
   this.siriName         = s.Attributes.siriName ? s.Attributes.siriName : this.alias;
   this.device		= s.Internals.NAME;
@@ -1927,7 +1928,9 @@ FHEMAccessory(platform, s) {
     this.serial = this.type + '.' + s.Internals.DEF;
   } else if( this.type == 'ZWave' ) {
     this.serial = this.type + '.' + s.Internals.DEF.replace(/ /, '-');
-  }
+  }else
+    this.serial = this.fuuid;
+
 
   if( this.mappings.SerialNumber !== undefined ) {
     if( this.mappings.SerialNumber.serial != undefined )
