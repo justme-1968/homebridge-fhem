@@ -2876,7 +2876,8 @@ FHEMAccessory.prototype = {
         if( mapping.minStep !== undefined ) characteristic.setProps( { minStep: mapping.minStep } );
         if( mapping.valid !== undefined ) characteristic.setProps( { validValues: mapping.valid } );
 
-        if( !characteristic.perms || characteristic.perms.length === 0 || characteristic_type.match( /-/ ) ) {
+        if( characteristic_type.match( /[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}/i )
+            || !characteristic.props || !characteristic.props.perms || !characteristic.props.perms.length ) {
           if( mapping.cmd === undefined )
             characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY] } );
           else {
