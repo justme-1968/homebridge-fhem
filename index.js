@@ -125,14 +125,14 @@ FHEM_update(informId, orig, no_update) {
       if( value === undefined )
         return;
 
-      if( subscription.accessory && subscription.accessory.loggingService ) {
+      if( subscription.accessory && subscription.accessory.historyService ) {
         //const moment = require('moment');
 
         //var entry = {time: moment().unix()};
         var entry = {time: Date.now()};
         if( mapping.CurrentTemperature )
           entry.temp = value;
-        subscription.accessory.loggingService.addEntry(entry);
+        subscription.accessory.historyService.addEntry(entry);
       }
 
       if( !no_update )
@@ -187,7 +187,7 @@ FHEM_reading2homekit(mapping, orig)
        defined = '???';
    }
 
-   mapping.log.info('    caching: ' + (mapping.name?'Custom '+mapping.name:mapping.characteristic_type) + (mapping.subtype?':'+mapping.subtype:'') + ': '
+   mapping.log.info('    caching: ' + (mapping.name?mapping.name:mapping.characteristic_type) + (mapping.subtype?':'+mapping.subtype:'') + ': '
                                     + value + ' (' + 'as '+typeof(value) + (defined?'; means '+defined:'') + '; from \''+orig + '\')');
    mapping.cached = value;
 
@@ -1928,7 +1928,7 @@ FHEMAccessory(platform, s) {
     this.serial = this.type + '.' + s.Internals.DEF;
   } else if( this.type == 'ZWave' ) {
     this.serial = this.type + '.' + s.Internals.DEF.replace(/ /, '-');
-  }else
+  } else
     this.serial = this.fuuid;
 
 
@@ -2762,17 +2762,6 @@ FHEMAccessory.prototype = {
         if( mapping._isInformation )
           continue;
 
-        if( characteristic_type === 'history' ) {
-          if( !FakeGatoHistoryService ) {
-            this.log.error( this.name + ': fakegato-history not installed' );
-            continue;
-          }
-
-          this.loggingService = new FakeGatoHistoryService( mapping.type?mapping.type:'thermo', this, mapping.size?mapping.size:1024 );
-          services.push( this.loggingService );
-          continue;
-        }
-
         if( !mapping.characteristic && mapping.name === undefined ) {
           //this.log.error(this.name + ': '+ ' no such characteristic: ' + characteristic_type );
           continue;
@@ -2793,32 +2782,44 @@ FHEMAccessory.prototype = {
           }
         }
 
+
+        if( characteristic_type === 'history' ) {
+          if( !FakeGatoHistoryService ) {
+            this.log.error( this.name + ': fakegato-history not installed' );
+            continue;
+          }
+
+          this.historyService = new FakeGatoHistoryService( mapping.type?mapping.type:'thermo', this, mapping.size?mapping.size:1024 );
+          services.push( this.historyService );
+          continue;
+        }
+
+
         if( seen[service_name +'#'+ characteristic_type] ) {
           if( mapping.subtype === undefined ) {
             this.log.error(this.name + ': '+ characteristic_type + ' characteristic already defined for service ' + this.name + ' and no subtype given');
-            //continue;
+            continue;
           }
 
           controlService = this.createDeviceService( service_name, mapping.subtype );
-          controlService.getCharacteristic(Characteristic.Name).setValue(mapping.subtype);
           services.push( controlService );
-
-        } else if( mapping.subtype ) {
-          controlService.subtype = mapping.subtype;
-          controlService.getCharacteristic(Characteristic.Name).setValue(mapping.subtype);
+          services_hash[service_name] = controlService;
 
         }
+        if( mapping.subtype !== undefined ) {
+          controlService.subtype = mapping.subtype;
+          controlService.getCharacteristic(Characteristic.Name).setValue(mapping.subtype);
+        }
+
 
         var characteristic = undefined;
         if( !mapping.characteristic ) {
-          if( CustomUUIDs[mapping.characteristic_type] ) {
-            if(!mapping.name) mapping.name = mapping.characteristic_type;
-            characteristic_type = CustomUUIDs[mapping.characteristic_type];
-          }
+          if( !mapping.name ) mapping.name = characteristic_type;
+          if( CustomUUIDs[characteristic_type] ) characteristic_type = CustomUUIDs[characteristic_type];
           if( mapping.name !== undefined ) {
-            characteristic = new Characteristic(mapping.name, mapping.characteristic_type );
-            controlService.addCharacteristic(characteristic);
-            characteristic_type = 'Custom ' + mapping.name;
+            characteristic = new Characteristic( mapping.name, characteristic_type );
+            controlService.addCharacteristic( characteristic );
+            mapping.name = 'Custom ' + mapping.name;
           }
 
         } else
@@ -2826,12 +2827,12 @@ FHEMAccessory.prototype = {
                            || controlService.addCharacteristic(mapping.characteristic)
 
         if( characteristic == undefined ) {
-          this.log.error(this.name + ': no '+ characteristic_type + ' characteristic available for service ' + service_name);
+          this.log.error(this.name + ': no '+ (mapping.name?mapping.name:mapping.characteristic_type) + ' characteristic available for service ' + service_name);
           continue;
         }
         seen[service_name +'#'+ characteristic_type] = true;
 
-        this.log('    ' + characteristic_type + (mapping.subtype?':'+mapping.subtype:'')
+        this.log('    ' + (mapping.name?mapping.name:mapping.characteristic_type) + (mapping.subtype?':'+mapping.subtype:'')
                         + ' characteristic for ' + mapping.device + ':' + mapping.reading);
 
         this.subscribe(mapping, characteristic);
@@ -2865,20 +2866,18 @@ FHEMAccessory.prototype = {
           else
             characteristic.setProps( { unit: mapping.unit } );
         }
+        //if( mapping.unit !== undefined ) characteristic.setProps( { unit: Characteristic.Units[mapping.unit] } );
         if( mapping.minValue !== undefined ) characteristic.setProps( { minValue: mapping.minValue } );
         if( mapping.maxValue !== undefined ) characteristic.setProps( { maxValue: mapping.maxValue } );
         if( mapping.minStep !== undefined ) characteristic.setProps( { minStep: mapping.minStep } );
         if( mapping.valid !== undefined ) characteristic.setProps( { validValues: mapping.valid } );
 
-        if( characteristic_type.match( /-/ ) ) {
-          //characteristic.readable = true;
+        if( !characteristic.perms || characteristic.perms.length === 0 || characteristic_type.match( /-/ ) ) {
           if( mapping.cmd === undefined )
             characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY] } );
           else {
-            //characteristic.writable = true;
             characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.WRITE, Characteristic.Perms.NOTIFY] } );
           }
-          //characteristic.supportsEventNotification = true;
         }
 
 
