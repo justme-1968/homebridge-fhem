@@ -2816,6 +2816,10 @@ FHEMAccessory.prototype = {
         if( !mapping.characteristic ) {
           if( !mapping.name ) mapping.name = characteristic_type;
           if( CustomUUIDs[characteristic_type] ) characteristic_type = CustomUUIDs[characteristic_type];
+          if( !characteristic_type.match( /[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}/i ) ) {
+            this.log.error(this.name + ': '+ (mapping.name?mapping.name:mapping.characteristic_type) + ' invalid uuid format: '+ characteristic_type );
+            continue;
+          }
           if( mapping.name !== undefined ) {
             characteristic = new Characteristic( mapping.name, characteristic_type );
             controlService.addCharacteristic( characteristic );
