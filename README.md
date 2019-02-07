@@ -113,6 +113,11 @@ for custom characterisitcs the additional parameters name, format and unit have 
 00000027-0000-1000-8000-0026BB765291=Volume::Volume,name=Volume,format=UINT8,unit=PERCENTAGE,minValue=0,maxValue=0,minStep=1
 ```
 
+adding a history characteristic will try to use fakegato-history to create Eve compatible history entries for ContactSensor and TemperatureSensor services
+```
+history:size=1024
+```
+
 
 ### Homekit -> FHEM parameters:
 - delay: true/<number> -> the value ist send afer one second/<number>ms of inactivity
