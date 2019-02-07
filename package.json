@@ -25,5 +25,9 @@
   },
   "dependencies": {
     "request": "^2.88.0"
+  },
+  "optionalDependencies": {
+    "fakegato-history": "^0.5.3"
   }
+
 }
