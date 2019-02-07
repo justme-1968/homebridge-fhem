@@ -121,17 +121,32 @@ FHEM_update(informId, orig, no_update) {
       if( typeof mapping.characteristic !== 'object' )
         return;
 
+      mapping.last_update = parseInt( Date.now()/1000 );
+
       var value = FHEM_reading2homekit(mapping, orig);
       if( value === undefined )
         return;
 
       if( subscription.accessory && subscription.accessory.historyService ) {
-        //const moment = require('moment');
-
-        //var entry = {time: moment().unix()};
-        var entry = {time: Date.now()};
-        if( mapping.CurrentTemperature )
+        var entry = { time: mapping.last_update };
+        if( mapping.characteristic_type === 'ContactSensorState' )
+          entry.status = value;
+        else if( mapping.characteristic_type === 'MotionDetected' )
+          entry.status = value;
+        else if( mapping.characteristic_type === 'CurrentTemperature' )
           entry.temp = value;
+        else if( mapping.characteristic_type === 'CurrentRelativeHumidity' )
+          entry.humidity = value;
+        else if( mapping.characteristic_type === CustomUUIDs.AirPressure )
+          entry.pressure = value;
+        else if( mapping.characteristic_type === CustomUUIDs.Power )
+          entry.power = value;
+        else if( mapping.characteristic_type === 'TargetTemperature' )
+          entry.setTemp = value;
+        else if( mapping.characteristic_type === CustomUUIDs.Actuation )
+          entry.valvePosition = value;
+
+        mapping.log.info( 'adding history entry'+ util.inspect(entry) );
         subscription.accessory.historyService.addEntry(entry);
       }
 
@@ -2156,6 +2171,11 @@ FHEMAccessory(platform, s) {
           FHEM_reading2homekit(mapping, orig);
       }
 
+      if( s.Readings[mapping.reading] && s.Readings[mapping.reading].Time ) {
+        var date = new Date(s.Readings[mapping.reading].Time);
+        mapping.last_update = parseInt( date.getTime() / 1000 );
+      }
+
     }
   }
 }
@@ -2617,9 +2637,10 @@ FHEMAccessory.prototype = {
       if( subtype )
         name = subtype + ' (' + this.siriName + ')';
 
-      //this.service_name = service_name;
       this.log('  ' + service_name + ' service for ' + this.name + (subtype?' (' + subtype + ')':'') );
-      return new service(name,subtype);
+      var service = new service(name,subtype);
+      service.service_name = service_name;
+      return service;
     }
 
     if( service === undefined )
@@ -2745,10 +2766,10 @@ FHEMAccessory.prototype = {
 
     }
 
-    var service_name = this.service_name;
-
-    var controlService = this.createDeviceService(service_name);
+    var controlService = this.createDeviceService(this.service_name);
     services.push( controlService );
+
+    var service_name = controlService.service_name;
 
     var seen = {};
     var services_hash = {};
@@ -2761,6 +2782,64 @@ FHEMAccessory.prototype = {
       for( var mapping of mappings ) {
         if( mapping._isInformation )
           continue;
+
+
+        if( characteristic_type === 'history' ) {
+          if( !FakeGatoHistoryService ) {
+            this.log.error( this.name + ': fakegato-history not installed' );
+            continue;
+          }
+
+          var type = mapping.type;
+          if( !type )
+            switch(service_name) {
+              case 'TemperatureSensor':
+                type = 'weather';
+                break;
+              case 'Thermostat':
+                type = 'thermo';
+                break;
+              case 'ContactSensor':
+                type = 'door';
+                break;
+              case 'MotionSensor':
+                type = 'motion';
+                break;
+              default:
+                this.log.error(this.name + ': history: no type known for '+ service_name);
+                continue;
+            }
+
+          this.log('    ' + 'FakeGatoHistory with type '+ type +' for ' + service_name);
+
+          this.displayName = this.name;
+          this.historyService = new FakeGatoHistoryService( type, this,
+                                                            { size: mapping.size?mapping.size: 1024,
+                                                              storage:'fs' } );
+          services.push( this.historyService );
+
+          this.log('      ' + 'FakeGatoHistory reset');
+          var characteristic = new Characteristic( 'Reset', 'E863F112-079E-48FF-8F27-9C2605A29F52' );
+          controlService.addCharacteristic( characteristic );
+          characteristic.setProps( { format: Characteristic.Formats['UINT32'] } );
+          characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.WRITE] } );
+          this.log.debug('      props: ' + util.inspect(characteristic.props) );
+          characteristic
+            .on('set', function(mapping, value, callback, context) {
+                         this.log('set reset: ' + value);
+                         //this.query(mapping, callback);
+                         callback();
+                       }.bind(this, mapping) )
+            .on('get', function(mapping, callback) {
+                         var time = this.historyService.getInitialTime();
+                         this.log('get reset: ' + time);
+                         callback( null, time );
+                       }.bind(this, mapping) );
+            }
+
+          continue;
+        }
+
 
         if( !mapping.characteristic && mapping.name === undefined ) {
           //this.log.error(this.name + ': '+ ' no such characteristic: ' + characteristic_type );
@@ -2781,19 +2860,6 @@ FHEMAccessory.prototype = {
             services_hash[service_name] = controlService;
           }
         }
-
-
-        if( characteristic_type === 'history' ) {
-          if( !FakeGatoHistoryService ) {
-            this.log.error( this.name + ': fakegato-history not installed' );
-            continue;
-          }
-
-          this.historyService = new FakeGatoHistoryService( mapping.type?mapping.type:'thermo', this, mapping.size?mapping.size:1024 );
-          services.push( this.historyService );
-          continue;
-        }
-
 
         if( seen[service_name +'#'+ characteristic_type] ) {
           if( mapping.subtype === undefined ) {
@@ -2906,6 +2972,39 @@ FHEMAccessory.prototype = {
           .on('get', function(mapping, callback) {
                        this.query(mapping, callback);
                      }.bind(this, mapping) );
+
+          if( FakeGatoHistoryService && characteristic_type === 'ContactSensorState' ) {
+            this.log('    ' + 'Custom LastActivation characteristic '+ mapping.device + ':' + mapping.reading);
+            characteristic = new Characteristic( 'LastActivation', 'E863F11A-079E-48FF-8F27-9C2605A29F52' );
+            controlService.addCharacteristic( characteristic );
+            characteristic.setProps( { format: Characteristic.Formats['UINT32'] } );
+            characteristic.setProps( { perms: [Characteristic.Perms.READ] } );
+            this.log.debug('      props: ' + util.inspect(characteristic.props) );
+            characteristic
+              .on('get', function(mapping, callback) {
+                           if( this.historyService === undefined ) {
+                             this.log.error(this.name + ': Custom LastActivation characteristic requires FakeGatoHistory');
+                             //callback( "error" );
+                             return;
+                           }
+                           if( mapping.last_update === undefined ) {
+                             this.log.error(this.name + ': Custom LastActivation characteristic: last update unknown ');
+                             //callback( "error" );
+                             return;
+                           }
+
+                           var time = this.historyService.getInitialTime();
+                           if( time === undefined ) {
+                             var entry = { time: mapping.last_update, status: mapping.cached  };
+                             mapping.log.info( 'adding history entry'+ util.inspect(entry) );
+                             this.historyService.addEntry( entry );
+                           }
+
+                           time = mapping.last_update - this.historyService.getInitialTime();
+
+                           this.log('query Custom LastActivation for '+ mapping.device + ':' + mapping.reading +': '+ time);
+                           callback( null, time );
+                         }.bind(this, mapping) );
       }
     }
 
