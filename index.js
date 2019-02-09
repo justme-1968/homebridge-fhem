@@ -145,9 +145,13 @@ FHEM_update(informId, orig, no_update) {
           entry.setTemp = value;
         else if( mapping.characteristic_type === CustomUUIDs.Actuation )
           entry.valvePosition = value;
+        else 
+          entry = undefined;
 
-        mapping.log.info( 'adding history entry'+ util.inspect(entry) );
-        subscription.accessory.historyService.addEntry(entry);
+        if( entry !== undefined ) {
+          mapping.log.info( 'adding history entry'+ util.inspect(entry) );
+          subscription.accessory.historyService.addEntry(entry);
+        }
       }
 
       if( !no_update )
