@@ -149,7 +149,7 @@ FHEM_update(informId, orig, no_update) {
           entry = undefined;
 
         if( entry !== undefined ) {
-          mapping.log.info( 'adding history entry'+ util.inspect(entry) );
+          mapping.log.info( '      adding history entry'+ util.inspect(entry) );
           subscription.accessory.historyService.addEntry(entry);
         }
       }
@@ -2999,7 +2999,7 @@ FHEMAccessory.prototype = {
                          var time = this.historyService.getInitialTime();
                          if( time === undefined ) {
                            var entry = { time: mapping.last_update, status: mapping.cached  };
-                           mapping.log.info( 'adding history entry'+ util.inspect(entry) );
+                           mapping.log.info( '      adding history entry'+ util.inspect(entry) );
                            this.historyService.addEntry( entry );
                          }
 
