@@ -130,7 +130,7 @@ FHEM_update(informId, orig, no_update) {
       if( subscription.accessory && subscription.accessory.historyService ) {
         var entry = { time: mapping.last_update };
         if( mapping.characteristic_type === 'ContactSensorState' )
-          entry.status = value;
+          entry.status = 1 - value;
         else if( mapping.characteristic_type === 'MotionDetected' )
           entry.status = value;
         else if( mapping.characteristic_type === 'CurrentTemperature' )
