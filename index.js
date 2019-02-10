@@ -1173,7 +1173,7 @@ FHEMPlatform.prototype = {
 var CustomUUIDs = {
                   //  F H E M       h o  m e  b r i d g e
             xVolume: '4648454d-0101-686F-6D65-627269646765',
-          Actuation: '4648454d-0201-686F-6D65-627269646765',
+        //Actuation: '4648454d-0201-686F-6D65-627269646765',
    //ColorTemperature: '4648454d-0301-686F-6D65-627269646765',
 
                  // see: https://github.com/ebaauw/homebridge-hue/wiki/Characteristics
@@ -1188,6 +1188,7 @@ var CustomUUIDs = {
               Power: 'E863F10D-079E-48FF-8F27-9C2605A29F52',
              Energy: 'E863F10C-079E-48FF-8F27-9C2605A29F52',
         AirPressure: 'E863F10F-079E-48FF-8F27-9C2605A29F52',
+          Actuation: 'E863F12E-079E-48FF-8F27-9C2605A29F52',
 };
 
 function
