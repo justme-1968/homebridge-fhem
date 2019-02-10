@@ -151,7 +151,7 @@ FHEM_update(informId, orig, no_update) {
             //var time = mapping.last_update - historyService.getInitialTime();
             //subscription.accessory.mappings['E863F11A-079E-48FF-8F27-9C2605A29F52'].characteristic.setValue(time, undefined, 'fromFHEM');
           } else if( mapping.characteristic_type === 'MotionDetected' )
-            entry.status = value;
+            entry.status = value?1:0;
           else if( mapping.characteristic_type === 'CurrentTemperature' )
             entry.temp = value;
           else if( mapping.characteristic_type === 'CurrentRelativeHumidity' )
@@ -2876,6 +2876,10 @@ FHEMAccessory.prototype = {
             this.historyService.extra_persist = { TimesOpened: 0, LastActivation: 0, OpenDuration: 0, ClosedDuration: 0, reset: 0 };
             this.historyService.setExtraPersistedData( this.historyService.extra_persist );
           }
+          else if( service_name === 'MotionSensor' ) {
+            this.historyService.extra_persist = { LastActivation: 0, reset: 0 };
+            this.historyService.setExtraPersistedData( this.historyService.extra_persist );
+          }
 
           if( this.historyService.extra_persist ) {
             this.historyService.checkIfLoaded = function(mapping) {
@@ -3066,7 +3070,9 @@ FHEMAccessory.prototype = {
                          this.log('query Custom TimesOpened for '+ mapping.device + ':' + mapping.reading +': '+ value);
                          callback( null, value );
                        }.bind(this, mapping) );
+        }
 
+        if( FakeGatoHistoryService && (characteristic_type === 'ContactSensorState' || characteristic_type === 'MotionDetected') ) {
           this.log('    ' + 'Custom LastActivation characteristic '+ mapping.device + ':' + mapping.reading);
           characteristic = new Characteristic( 'LastActivation', 'E863F11A-079E-48FF-8F27-9C2605A29F52' );
           this.mappings['E863F11A-079E-48FF-8F27-9C2605A29F52'] = { name: 'Custom LastActivation', characteristic: characteristic, informId: mapping.device+'-EVE-LastActivation', log: mapping.log };
@@ -3102,7 +3108,9 @@ FHEMAccessory.prototype = {
                          this.log('query Custom LastActivation for '+ mapping.device + ':' + mapping.reading +': '+ time);
                          callback( null, time );
                        }.bind(this, mapping) );
+          }
 
+        if( FakeGatoHistoryService && characteristic_type === 'ContactSensorState' ) {
 if( 1 ) {
           this.log('    ' + 'Custom OpenDuration characteristic '+ mapping.device + ':' + mapping.reading);
           characteristic = new Characteristic( 'OpenDuration', 'E863F118-079E-48FF-8F27-9C2605A29F52' );
