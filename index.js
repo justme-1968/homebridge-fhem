@@ -152,9 +152,10 @@ FHEM_update(informId, orig, no_update) {
             //subscription.accessory.mappings['E863F11A-079E-48FF-8F27-9C2605A29F52'].characteristic.setValue(time, undefined, 'fromFHEM');
           } else if( mapping.characteristic_type === 'MotionDetected' )
             entry.status = value?1:0;
-          else if( mapping.characteristic_type === 'CurrentTemperature' )
+          else if( mapping.characteristic_type === 'CurrentTemperature' ) {
             entry.temp = value;
-          else if( mapping.characteristic_type === 'CurrentRelativeHumidity' )
+            entry.currentTemp = value;
+          } else if( mapping.characteristic_type === 'CurrentRelativeHumidity' )
             entry.humidity = value;
           else if( mapping.characteristic_type === CustomUUIDs.AirPressure )
             entry.pressure = value;
@@ -2897,28 +2898,30 @@ FHEMAccessory.prototype = {
             this.historyService.checkIfLoaded.bind(this)(mapping);
           }
 
-          this.log('    ' + 'FakeGatoHistory reset');
-          var characteristic = new Characteristic( 'Reset', 'E863F112-079E-48FF-8F27-9C2605A29F52' );
-          this.historyService.addCharacteristic( characteristic );
-          characteristic.setProps( { format: Characteristic.Formats['UINT32'] } );
-          characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.WRITE] } );
-          //characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.WRITE, Characteristic.Perms.NOTIFY] } );
-          this.log.debug('      props: ' + util.inspect(characteristic.props) );
-          characteristic
-            .on('set', function(mapping, value, callback, context) {
-                         if( context !== 'fromFHEM' ) {
-			   this.log('set reset: ' + value);
-			   this.historyService.extra_persist.reset = value;
-                           FHEM_update( mapping.device + '-EVE-TimesOpened', 0 );
-                         }
-                         callback();
-                       }.bind(this, mapping) )
-            .on('get', function(mapping, callback) {
-                         var value = this.historyService.extra_persist.reset;
-                         if( value === undefined) value = 0;
-                         this.log('get reset: ' + value);
-                         callback( null, value );
-                       }.bind(this, mapping) );
+          if( service_name === 'ContactSensor' ) {
+            this.log('    ' + 'FakeGatoHistory reset');
+            var characteristic = new Characteristic( 'Reset', 'E863F112-079E-48FF-8F27-9C2605A29F52' );
+            this.historyService.addCharacteristic( characteristic );
+            characteristic.setProps( { format: Characteristic.Formats['UINT32'] } );
+            characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.WRITE] } );
+            //characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.WRITE, Characteristic.Perms.NOTIFY] } );
+            this.log.debug('      props: ' + util.inspect(characteristic.props) );
+            characteristic
+              .on('set', function(mapping, value, callback, context) {
+                           if( context !== 'fromFHEM' ) {
+			     this.log('set reset: ' + value);
+			     this.historyService.extra_persist.reset = value;
+                             FHEM_update( mapping.device + '-EVE-TimesOpened', 0 );
+                           }
+                           callback();
+                         }.bind(this, mapping) )
+              .on('get', function(mapping, callback) {
+                           var value = this.historyService.extra_persist.reset;
+                           if( value === undefined) value = 0;
+                           this.log('get reset: ' + value);
+                           callback( null, value );
+                         }.bind(this, mapping) );
+            }
 
             continue;
         }
