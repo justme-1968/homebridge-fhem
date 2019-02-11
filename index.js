@@ -2883,14 +2883,17 @@ FHEMAccessory.prototype = {
           }
 
           if( this.historyService.extra_persist ) {
+            //this.historyService.on( 'historyLoaded', function() {this.log.error(this.name +': loaded')}.bind(this) );
             this.historyService.checkIfLoaded = function(mapping) {
               if( this.historyService.isHistoryLoaded() ) {
                 var extra_persist = this.historyService.getExtraPersistedData();
                 if( extra_persist !== undefined ) {
                   this.historyService.extra_persist = extra_persist;
+                  this.log(this.name+ ': FakeGatoHistory extra persisted data loaded');
                   if( this.historyService.extra_persist.TimesOpened !== undefined )
                     FHEM_update( mapping.device + '-EVE-TimesOpened', this.historyService.extra_persist.TimesOpened );
-                }
+                } else
+                  this.log(this.name+ ': FakeGatoHistory extra persisted data is empty');
               } else {
                 setTimeout(function(mapping) {
                   this.historyService.checkIfLoaded.bind(this)(mapping);
