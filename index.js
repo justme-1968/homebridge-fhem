@@ -2885,9 +2885,12 @@ FHEMAccessory.prototype = {
           if( this.historyService.extra_persist ) {
             this.historyService.checkIfLoaded = function(mapping) {
               if( this.historyService.isHistoryLoaded() ) {
-                this.historyService.extra_persist = this.historyService.getExtraPersistedData();
-                if( this.historyService.extra_persist.TimesOpened !== undefined )
-                  FHEM_update( mapping.device + '-EVE-TimesOpened', this.historyService.extra_persist.TimesOpened );
+                var extra_persist = this.historyService.getExtraPersistedData();
+                if( extra_persist !== undefined ) {
+                  this.historyService.extra_persist = extra_persist;
+                  if( this.historyService.extra_persist.TimesOpened !== undefined )
+                    FHEM_update( mapping.device + '-EVE-TimesOpened', this.historyService.extra_persist.TimesOpened );
+                }
               } else {
                 setTimeout(function(mapping) {
                   this.historyService.checkIfLoaded.bind(this)(mapping);
