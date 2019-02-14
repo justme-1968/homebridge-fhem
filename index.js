@@ -127,8 +127,9 @@ FHEM_update(informId, orig, no_update) {
       if( value === undefined )
         return;
 
-      if( subscription.accessory && subscription.accessory.historyService ) {
-        var historyService = subscription.accessory.historyService;
+      var accessory = subscription.accessory;
+      if( accessory && accessory.historyService ) {
+        var historyService = accessory.historyService;
 
         var extra_persist = {};
         if( historyService.isHistoryLoaded() ) {
@@ -138,6 +139,7 @@ FHEM_update(informId, orig, no_update) {
 
         if( mapping.name === 'Custom TimesOpened' )
           historyService.extra_persist.TimesOpened = value;
+
         else if( mapping.name === 'Custom LastActivation' )
           historyService.extra_persist.LastActivation = value;
 
@@ -149,22 +151,40 @@ FHEM_update(informId, orig, no_update) {
               FHEM_update( mapping.device + '-EVE-TimesOpened', ++historyService.extra_persist.TimesOpened );
             }
             //var time = mapping.last_update - historyService.getInitialTime();
-            //subscription.accessory.mappings['E863F11A-079E-48FF-8F27-9C2605A29F52'].characteristic.setValue(time, undefined, 'fromFHEM');
+            //accessory.mappings['E863F11A-079E-48FF-8F27-9C2605A29F52'].characteristic.setValue(time, undefined, 'fromFHEM');
+
           } else if( mapping.characteristic_type === 'MotionDetected' )
             entry.status = value?1:0;
+
           else if( mapping.characteristic_type === 'CurrentTemperature' ) {
-            entry.temp = value;
-            entry.currentTemp = value;
+            if( accessory.mappings.TargetTemperature ) {
+              entry.currentTemp = value;
+              var target = accessory.mappings.TargetTemperature.cached;
+              if( target !== undefined )
+                entry.setTemp = target;
+            } else
+              entry.temp = value;
+
+          } else if( mapping.characteristic_type === 'TargetTemperature' ) {
+            entry.setTemp = value;
+            if( accessory.mappings.CurrentTemperature ) {
+              var current = accessory.mappings.CurrentTemperature.cached;
+              if( current !== undefined )
+                entry.currentTemp = current;
+            }
+
           } else if( mapping.characteristic_type === 'CurrentRelativeHumidity' )
             entry.humidity = value;
+
           else if( mapping.characteristic_type === CustomUUIDs.AirPressure )
             entry.pressure = value;
+
           else if( mapping.characteristic_type === CustomUUIDs.Power )
             entry.power = value;
-          else if( mapping.characteristic_type === 'TargetTemperature' )
-            entry.setTemp = value;
+
           else if( mapping.characteristic_type === CustomUUIDs.Actuation )
             entry.valvePosition = value;
+
           else
             entry = undefined;
 
