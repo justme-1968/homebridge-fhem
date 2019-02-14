@@ -156,21 +156,27 @@ FHEM_update(informId, orig, no_update) {
           } else if( mapping.characteristic_type === 'MotionDetected' )
             entry.status = value?1:0;
 
-          else if( mapping.characteristic_type === 'CurrentTemperature' ) {
+          else if( mapping.characteristic_type === 'CurrentTemperature' 
+                   || mapping.characteristic_type === 'TargetTemperature'
+                   || mapping.characteristic_type === CustomUUIDs.Actuation ) {
+            var current;
+            if( accessory.mappings.CurrentTemperature )
+              current = accessory.mappings.CurrentTemperature.cached;
+
             if( accessory.mappings.TargetTemperature ) {
-              entry.currentTemp = value;
               var target = accessory.mappings.TargetTemperature.cached;
               if( target !== undefined )
                 entry.setTemp = target;
-            } else
-              entry.temp = value;
-
-          } else if( mapping.characteristic_type === 'TargetTemperature' ) {
-            entry.setTemp = value;
-            if( accessory.mappings.CurrentTemperature ) {
-              var current = accessory.mappings.CurrentTemperature.cached;
               if( current !== undefined )
                 entry.currentTemp = current;
+            } else
+              if( current !== undefined )
+                entry.temp = current;
+
+            if( accessory.mappings[CustomUUIDs.Actuation] ) {
+              var valve = accessory.mappings[CustomUUIDs.Actuation].cached;
+              if( valve !== undefined )
+                entry.valvePosition = valve;
             }
 
           } else if( mapping.characteristic_type === 'CurrentRelativeHumidity' )
@@ -181,9 +187,6 @@ FHEM_update(informId, orig, no_update) {
 
           else if( mapping.characteristic_type === CustomUUIDs.Power )
             entry.power = value;
-
-          else if( mapping.characteristic_type === CustomUUIDs.Actuation )
-            entry.valvePosition = value;
 
           else
             entry = undefined;
