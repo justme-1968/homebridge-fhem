@@ -1561,7 +1561,7 @@ FHEMAccessory(platform, s) {
 
   if( s.Readings.current ) {
     this.mappings[CustomUUIDs.Current] = { name: 'Current', reading: 'current', format: 'FLOAT', factor: 1 };
-    if( s.Internals.TYPE === 'HM-ES-PMSw1-Pl' )
+    if( s.Attributes.model === 'HM-ES-PMSw1-Pl' || s.Attributes.model === 'HM-ES-PMSw1-Pl-DN-R1' )
       this.mappings[CustomUUIDs.Current].factor = 0.001;
   }
 
@@ -1570,7 +1570,7 @@ FHEMAccessory(platform, s) {
 
   if( s.Readings.energy ) {
     this.mappings[CustomUUIDs.Energy] = { name: 'Energy', reading: 'energy', format: 'FLOAT', factor: 1 };
-    if( s.Internals.TYPE === 'HM-ES-PMSw1-Pl' )
+    if( s.Attributes.model === 'HM-ES-PMSw1-Pl' || s.Attributes.model === 'HM-ES-PMSw1-Pl-DN-R1' )
       this.mappings[CustomUUIDs.Energy].factor = 0.001;
     else if( s.Readings.energy.Value.match( / Wh/ ) )
       this.mappings[CustomUUIDs.Energy].factor = 0.001;
