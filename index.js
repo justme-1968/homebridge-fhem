@@ -156,7 +156,7 @@ FHEM_update(informId, orig, no_update) {
           } else if( mapping.characteristic_type === 'MotionDetected' )
             entry.status = value?1:0;
 
-          else if( mapping.characteristic_type === 'CurrentTemperature' 
+          else if( mapping.characteristic_type === 'CurrentTemperature'
                    || mapping.characteristic_type === 'TargetTemperature'
                    || mapping.characteristic_type === CustomUUIDs.Actuation ) {
             var current;
@@ -2010,7 +2010,12 @@ FHEMAccessory(platform, s) {
     this.model = s.Internals.SUBTYPE;
     this.serial = this.type + '.' + s.Internals.DEF;
   } else if( this.type == 'ZWave' ) {
+    if( s.Readings.model && s.Readings.model.Value )
+      this.model = s.Readings.model.Value;
     this.serial = this.type + '.' + s.Internals.DEF.replace(/ /, '-');
+  } else if( this.type == 'HMCCUDEV' ) {
+    this.model = s.Internals.ccutype;
+    this.serial = s.Internals.ccuaddr;
   } else
     this.serial = this.fuuid;
 
@@ -2838,6 +2843,19 @@ FHEMAccessory.prototype = {
     services.push( controlService );
 
     var service_name = controlService.service_name;
+
+    if( 0 && service_name === 'Television' ) {
+      var input = new Service.InputSource('hdmi1', 'HDMI 1');
+      input
+        .setCharacteristic(Characteristic.Identifier, 1)
+        .setCharacteristic(Characteristic.ConfiguredName, 'HDMI 1')
+        .setCharacteristic(Characteristic.IsConfigured, Characteristic.IsConfigured.CONFIGURED)
+        .setCharacteristic(Characteristic.InputSourceType, Characteristic.InputSourceType.HDMI);
+
+      controlService.addLinkedService(input);
+
+      services.push( input );
+    }
 
     var seen = {};
     var services_hash = {};
