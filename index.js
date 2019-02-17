@@ -55,11 +55,11 @@ var events = require('events');
 // subscriptions to fhem longpoll events
 var FHEM_subscriptions = {};
 function
-FHEM_subscribe(accessory, informId, characteristic) {
+FHEM_subscribe(accessory, informId, characteristic, mapping) {
   if( !FHEM_subscriptions[informId] )
     FHEM_subscriptions[informId] = [];
 
-  FHEM_subscriptions[informId].push( { accessory: accessory, characteristic: characteristic } );
+  FHEM_subscriptions[informId].push( { accessory: accessory, characteristic: characteristic, mapping: mapping } );
 }
 function
 FHEM_unsubscribe(accessory, informId, characteristic) {
@@ -114,11 +114,8 @@ FHEM_update(informId, orig, no_update) {
   var subscriptions = FHEM_subscriptions[informId];
   if( subscriptions )
     subscriptions.forEach( function(subscription) {
-      if( subscription.characteristic === undefined )
-        return;
-
-      var mapping = subscription.characteristic.FHEM_mapping;
-      if( typeof mapping.characteristic !== 'object' )
+      var mapping = subscription.mapping;
+      if( typeof mapping !== 'object' )
         return;
 
       mapping.last_update = parseInt( Date.now()/1000 );
@@ -350,9 +347,6 @@ FHEM_reading2homekit_(mapping, orig)
 
     }
 
-    if( format === undefined )
-      return value;
-
     if( mapping.event_map !== undefined ) {
       var mapped = mapping.event_map[value];
       if( mapped !== undefined ) {
@@ -411,6 +405,9 @@ FHEM_reading2homekit_(mapping, orig)
       mapping.log.debug(mapping.informId + ' values: value ' + value + ' mapped to ' + mapped);
       value = mapped;
     }
+
+    if( format === undefined )
+      return value;
 
 //mapping.log.error( format );
     if( !format ) {
@@ -2261,7 +2258,7 @@ FHEMAccessory.prototype = {
       if( characteristic )
         characteristic.FHEM_mapping = mapping;
 
-      FHEM_subscribe(this, mapping.informId, characteristic);
+      FHEM_subscribe(this, mapping.informId, characteristic, mapping);
 
     } else {
       FHEM_subscribe(this, mapping, characteristic);
