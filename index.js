@@ -1634,10 +1634,13 @@ FHEMAccessory(platform, s) {
     var value = parseInt( s.Readings.battery.Value );
 
     if( isNaN(value) )
-      this.mappings.StatusLowBattery = { reading: 'battery', values: ['ok:BATTERY_LEVEL_NORMAL', '/.*/:BATTERY_LEVEL_LOW'] };
+      //this.mappings.StatusLowBattery = { reading: 'battery', values: ['ok:BATTERY_LEVEL_NORMAL', '/.*/:BATTERY_LEVEL_LOW'] };
+      this.mappings['BatteryService#StatusLowBattery'] = { reading: 'battery', values: ['ok:BATTERY_LEVEL_NORMAL', '/.*/:BATTERY_LEVEL_LOW'] };
     else {
-      this.mappings.BatteryLevel = { reading: 'battery' };
-      this.mappings.StatusLowBattery = { reading: 'battery', threshold: 20, values: ['0:BATTERY_LEVEL_LOW', '1:BATTERY_LEVEL_NORMAL']  };
+      //this.mappings.BatteryLevel = { reading: 'battery' };
+      //this.mappings.StatusLowBattery = { reading: 'battery', threshold: 20, values: ['0:BATTERY_LEVEL_LOW', '1:BATTERY_LEVEL_NORMAL']  };
+      this.mappings['BatteryService#BatteryLevel'] = { reading: 'battery' };
+      this.mappings['BatteryService#StatusLowBattery'] = { reading: 'battery', threshold: 20, values: ['0:BATTERY_LEVEL_LOW', '1:BATTERY_LEVEL_NORMAL']  };
     }
   }
 
@@ -2840,6 +2843,7 @@ FHEMAccessory.prototype = {
     services.push( controlService );
 
     var service_name = controlService.service_name;
+    var service_name_default = controlService.service_name;
 
     if( 0 && service_name === 'Television' ) {
       var input = new Service.InputSource('hdmi1', 'HDMI 1');
@@ -2989,6 +2993,10 @@ FHEMAccessory.prototype = {
             services.push( controlService );
             services_hash[service_name] = controlService;
           }
+        } else {
+          service_name = service_name_default;
+          controlService = services_hash[service_name];
+          //if( !mapping.name ) mapping.name = service_name+'#'+characteristic_type;
         }
 
         if( seen[service_name +'#'+ characteristic_type] ) {
