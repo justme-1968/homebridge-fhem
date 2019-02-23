@@ -196,7 +196,7 @@ FHEM_update(informId, orig, no_update) {
 
       }
 
-      if( !no_update )
+      if( !no_update && mapping.characteristic )
         mapping.characteristic.setValue(value, undefined, 'fromFHEM');
     } );
 }
@@ -298,8 +298,7 @@ FHEM_reading2homekit_(mapping, orig)
     value = parseInt( value );
 
   } else if( reading == 'reachable' ) {
-    value = parseInt( value );
-    //value = parseInt( value ) == true;
+    value = parseInt( value ) == true;
 
   } else if( reading === 'state' && ( mapping.On
                                       && typeof mapping.values !== 'object'
@@ -1650,14 +1649,10 @@ FHEMAccessory(platform, s) {
     this.mappings.FirmwareRevision = { reading: 'firmware', _isInformation: true };
   //FIXME: add swversion internal for HUEDevices
 
-  if( 0 ) {
   if( s.Readings.reachable )
-    this.mappings.reachable = { reading: 'reachable' };
-  else if( s.PossibleAttrs.match(/(^| )disable\b/) )
-    this.mappings.reachable = { reading: 'reachable' };
-  }
+    this.mappings.Reachable = { reading: 'reachable' };
 
-  else if( genericType == 'garage' ) {
+  if( genericType == 'garage' ) {
     this.service_name = 'garage';
     if( s.PossibleAttrs.match(/(^| )setList\b/) && !s.Attributes.setList  ) s.Attributes.setList = 'on off';
     if( s.Attributes.setList ) {
@@ -1969,9 +1964,6 @@ FHEMAccessory(platform, s) {
         this.log( '  ' + characteristic_type + ' [' + (mapping.device ? mapping.device +'.':'') + mapping.reading + ']' );
     }
   }
-
-  if( this.mappings.reachable )
-    this.log( s.Internals.NAME + ' has reachability ['+ this.mappings.reachable.reading +']' );
 
 //log( util.inspect(s) );
 
@@ -2791,8 +2783,8 @@ FHEMAccessory.prototype = {
                    }.bind(this) );
     }
 
-    if( Characteristic.Reachable )
-      if( this.mappings.reachable ) {
+    if( Characteristic.Reachable ) {
+      if( 0 && this.mappings.Reachable ) {
         this.log('  bridging service for ' + this.name)
         var bridgingService = new Service.BridgingState();
         services.push( bridgingService );
@@ -2800,13 +2792,17 @@ FHEMAccessory.prototype = {
         this.log('    reachability characteristic for ' + this.name)
         var characteristic = bridgingService.getCharacteristic(Characteristic.Reachable);
 
-        this.subscribe(this.mappings.reachable,characteristic);
-        characteristic.value = FHEM_cached[this.mappings.reachable.informId]==true;
+        this.subscribe(this.mappings.Reachable,characteristic);
+        characteristic.value = FHEM_cached[this.mappings.Reachable.informId]==true;
 
         characteristic
           .on('get', function(callback) {
-                       this.query(this.mappings.reachable, callback);
+                       this.query(this.mappings.Reachable, callback);
                      }.bind(this) );
+
+      } else if( this.mappings.Reachable ) {
+          this.subscribe(this.mappings.Reachable);
+      }
     }
 
 
@@ -2865,6 +2861,9 @@ FHEMAccessory.prototype = {
       var mappings = this.mappings[characteristic_type];
       if( !Array.isArray(mappings) )
          mappings = [mappings];
+
+      if( characteristic_type === 'Reachable' )
+        continue;
 
       if( service_name === 'ContactSensor' && characteristic_type === 'CurrentDoorState'
           && this.mappings.history && this.mappings.ContactSensorState ) {
@@ -3108,7 +3107,10 @@ FHEMAccessory.prototype = {
                        callback();
                      }.bind(this, mapping) )
           .on('get', function(mapping, callback) {
-                       this.query(mapping, callback);
+                       if( this.mappings.Reachable && !this.mappings.Reachable.cached  )
+                         callback( 'unreachable' );
+                       else
+                         this.query(mapping, callback);
                      }.bind(this, mapping) );
 
         if( FakeGatoHistoryService && characteristic_type === 'ContactSensorState' ) {

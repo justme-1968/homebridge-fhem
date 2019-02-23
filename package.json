@@ -1,6 +1,6 @@
 {
   "name": "homebridge-fhem",
-  "version": "0.4.20",
+  "version": "0.5.1",
   "description": "a fhem platform plugin for homebridge",
   "author": {
     "name": "justme1968"
@@ -27,7 +27,8 @@
     "request": "^2.88.0"
   },
   "optionalDependencies": {
-    "fakegato-history": "^0.5.3"
+    "fakegato-history": "^0.5.3",
+    "ws": "^6.1.2"
   }
 
 }
