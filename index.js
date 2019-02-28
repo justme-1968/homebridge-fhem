@@ -1633,13 +1633,13 @@ FHEMAccessory(platform, s) {
     var value = parseInt( s.Readings.battery.Value );
 
     if( isNaN(value) )
-      //this.mappings.StatusLowBattery = { reading: 'battery', values: ['ok:BATTERY_LEVEL_NORMAL', '/.*/:BATTERY_LEVEL_LOW'] };
-      this.mappings['BatteryService#StatusLowBattery'] = { reading: 'battery', values: ['ok:BATTERY_LEVEL_NORMAL', '/.*/:BATTERY_LEVEL_LOW'] };
+      this.mappings.StatusLowBattery = { reading: 'battery', values: ['ok:BATTERY_LEVEL_NORMAL', '/.*/:BATTERY_LEVEL_LOW'] };
+      //this.mappings['BatteryService#StatusLowBattery'] = { reading: 'battery', values: ['ok:BATTERY_LEVEL_NORMAL', '/.*/:BATTERY_LEVEL_LOW'] };
     else {
-      //this.mappings.BatteryLevel = { reading: 'battery' };
-      //this.mappings.StatusLowBattery = { reading: 'battery', threshold: 20, values: ['0:BATTERY_LEVEL_LOW', '1:BATTERY_LEVEL_NORMAL']  };
-      this.mappings['BatteryService#BatteryLevel'] = { reading: 'battery' };
-      this.mappings['BatteryService#StatusLowBattery'] = { reading: 'battery', threshold: 20, values: ['0:BATTERY_LEVEL_LOW', '1:BATTERY_LEVEL_NORMAL']  };
+      this.mappings.BatteryLevel = { reading: 'battery' };
+      this.mappings.StatusLowBattery = { reading: 'battery', threshold: 20, values: ['0:BATTERY_LEVEL_LOW', '1:BATTERY_LEVEL_NORMAL']  };
+      //this.mappings['BatteryService#BatteryLevel'] = { reading: 'battery' };
+      //this.mappings['BatteryService#StatusLowBattery'] = { reading: 'battery', threshold: 20, values: ['0:BATTERY_LEVEL_LOW', '1:BATTERY_LEVEL_NORMAL']  };
     }
   }
 
@@ -3123,6 +3123,12 @@ FHEMAccessory.prototype = {
           characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY] } );
           characteristic
             .on('get', function(mapping, callback) {
+                         if( !this.historyService ) {
+                           this.log.error(this.name + ': Custom TimesOpened characteristic requires FakeGatoHistory');
+                           callback( 'no historyService' );
+                           return;
+                         }
+
                          var value = this.historyService.extra_persist.TimesOpened;
                          this.log('query Custom TimesOpened for '+ mapping.device + ':' + mapping.reading +': '+ value);
                          callback( null, value );
@@ -3168,7 +3174,6 @@ FHEMAccessory.prototype = {
           }
 
         if( FakeGatoHistoryService && characteristic_type === 'ContactSensorState' ) {
-if( 1 ) {
           this.log('    ' + 'Custom OpenDuration characteristic '+ mapping.device + ':' + mapping.reading);
           characteristic = new Characteristic( 'OpenDuration', 'E863F118-079E-48FF-8F27-9C2605A29F52' );
           controlService.addCharacteristic( characteristic );
@@ -3192,7 +3197,6 @@ if( 1 ) {
                          this.log('query Custom ClosedDuration for '+ mapping.device + ':' + mapping.reading +': '+ value);
                          callback( null, value );
                        }.bind(this, mapping) );
-}
 
         }
       }
