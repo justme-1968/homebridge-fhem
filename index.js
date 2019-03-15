@@ -2044,9 +2044,7 @@ FHEMAccessory(platform, s) {
       mapping.log = this.log;
 
       var parts = characteristic_type.split('#');
-      if( parts[1] ) {
-        characteristic_type = parts[1]
-      }
+      if( parts[1] ) characteristic_type = parts[1];
 
       //FIXME: better integrate eventMap
       if( s.Attributes.eventMap ) {
@@ -2387,13 +2385,15 @@ FHEMAccessory.prototype = {
             mapping[p[0]] = p[1].replace( /\+/g, ' ' );
 
         } else if( p.length == 1 ) {
-          if( this.mappings[param] !== undefined ) {
+	  var m = this.mappings[param];
+	  if( m === undefined ) m = this.mappings[service+'#'+param];
+          if( m !== undefined ) {
             try {
-              mapping = Object.assign({}, this.mappings[param]);
+              mapping = Object.assign({}, m);
             } catch(err) {
-              console.log(this.mappings[param]);
-              for( var x in this.mappings[param] ) {
-                mapping[x] = this.mappings[param][x]
+              console.log(m);
+              for( var x in m ) {
+                mapping[x] = m[x]
               }
             }
             this.mappings[characteristic] = mapping;
@@ -2894,7 +2894,7 @@ FHEMAccessory.prototype = {
 
     var seen = {};
     var services_hash = {};
-    services_hash[service_name] = controlService;
+    services_hash[service_name +'#undefined'] = controlService;
     for( var characteristic_type in this.mappings ) {
       var mappings = this.mappings[characteristic_type];
       if( !Array.isArray(mappings) )
@@ -3014,24 +3014,31 @@ FHEMAccessory.prototype = {
 
         var parts = characteristic_type.split('#');
         if( parts[1] ) {
-          service_name = parts[0]
-          characteristic_type = parts[1]
+          service_name = parts[0];
+          characteristic_type = parts[1];
           //mapping.characteristic_type = parts[1]
 
-          if( services_hash[service_name] )
-            controlService = services_hash[service_name];
+	  //handle <service>(n)#<characteristic>
+	  var match = service_name.match(/(.+)\((\d+)\)$/);
+          if( match && match[2] !== undefined ) {
+            service_name = match[1];
+            mapping.subtype = match[2];
+	  }
+
+          if( services_hash[service_name +'#'+ mapping.subtype] )
+            controlService = services_hash[service_name +'#'+ mapping.subtype];
           else {
-            controlService = this.createDeviceService(service_name);
+            controlService = this.createDeviceService(service_name,mapping.subtype);
             services.push( controlService );
-            services_hash[service_name] = controlService;
+            services_hash[service_name +'#'+ mapping.subtype] = controlService;
           }
         } else {
           service_name = service_name_default;
-          controlService = services_hash[service_name];
+          controlService = services_hash[service_name +'#'+ mapping.subtype];
           //if( !mapping.name ) mapping.name = service_name+'#'+characteristic_type;
         }
 
-        if( seen[service_name +'#'+ characteristic_type] ) {
+        if( seen[service_name +'#'+ characteristic_type +'#'+ mapping.subtype] ) {
           if( mapping.subtype === undefined ) {
             this.log.error(this.name + ': '+ characteristic_type + ' characteristic already defined for service ' + this.name + ' and no subtype given');
             continue;
@@ -3039,23 +3046,24 @@ FHEMAccessory.prototype = {
 
           controlService = this.createDeviceService( service_name, mapping.subtype );
           services.push( controlService );
-          services_hash[service_name] = controlService;
+          services_hash[service_name +'#'+ mapping.subtype] = controlService;
 
         }
         if( mapping.subtype !== undefined ) {
           controlService.subtype = mapping.subtype;
-          controlService.getCharacteristic(Characteristic.Name).setValue(mapping.subtype);
+	  if( service_name !== 'InputSource' )
+            controlService.getCharacteristic(Characteristic.Name).setValue(mapping.subtype);
         }
 
         if( characteristic_type === 'linkedTo' ) {
-	  let service = services_hash[mapping.reading];
+	  let service = services_hash[mapping.reading +'#undefined'];
 	  if( !service )
             this.log.error(this.name + ': no '+ mapping.reading +' service to link to' );
 	  else if( mapping.reading === service_name )
             this.log.error(this.name + ': can\'t link '+ mapping.reading +' service to itself' );
           else {
             service.addLinkedService(controlService);
-            this.log('    linked to '+ mapping.reading );
+            this.log('    linked to '+ service.service_name );
 	  }
 
           continue;
@@ -3089,7 +3097,7 @@ FHEMAccessory.prototype = {
           this.log.error(this.name + ': no '+ (mapping.name?mapping.name:mapping.characteristic_type) + ' characteristic available for service ' + service_name);
           continue;
         }
-        seen[service_name +'#'+ characteristic_type] = true;
+        seen[service_name +'#'+ characteristic_type  +'#'+ mapping.subtype] = true;
 
         this.log('    ' + (mapping.name?mapping.name:mapping.characteristic_type) + (mapping.subtype?':'+mapping.subtype:'')
                         + ' characteristic for ' + mapping.device + ':' + mapping.reading);
