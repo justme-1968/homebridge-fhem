@@ -20,6 +20,16 @@
 var version = require('./lib/version');
 //var FHEM = require('./lib/fhem').FHEM;
 
+function getLine(offset) {
+var stack = new Error().stack.split('\n'),
+      line = stack[(offset || 1) + 1].split(':');
+return parseInt(line[line.length - 2], 10);
+}
+global.__defineGetter__('__LINE__', function () {
+return getLine(2);
+});
+
+
 var User;
 var Accessory, Service, Characteristic, UUIDGen, FakeGatoHistoryService;
 module.exports = function(homebridge){
@@ -248,7 +258,7 @@ FHEM_reading2homekit(mapping, orig)
        defined = '???';
    }
 
-   mapping.log.info('    caching: ' + (mapping.name?mapping.name:mapping.characteristic_type) + (mapping.subtype?':'+mapping.subtype:'') + ': '
+   mapping.log.info('    caching: ' + (mapping.name?mapping.name:mapping.characteristic_type) +': '
                                     + value + ' (' + 'as '+typeof(value) + (defined?'; means '+defined:'') + '; from \''+orig + '\')');
    mapping.cached = value;
 
@@ -2592,7 +2602,7 @@ FHEMAccessory.prototype = {
       return;
     }
 
-    this.log.info('query: ' + mapping.characteristic_type + ' for ' + mapping.informId);
+    this.log.info('query: ' + (mapping.name?mapping.name:mapping.characteristic_type) + ' for ' + mapping.informId);
     var value = mapping.cached;
     if( typeof mapping === 'object' && value !== undefined ) {
       var defined = undefined;
@@ -2842,59 +2852,9 @@ FHEMAccessory.prototype = {
     var service_name = controlService.service_name;
     var service_name_default = controlService.service_name;
 
-    if( 0 && service_name === 'Television' ) {
-      var savedNames = {};
-      var inputs = ['0', '1', '2', '3', '4', '5'];
-      var inputAppIds = new Array();
-      inputs.forEach((value, i) => {
-                    // get appid
-                    let appId = null;
-
-                    if (value.appId != undefined) {appId = value.appId;} else {appId = value;}
-                    let inputName = appId;
-                   this.log.debug('appID Value: ' + inputName);
-                    if (appId != undefined && appId != null && appId != '') {appId = appId.replace(/\s/g, ''); // remove all white spaces from the string
-
-                    let input = new Service.InputSource(appId, 'inputSource' + i);
-                   this.log.debug('appID Value: ' + value.AppID);
-                    inputName = value.AppID;
-                    input
-                    .setCharacteristic(Characteristic.Identifier, i)
-                    .setCharacteristic(Characteristic.ConfiguredName, inputName)
-                    .setCharacteristic(Characteristic.IsConfigured, Characteristic.IsConfigured.CONFIGURED)
-                    .setCharacteristic(Characteristic.InputSourceType, Characteristic.InputSourceType.APPLICATION)
-                    .setCharacteristic(Characteristic.CurrentVisibilityState, Characteristic.CurrentVisibilityState.SHOWN);
-
-                    input
-                    .getCharacteristic(Characteristic.ConfiguredName)
-                    .on('set', (name, callback) => {
-                        savedNames[appId] = name;
-                        callback()
-                        });
-                    controlService.addLinkedService(input);
-                    services.push(input);
-                    }
-                    });
-        this.log.debug('TESTMGR: ' + value); //undef
-            }
-
-    if( 0 && service_name === 'Television' ) {
-      var input = new Service.InputSource('hdmi1', 'HDMI 1');
-      input
-        .setCharacteristic(Characteristic.Identifier, 1)
-        .setCharacteristic(Characteristic.ConfiguredName, 'HDMI 1')
-        .setCharacteristic(Characteristic.IsConfigured, Characteristic.IsConfigured.CONFIGURED)
-        .setCharacteristic(Characteristic.InputSourceType, Characteristic.InputSourceType.HDMI)
-	.setCharacteristic(Characteristic.CurrentVisibilityState, Characteristic.CurrentVisibilityState.SHOWN);
-
-      //controlService.addLinkedService(input);
-
-      services.push( input );
-    }
-
     var seen = {};
     var services_hash = {};
-    services_hash[service_name +'#undefined'] = controlService;
+    //services_hash[service_name +'#undefined'] = controlService;
     for( var characteristic_type in this.mappings ) {
       var mappings = this.mappings[characteristic_type];
       if( !Array.isArray(mappings) )
@@ -2912,6 +2872,11 @@ FHEMAccessory.prototype = {
       for( var mapping of mappings ) {
         if( mapping._isInformation )
           continue;
+
+        if( Object.keys(services_hash).length == 0 ) {
+          controlService.subtype = mapping.subtype;
+          services_hash[service_name +'#'+ mapping.subtype] = controlService;
+        }
 
         if( characteristic_type === 'history' ) {
           if( !FakeGatoHistoryService ) {
@@ -3018,37 +2983,32 @@ FHEMAccessory.prototype = {
           characteristic_type = parts[1];
           //mapping.characteristic_type = parts[1]
 
-	  //handle <service>(n)#<characteristic>
-	  var match = service_name.match(/(.+)\((\d+)\)$/);
+	  //handle <service>(<subtype>)#<characteristic>
+	  var match = service_name.match(/(.+)\((.+)\)$/);
           if( match && match[2] !== undefined ) {
             service_name = match[1];
             mapping.subtype = match[2];
+	    if( !mapping.name ) mapping.name = service_name +'('+ mapping.subtype +')#'+ characteristic_type;
 	  }
+	} else if( mapping.subtype ) {
+	  if( !mapping.name ) mapping.name = characteristic_type +'('+ mapping.subtype +')';
+	}
 
-          if( services_hash[service_name +'#'+ mapping.subtype] )
-            controlService = services_hash[service_name +'#'+ mapping.subtype];
-          else {
-            controlService = this.createDeviceService(service_name,mapping.subtype);
-            services.push( controlService );
-            services_hash[service_name +'#'+ mapping.subtype] = controlService;
-          }
-        } else {
-          service_name = service_name_default;
-          controlService = services_hash[service_name +'#'+ mapping.subtype];
-          //if( !mapping.name ) mapping.name = service_name+'#'+characteristic_type;
-        }
-
-        if( seen[service_name +'#'+ characteristic_type +'#'+ mapping.subtype] ) {
+        if( seen[service_name +'#'+ characteristic_type] ) {
           if( mapping.subtype === undefined ) {
             this.log.error(this.name + ': '+ characteristic_type + ' characteristic already defined for service ' + this.name + ' and no subtype given');
             continue;
           }
+        }
 
-          controlService = this.createDeviceService( service_name, mapping.subtype );
+        if( services_hash[service_name +'#'+ mapping.subtype] )
+          controlService = services_hash[service_name +'#'+ mapping.subtype];
+        else {
+          controlService = this.createDeviceService(service_name,mapping.subtype);
           services.push( controlService );
           services_hash[service_name +'#'+ mapping.subtype] = controlService;
-
         }
+
         if( mapping.subtype !== undefined ) {
           controlService.subtype = mapping.subtype;
 	  if( service_name !== 'InputSource' )
@@ -3097,9 +3057,9 @@ FHEMAccessory.prototype = {
           this.log.error(this.name + ': no '+ (mapping.name?mapping.name:mapping.characteristic_type) + ' characteristic available for service ' + service_name);
           continue;
         }
-        seen[service_name +'#'+ characteristic_type  +'#'+ mapping.subtype] = true;
+        seen[service_name +'#'+ characteristic_type] = true;
 
-        this.log('    ' + (mapping.name?mapping.name:mapping.characteristic_type) + (mapping.subtype?':'+mapping.subtype:'')
+        this.log('    ' + (mapping.name?mapping.name:mapping.characteristic_type)
                         + ' characteristic for ' + mapping.device + ':' + mapping.reading);
 
         this.subscribe(mapping, characteristic);

@@ -49,7 +49,7 @@ devices use the homebridgeMapping attribute. it is parsed from left to right and
   - the special clear to clear the mappings for the current characteristic
   - linkedTo=<service-name> to link the current service to <service-name>
 - characteristic names can be given as <service_name>#<characteristic_name> to create multiple services for a device
-  this can also include a subtype like so; <service_name>(subtype)#<characteristic_name> to create multiple identical services for a device
+  this can also include a subtype like so; <service_name>(<subtype>)#<characteristic_name> to create multiple services of the same type
 - the following special values for a description are recognized: clear -> clears all mappings for this device
 
 e.g:
