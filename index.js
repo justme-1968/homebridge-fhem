@@ -1866,17 +1866,16 @@ FHEMAccessory(platform, s) {
   } else if( !this.mappings.On
              && s.PossibleSets.match(/(^| )on\b/)
              && s.PossibleSets.match(/(^| )off\b/) ) {
+    if( !this.service_name ) this.service_name = 'switch';
     this.mappings.On = { reading: 'state', valueOff: '/off|A0|000000/', cmdOn: 'on', cmdOff: 'off' };
-    if( !s.Readings.state )
-      delete this.mappings.On.reading;
-    else if( !this.service_name )
-      this.service_name = 'switch';
+    if( !s.Readings.state ) delete this.mappings.On.reading;
 
   } else if( (!this.service_name || this.service_name === 'switch') && s.Attributes.setList ) {
     var parts = s.Attributes.setList.split( ' ' );
     if( parts.length == 2 ) {
       if( !this.service_name ) this.service_name = 'switch';
       this.mappings.On = { reading: 'state', valueOn: parts[0], cmdOn: parts[0], cmdOff: parts[1] };
+      if( !s.Readings.state ) delete this.mappings.On.reading;
     }
 
   }
@@ -2069,6 +2068,8 @@ FHEMAccessory(platform, s) {
           mapping.homekit2name[Characteristic[characteristic_type][mapping.default]] = mapping.default;
           mapping.default = Characteristic[characteristic_type][mapping.default];
         }
+	if( typeof mapping.default === 'string' )
+          mapping.default = mapping.default.replace( /\+/g, ' ' );
         this.log.debug( 'default: ' + mapping.default );
       }
 
@@ -2842,14 +2843,51 @@ FHEMAccessory.prototype = {
     var service_name_default = controlService.service_name;
 
     if( 0 && service_name === 'Television' ) {
+      var savedNames = {};
+      var inputs = ['0', '1', '2', '3', '4', '5'];
+      var inputAppIds = new Array();
+      inputs.forEach((value, i) => {
+                    // get appid
+                    let appId = null;
+
+                    if (value.appId != undefined) {appId = value.appId;} else {appId = value;}
+                    let inputName = appId;
+                   this.log.debug('appID Value: ' + inputName);
+                    if (appId != undefined && appId != null && appId != '') {appId = appId.replace(/\s/g, ''); // remove all white spaces from the string
+
+                    let input = new Service.InputSource(appId, 'inputSource' + i);
+                   this.log.debug('appID Value: ' + value.AppID);
+                    inputName = value.AppID;
+                    input
+                    .setCharacteristic(Characteristic.Identifier, i)
+                    .setCharacteristic(Characteristic.ConfiguredName, inputName)
+                    .setCharacteristic(Characteristic.IsConfigured, Characteristic.IsConfigured.CONFIGURED)
+                    .setCharacteristic(Characteristic.InputSourceType, Characteristic.InputSourceType.APPLICATION)
+                    .setCharacteristic(Characteristic.CurrentVisibilityState, Characteristic.CurrentVisibilityState.SHOWN);
+
+                    input
+                    .getCharacteristic(Characteristic.ConfiguredName)
+                    .on('set', (name, callback) => {
+                        savedNames[appId] = name;
+                        callback()
+                        });
+                    controlService.addLinkedService(input);
+                    services.push(input);
+                    }
+                    });
+        this.log.debug('TESTMGR: ' + value); //undef
+            }
+
+    if( 0 && service_name === 'Television' ) {
       var input = new Service.InputSource('hdmi1', 'HDMI 1');
       input
         .setCharacteristic(Characteristic.Identifier, 1)
         .setCharacteristic(Characteristic.ConfiguredName, 'HDMI 1')
         .setCharacteristic(Characteristic.IsConfigured, Characteristic.IsConfigured.CONFIGURED)
-        .setCharacteristic(Characteristic.InputSourceType, Characteristic.InputSourceType.HDMI);
+        .setCharacteristic(Characteristic.InputSourceType, Characteristic.InputSourceType.HDMI)
+	.setCharacteristic(Characteristic.CurrentVisibilityState, Characteristic.CurrentVisibilityState.SHOWN);
 
-      controlService.addLinkedService(input);
+      //controlService.addLinkedService(input);
 
       services.push( input );
     }
@@ -2970,14 +3008,9 @@ FHEMAccessory.prototype = {
                          }.bind(this, mapping) );
             }
 
-            continue;
-        }
-
-
-        if( !mapping.characteristic && mapping.name === undefined ) {
-          //this.log.error(this.name + ': '+ ' no such characteristic: ' + characteristic_type );
           continue;
         }
+
 
         var parts = characteristic_type.split('#');
         if( parts[1] ) {
@@ -3012,6 +3045,25 @@ FHEMAccessory.prototype = {
         if( mapping.subtype !== undefined ) {
           controlService.subtype = mapping.subtype;
           controlService.getCharacteristic(Characteristic.Name).setValue(mapping.subtype);
+        }
+
+        if( characteristic_type === 'linkedTo' ) {
+	  let service = services_hash[mapping.reading];
+	  if( !service )
+            this.log.error(this.name + ': no '+ mapping.reading +' service to link to' );
+	  else if( mapping.reading === service_name )
+            this.log.error(this.name + ': can\'t link '+ mapping.reading +' service to itself' );
+          else {
+            service.addLinkedService(controlService);
+            this.log('    linked to '+ mapping.reading );
+	  }
+
+          continue;
+	}
+
+        if( !mapping.characteristic && mapping.name === undefined ) {
+          //this.log.error(this.name + ': '+ ' no such characteristic: ' + characteristic_type );
+          continue;
         }
 
 
