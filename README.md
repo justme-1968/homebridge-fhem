@@ -48,6 +48,8 @@ devices use the homebridgeMapping attribute. it is parsed from left to right and
   - the name of an already mapped characteristic to copy the configuration from there
   - the special clear to clear the mappings for the current characteristic
   - linkedTo=<service-name> to link the current service to <service-name>
+- characteristic names can be given as <service_name>#<characteristic_name> to create multiple services for a device
+  this can also include a subtype like so; <service_name>(subtype)#<characteristic_name> to create multiple identical services for a device
 - the following special values for a description are recognized: clear -> clears all mappings for this device
 
 e.g:
@@ -92,7 +94,7 @@ the names for the stadard service and characteristic types can be found here: ..
           each list entry consists of a : separated pair of from and to values
           each from value can be a literal value or a regex of the form /regex/
           each to value can be a literal value or a homekit defined term for this characteristic
-          if to is exaktly # then it is set to the current value. usefull for regex ranges
+          if to is exactly # then it is set to the current value. usefull for regex ranges
 - valueOn, valueOff: the reading values that are mapped to the true/false resp. on/off states in homekit. shotcut for values
                      if only one is given all values not matching this one are automaticaly mapped to the other
 - default: value to use if no reading is found or if none of values/valueOn/valueOff matches
@@ -100,7 +102,6 @@ the names for the stadard service and characteristic types can be found here: ..
 - valid: a ; separated list of valid values for this characteristic,
          each to value can be a literal value or a homekit defined term for this characteristic
 - readOnly: if set to true: make this charateristic read only. ignore any changes made by homekit
-- characteristic names can be given as <service_name>#<characteristic_name> to create multiple services for a device
 
 e.g.:
 ```
