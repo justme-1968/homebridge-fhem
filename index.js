@@ -1071,6 +1071,9 @@ FHEM_execute(log,connection,cmd,callback) {
 }
 
 FHEMPlatform.prototype = {
+  didFinishLaunching: function() { this.log.error('didFinishLaunching')
+  },
+
   shutdown: function() { //this.log.error('shutdown')
     for( var informId in FHEM_subscriptions ) {
       for( var subscription of FHEM_subscriptions[informId] ) {
@@ -2714,7 +2717,7 @@ FHEMAccessory.prototype = {
         name = subtype + ' (' + this.siriName + ')';
 
       this.log('  ' + service_name + ' service for ' + this.name + (subtype?' (' + subtype + ')':'') );
-      var service = new service(name,subtype);
+      var service = new service(name,subtype?subtype:'');
       service.service_name = service_name;
       return service;
     }
