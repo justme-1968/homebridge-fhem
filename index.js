@@ -2020,7 +2020,9 @@ FHEMAccessory(platform, s) {
   } else if( this.type == 'HMCCUDEV' ) {
     this.model = s.Internals.ccutype;
     this.serial = s.Internals.ccuaddr;
-  } else
+  }
+
+  if( !this.serial )
     this.serial = this.fuuid;
 
 
