@@ -2799,6 +2799,24 @@ FHEMAccessory.prototype = {
                    }.bind(this) );
     }
 
+    var characteristic = informationService.getCharacteristic(Characteristic.Name);
+    if( characteristic ) {
+      this.log('    name (siriName) characteristic for ' + this.name)
+      characteristic
+        .on('set', function(mapping, value, callback, context) {
+                     if( context !== 'fromFHEM' ) {
+	               this.log('set name: ' + value);
+	               this.siriName = value;
+                       this.execute( 'attr '+ this.device +' siriName '+ this.siriName );
+                       this.log.info( 'siriName attribute updated.' );
+                     }
+                     callback();
+                   }.bind(this, mapping) )
+        .on('get', function(callback) {
+                     callback( null, this.siriName );
+                   }.bind(this) );
+    }
+
     if( Characteristic.Reachable ) {
       if( 0 && this.mappings.Reachable ) {
         this.log('  bridging service for ' + this.name)
@@ -2964,8 +2982,8 @@ FHEMAccessory.prototype = {
             characteristic
               .on('set', function(mapping, value, callback, context) {
                            if( context !== 'fromFHEM' ) {
-			     this.log('set reset: ' + value);
-			     this.historyService.extra_persist.reset = value;
+                             this.log('set reset: ' + value);
+                             this.historyService.extra_persist.reset = value;
                              FHEM_update( mapping.device + '-EVE-TimesOpened', 0 );
                            }
                            callback();
@@ -2988,8 +3006,8 @@ FHEMAccessory.prototype = {
           characteristic_type = parts[1];
           //mapping.characteristic_type = parts[1]
 
-	  //handle <service>(<subtype>)#<characteristic>
-	  var match = service_name.match(/(.+)\((.+)\)$/);
+          //handle <service>(<subtype>)#<characteristic>
+          var match = service_name.match(/(.+)\((.+)\)$/);
           if( match && match[2] !== undefined ) {
             service_name = match[1];
             mapping.subtype = match[2];
