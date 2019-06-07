@@ -2081,7 +2081,7 @@ FHEMAccessory(platform, s) {
           mapping.homekit2name[Characteristic[characteristic_type][mapping.default]] = mapping.default;
           mapping.default = Characteristic[characteristic_type][mapping.default];
         }
-	if( typeof mapping.default === 'string' )
+        if( typeof mapping.default === 'string' )
           mapping.default = mapping.default.replace( /\+/g, ' ' );
         this.log.debug( 'default: ' + mapping.default );
       }
@@ -2400,8 +2400,8 @@ FHEMAccessory.prototype = {
             mapping[p[0]] = p[1].replace( /\+/g, ' ' );
 
         } else if( p.length == 1 ) {
-	  var m = this.mappings[param];
-	  if( m === undefined ) m = this.mappings[service+'#'+param];
+          var m = this.mappings[param];
+          if( m === undefined ) m = this.mappings[service+'#'+param];
           if( m !== undefined ) {
             try {
               mapping = Object.assign({}, m);
@@ -2805,8 +2805,8 @@ FHEMAccessory.prototype = {
       characteristic
         .on('set', function(mapping, value, callback, context) {
                      if( context !== 'fromFHEM' ) {
-	               this.log('set name: ' + value);
-	               this.siriName = value;
+                       this.log('set name: ' + value);
+                       this.siriName = value;
                        this.execute( 'attr '+ this.device +' siriName '+ this.siriName );
                        this.log.info( 'siriName attribute updated.' );
                      }
@@ -3011,11 +3011,11 @@ FHEMAccessory.prototype = {
           if( match && match[2] !== undefined ) {
             service_name = match[1];
             mapping.subtype = match[2];
-	    if( !mapping.name ) mapping.name = service_name +'('+ mapping.subtype +')#'+ characteristic_type;
-	  }
-	} else if( mapping.subtype ) {
-	  if( !mapping.name ) mapping.name = characteristic_type +'('+ mapping.subtype +')';
-	}
+            if( !mapping.name ) mapping.name = service_name +'('+ mapping.subtype +')#'+ characteristic_type;
+          }
+        } else if( mapping.subtype ) {
+          if( !mapping.name ) mapping.name = characteristic_type +'('+ mapping.subtype +')';
+        }
 
         if( seen[service_name +'#'+ characteristic_type] ) {
           if( mapping.subtype === undefined ) {
@@ -3034,23 +3034,23 @@ FHEMAccessory.prototype = {
 
         if( mapping.subtype !== undefined ) {
           controlService.subtype = mapping.subtype;
-	  if( service_name !== 'InputSource' )
+          if( service_name !== 'InputSource' )
             controlService.getCharacteristic(Characteristic.Name).setValue(mapping.subtype);
         }
 
         if( characteristic_type === 'linkedTo' ) {
-	  let service = services_hash[mapping.reading +'#undefined'];
-	  if( !service )
+          let service = services_hash[mapping.reading +'#undefined'];
+          if( !service )
             this.log.error(this.name + ': no '+ mapping.reading +' service to link to' );
-	  else if( mapping.reading === service_name )
+          else if( mapping.reading === service_name )
             this.log.error(this.name + ': can\'t link '+ mapping.reading +' service to itself' );
           else {
             service.addLinkedService(controlService);
             this.log('    linked to '+ service.service_name );
-	  }
+          }
 
           continue;
-	}
+        }
 
         if( !mapping.characteristic && mapping.name === undefined ) {
           //this.log.error(this.name + ': '+ ' no such characteristic: ' + characteristic_type );
@@ -3178,7 +3178,10 @@ FHEMAccessory.prototype = {
                        }.bind(this, mapping) );
         }
 
-        if( FakeGatoHistoryService && (characteristic_type === 'ContactSensorState' || characteristic_type === 'MotionDetected') ) {
+        if( FakeGatoHistoryService
+            && (characteristic_type === 'ContactSensorState' || characteristic_type === 'MotionDetected')
+            && !seen[service_name +'#E863F11A-079E-48FF-8F27-9C2605A29F52']) {
+          seen[service_name +'#E863F11A-079E-48FF-8F27-9C2605A29F52'] = true;
           this.log('    ' + 'Custom LastActivation characteristic '+ mapping.device + ':' + mapping.reading);
           characteristic = new Characteristic( 'LastActivation', 'E863F11A-079E-48FF-8F27-9C2605A29F52' );
           this.mappings['E863F11A-079E-48FF-8F27-9C2605A29F52'] = { name: 'Custom LastActivation', characteristic: characteristic, informId: mapping.device+'-EVE-LastActivation', log: mapping.log };
