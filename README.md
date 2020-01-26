@@ -11,7 +11,7 @@ a debug browser is available at port 8282 (or 8283).
 add one (or more) FHEM platforms to config.json and set the filter(s) to a fhem devspec that
 includes the devices that should be bridged to homekit.
 
-## directly (automaticaly) supports:
+## directly (automatically) supports:
 - switches (devices with set on and set off commands)
 - lights (devices with set on and set off commands)
 - homematc, FS20 and ZWave dimmers (devices with set on, set off and set dim or set pct commands)
@@ -49,7 +49,7 @@ devices use the homebridgeMapping attribute. it is parsed from left to right and
   - the special clear to clear the mappings for the current characteristic
   - linkedTo=<service-name> to link the current service to <service-name>
 - characteristic names can be given as <service_name>#<characteristic_name> to create multiple services for a device
-  this can also include a subtype like so; <service_name>(<subtype>)#<characteristic_name> to create multiple services of the same type
+  this can also include a subtype like so: <service_name>(<subtype>)#<characteristic_name> to create multiple services of the same type
 - the following special values for a description are recognized: clear -> clears all mappings for this device
 
 e.g:
