@@ -1681,8 +1681,8 @@ FHEMAccessory(platform, s) {
     }
 
   } else if( genericType == 'blind'
-	     || s.Internals.type == 'blind' )
-             || s.Attributes.subType == 'blind' )
+	     || s.Internals.type == 'blind'
+             || s.Attributes.subType == 'blind'
              || s.Attributes.subType == 'blindActuator' ) {
     if( !this.service_name ) this.service_name = 'blind';
     delete this.mappings.Brightness;
