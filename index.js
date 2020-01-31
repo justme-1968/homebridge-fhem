@@ -189,6 +189,9 @@ FHEM_update(informId, orig, no_update) {
           } else if( mapping.characteristic_type === 'CurrentRelativeHumidity' )
             entry.humidity = value;
 
+          else if( mapping.characteristic_type === 'AirQuality' )
+            entry.ppm = value;
+
           else if( mapping.characteristic_type === CustomUUIDs.AirPressure )
             entry.pressure = value;
 
@@ -1211,7 +1214,7 @@ var CustomUUIDs = {
 
                  // see: https://github.com/ebaauw/homebridge-hue/wiki/Characteristics
                  CT: 'E887EF67-509A-552D-A138-3DA215050F46',
-   ColorTemperature: 'A18E5901-CFA1-4D37-A10F-0071CEEEEEBD',
+   //ColorTemperature: 'A18E5901-CFA1-4D37-A10F-0071CEEEEEBD',
 
              Volume: '00001001-0000-1000-8000-135D67EC4377', // used in YamahaAVRPlatform, recognized by EVE
 
@@ -1370,13 +1373,13 @@ FHEMAccessory(platform, s) {
       minValue = parseInt(1000000/values[2]);
       maxValue = parseInt(1000000/values[0]);
     }
-    this.mappings[CustomUUIDs.ColorTemperature] = { reading: 'ct', cmd: 'ct', delay: true,
-                                                    name: 'Color Temperature', format: 'INT', unit: 'K',
-                                                    minValue: maxValue,  maxValue: minValue, minStep: 10 };
+    this.mappings[ColorTemperature] = { reading: 'ct', cmd: 'ct', delay: true,
+                                        name: 'Color Temperature', format: 'INT', unit: 'K',
+                                        minValue: maxValue,  maxValue: minValue, minStep: 10 };
     var reading2homekit = function(mapping, orig) { return parseInt(1000000 / parseInt(orig)) };
     var homekit2reading = function(mapping, orig) { return parseInt(1000000 / orig) };
-    this.mappings[CustomUUIDs.ColorTemperature].reading2homekit = reading2homekit.bind(null, this.mappings.color);
-    this.mappings[CustomUUIDs.ColorTemperature].reading2homekit = reading2homekit.bind(null, this.mappings.color);
+    this.mappings[ColorTemperature].reading2homekit = reading2homekit.bind(null, this.mappings.color);
+    this.mappings[ColorTemperature].reading2homekit = reading2homekit.bind(null, this.mappings.color);
 
   } else if( match = s.PossibleSets.match(/(^| )color(:[^\d]*([^\$ ]*))?/) ) {
     this.service_name = 'light';
@@ -1387,9 +1390,9 @@ FHEMAccessory(platform, s) {
       minValue = parseInt(values[0]);
       maxValue = parseInt(values[2]);
     }
-    this.mappings[CustomUUIDs.ColorTemperature] = { reading: 'color', cmd: 'color', delay: true,
-                                                    name: 'Color Temperature', format: 'INT', unit: 'K',
-                                                    minValue: minValue,  maxValue: maxValue, minStep: 10 };
+    this.mappings[ColorTemperature] = { reading: 'color', cmd: 'color', delay: true,
+                                        name: 'Color Temperature', format: 'INT', unit: 'K',
+                                        minValue: minValue,  maxValue: maxValue, minStep: 10 };
   }*/
 
 
@@ -1548,8 +1551,8 @@ FHEMAccessory(platform, s) {
     this.mappings.colormode = { reading: 'colormode' };
   if( s.Readings.xy )
     this.mappings.xy = { reading: 'xy' };
-  //if( s.Readings.ct && !this.mappings[CustomUUIDs.ColorTemperature] )
-  //  this.mappings.ct = { reading: 'ct' };
+  //if( s.Readings.ct && !this.mappings[ColorTemperature] )
+  //  this.mappings.ct = { reading: 'ct', cmd: 'ct' };
 
   if( s.Readings.volume ) {
     this.mappings[CustomUUIDs.Volume] = { reading: 'volume', cmd: 'volume', delay: true,
@@ -1678,6 +1681,8 @@ FHEMAccessory(platform, s) {
     }
 
   } else if( genericType == 'blind'
+	     || s.Internals.type == 'blind' )
+             || s.Attributes.subType == 'blind' )
              || s.Attributes.subType == 'blindActuator' ) {
     if( !this.service_name ) this.service_name = 'blind';
     delete this.mappings.Brightness;
@@ -2750,7 +2755,7 @@ FHEMAccessory.prototype = {
     if( typeof service === 'object' )
       return service;
 
-    this.log('  switch service for ' + this.name + ' (' + subtype + ')' )
+    this.log('  switch service (default) for ' + this.name + ' (' + subtype + ')' )
     return new Service.Switch(name, subtype);
   },
 
@@ -2914,6 +2919,9 @@ FHEMAccessory.prototype = {
           var type = mapping.type;
           if( !type )
             switch(service_name) {
+              case 'AirQualitySensor':
+                type = 'room';
+                break;
               case 'TemperatureSensor':
                 type = 'weather';
                 break;
