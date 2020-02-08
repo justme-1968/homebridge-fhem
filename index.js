@@ -2070,8 +2070,8 @@ FHEMAccessory(platform, s) {
       if( s.Attributes.eventMap ) {
         for( var part of s.Attributes.eventMap.split( ' ' ) ) {
           var map = part.split( ':' );
-          if( map[1].toLowerCase() == 'on'
-              || map[1].toLowerCase() == 'off' ) {
+          if( map[1] && ( map[1].toLowerCase() == 'on'
+                          || map[1].toLowerCase() == 'off' ) ) {
             if( !mapping.event_map )
               mapping.event_map = {}
             mapping.event_map[map[0]] = map[1];
