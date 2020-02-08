@@ -1335,13 +1335,13 @@ FHEMAccessory(platform, s) {
     }.bind(null, this.mappings.Brightness);
 
     this.mappings.Brightness.homekit2reading = function(mapping, orig) {
-      var dim_values = ['dim06%', 'dim12%', 'dim18%', 'dim25%', 'dim31%', 'dim37%', 'dim43%',
-                        'dim50%', 'dim56%', 'dim62%', 'dim68%', 'dim75%', 'dim81%', 'dim87%', 'dim93%'];
+      var dim_values = [ 'dim06%', 'dim12%', 'dim18%', 'dim25%', 'dim31%', 'dim37%', 'dim43%', 'dim50%', 
+                         'dim56%', 'dim62%', 'dim68%', 'dim75%', 'dim81%', 'dim87%', 'dim93%', 'dim100%' ];
       //if( value < 3 )
       //  value = 'off';
       //else
       if( orig > 97 )
-        return 'on';
+        return 'dim100%';
 
       return dim_values[Math.round(orig/6.25)];
     }.bind(null, this.mappings.Brightness);
