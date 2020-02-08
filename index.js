@@ -284,9 +284,9 @@ FHEM_reading2homekit_(mapping, orig)
       || reading == 'desired-temp'
       || reading == 'desired'
       || reading == 'desiredTemperature' ) {
-    if( value == 'on' )
+    if( value.toLowerCase() == 'on' )
       value = 31.0;
-    else if( value == 'off' )
+    else if( value.toLowerCase() == 'off' )
       value = 4.0;
     else
       value = parseFloat( value );
@@ -328,7 +328,7 @@ FHEM_reading2homekit_(mapping, orig)
         value = mapped;
     }
 
-    if( value == 'off' )
+    if( value.toLowerCase() == 'off' )
       value = 0;
     else if( value == '000000' )
       value = 0;
@@ -445,9 +445,9 @@ FHEM_reading2homekit_(mapping, orig)
           mapped = 1;
       }
       if( mapping.valueOn === undefined  &&  mapping.valueOff === undefined ) {
-        if( value == 'on' )
+        if( value.toLowerCase() == 'on' )
           mapped = 1;
-        else if( value == 'off' )
+        else if( value.toLowerCase() == 'off' )
           mapped = 0;
         else
           mapped = parseInt(value)?1:0;
@@ -1326,7 +1326,7 @@ FHEMAccessory(platform, s) {
 
     this.mappings.Brightness.reading2homekit = function(mapping, orig) {
       var match;
-      if( orig == 'off' )
+      if( orig.toLowerCase() == 'off' )
         return 0;
       else if( match = orig.match(/dim(\d+)%?/ ) )
         return parseInt( match[1] );
@@ -2070,8 +2070,8 @@ FHEMAccessory(platform, s) {
       if( s.Attributes.eventMap ) {
         for( var part of s.Attributes.eventMap.split( ' ' ) ) {
           var map = part.split( ':' );
-          if( map[1] == 'on'
-              || map[1] == 'off' ) {
+          if( map[1].toLowerCase() == 'on'
+              || map[1].toLowerCase() == 'off' ) {
             if( !mapping.event_map )
               mapping.event_map = {}
             mapping.event_map[map[0]] = map[1];
