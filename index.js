@@ -838,7 +838,7 @@ FHEMPlatform(log, config, api) {
     base_url += '/fhem';
   }
 
-  var request = require('request');
+  var request = require('postman-request');
   var auth = config['auth'];
   if( auth ) {
     if( auth.sendImmediately === undefined )
@@ -2823,24 +2823,9 @@ FHEMAccessory.prototype = {
     }
 
     if( Characteristic.Reachable ) {
-      if( 0 && this.mappings.Reachable ) {
-        this.log('  bridging service for ' + this.name)
-        var bridgingService = new Service.BridgingState();
-        services.push( bridgingService );
-
-        this.log('    reachability characteristic for ' + this.name)
-        var characteristic = bridgingService.getCharacteristic(Characteristic.Reachable);
-
-        this.subscribe(this.mappings.Reachable,characteristic);
-        characteristic.value = FHEM_cached[this.mappings.Reachable.informId]==true;
-
-        characteristic
-          .on('get', function(callback) {
-                       this.query(this.mappings.Reachable, callback);
-                     }.bind(this) );
-
-      } else if( this.mappings.Reachable ) {
-          this.subscribe(this.mappings.Reachable);
+      if( this.mappings.Reachable ) {
+	this.log.info( s.Internals.NAME + ' has reachability ['+ this.mappings.reachable.reading +']' );
+        this.subscribe(this.mappings.Reachable);
       }
     }
 
