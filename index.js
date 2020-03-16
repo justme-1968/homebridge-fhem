@@ -284,9 +284,9 @@ FHEM_reading2homekit_(mapping, orig)
       || reading == 'desired-temp'
       || reading == 'desired'
       || reading == 'desiredTemperature' ) {
-    if( value.toLowerCase() == 'on' )
+    if( typeof value === 'string' && value.toLowerCase() == 'on' )
       value = 31.0;
-    else if( value.toLowerCase() == 'off' )
+    else if( typeof value === 'string' && value.toLowerCase() == 'off' )
       value = 4.0;
     else
       value = parseFloat( value );
@@ -1335,7 +1335,7 @@ FHEMAccessory(platform, s) {
     }.bind(null, this.mappings.Brightness);
 
     this.mappings.Brightness.homekit2reading = function(mapping, orig) {
-      var dim_values = [ 'dim06%', 'dim12%', 'dim18%', 'dim25%', 'dim31%', 'dim37%', 'dim43%', 'dim50%', 
+      var dim_values = [ 'dim06%', 'dim12%', 'dim18%', 'dim25%', 'dim31%', 'dim37%', 'dim43%', 'dim50%',
                          'dim56%', 'dim62%', 'dim68%', 'dim75%', 'dim81%', 'dim87%', 'dim93%', 'dim100%' ];
       //if( value < 3 )
       //  value = 'off';
