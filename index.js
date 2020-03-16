@@ -445,9 +445,9 @@ FHEM_reading2homekit_(mapping, orig)
           mapped = 1;
       }
       if( mapping.valueOn === undefined  &&  mapping.valueOff === undefined ) {
-        if( value.toLowerCase() == 'on' )
+        if( typeof value === 'string' && value.toLowerCase() == 'on' )
           mapped = 1;
-        else if( value.toLowerCase() == 'off' )
+        else if( typeof value === 'string' && value.toLowerCase() == 'off' )
           mapped = 0;
         else
           mapped = parseInt(value)?1:0;
