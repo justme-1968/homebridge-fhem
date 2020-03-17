@@ -2824,7 +2824,7 @@ FHEMAccessory.prototype = {
 
     if( Characteristic.Reachable ) {
       if( this.mappings.Reachable ) {
-	this.log.info( s.Internals.NAME + ' has reachability ['+ this.mappings.reachable.reading +']' );
+	this.log.info( '  ' + this.device + ' has reachability ['+ this.mappings.Reachable.reading +']' );
         this.subscribe(this.mappings.Reachable);
       }
     }
