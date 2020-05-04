@@ -2810,10 +2810,10 @@ FHEMAccessory.prototype = {
       characteristic
         .on('set', function(mapping, value, callback, context) {
                      if( context !== 'fromFHEM' ) {
-                       this.log('set name: ' + value);
-                       this.siriName = value;
-                       this.execute( 'attr '+ this.device +' siriName '+ this.siriName );
-                       this.log.info( 'siriName attribute updated.' );
+                       //this.log('set name: ' + value);
+                       //this.siriName = value;
+                       //this.execute( 'attr '+ this.device +' siriName '+ this.siriName );
+                       //this.log.info( 'siriName attribute updated.' );
                      }
                      callback();
                    }.bind(this, mapping) )
