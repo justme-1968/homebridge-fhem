@@ -43,15 +43,14 @@ devices use the homebridgeMapping attribute. it is parsed from left to right and
 - the homebridgeMapping attribute containts a space separated list of characteristic descriptions
 - each description consists of the characteristic name followed by a = followed by a komma separated list of parameters
 - each parameter can be of the form
-  - <command>:<device>:<reading> where parts can be omitted from left to right or
-  - <name>=<value>
+  - \<command\>:\<device\>:\<reading\> where parts can be omitted from left to right or
+  - \<name\>=\<value\>
   - the name of an already mapped characteristic to copy the configuration from there
   - the special clear to clear the mappings for the current characteristic
-  - linkedTo=<service-name> to link the current service to <service-name>
-- characteristic names can be given as <service_name>#<characteristic_name> to create multiple services for a device
-  this can also include a subtype like so: <service_name>(<subtype>)#<characteristic_name> to create multiple services of the same type
+  - linkedTo=\<service-name\> to link the current service to \<service-name\>
+- characteristic names can be given as \<service_name\>#\<characteristic_name\> to create multiple services for a device
+  this can also include a subtype like so: \<service_name\>(\<subtype\>)#\<characteristic_name\> to create multiple services of the same type
 - the following special values for a description are recognized: clear -> clears all mappings for this device
-
 e.g:
 ```
 attr <thermostat> genericDeviceType thermostat
@@ -126,11 +125,11 @@ history:size=1024
 
 
 ### Homekit -> FHEM parameters:
-- delay: true/<number> -> the value ist send afer one second/<number>ms of inactivity
+- delay: true/\<number\> -> the value ist send afer one second/\<number\>ms of inactivity
 - factor: divide homekit value by this factor
 - maxValue: for all int and float characteristics -> the allowed range for this value in homekit
 - max: the max value the reading has in fhem, only if different from maxValue
-- cmd: the set command to use: set <device> <cmd> <value>
+- cmd: the set command to use: set \<device\> \<cmd\> \<value\>
 - cmdOn, cmdOff: for all bool characteristics
 - cmds: a ; separated list that indicates the mapping of homekit values to fhem values.
         each list entry consists of a : separated pair of from and to values
@@ -193,7 +192,7 @@ examples:
                                On=activity,subtype=Off,valueOn=PowerOff,valueOff=PowerOff,cmd=off
 ```
 
-- 1 device -> n services: give characteristic names as <service_name>#<characteristic_name>
+- 1 device -> n services: give characteristic names as \<service_name\>#\<characteristic_name\>
 ```
   attr <name> genericDeviceType switch
   attr <name> homebridgeMapping On=state,cmdOn=on,cmdOff=off
