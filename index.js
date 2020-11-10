@@ -1808,7 +1808,7 @@ FHEMAccessory(platform, s) {
 
     if( match[3] ) {
       var values = match[3].split(',');
-      if( match[3].match(/slider/ ) ) {
+      if( match[2].match(/slider/ ) ) {
         this.mappings.TargetTemperature.minValue = parseFloat(values[0]);
         this.mappings.TargetTemperature.maxValue = parseFloat(values[2]);
         this.mappings.TargetTemperature.minStep = values[1];
