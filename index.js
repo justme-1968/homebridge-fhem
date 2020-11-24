@@ -393,7 +393,7 @@ FHEM_reading2homekit_(mapping, orig)
       var mapped = undefined;
       if( typeof mapping.value2homekit_re === 'object' )
         for( var entry of mapping.value2homekit_re ) {
-          if( value.match( entry.re ) ) {
+          if( value && value.match( entry.re ) ) {
             mapped = entry.to;
             break;
           }
