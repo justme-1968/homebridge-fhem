@@ -112,8 +112,7 @@ var tzoffset = (new Date()).getTimezoneOffset() * 60000; //offset in millisecond
 var FHEM_cached = {};
 function
 FHEM_update(informId, orig, no_update) {
-  if( orig === undefined
-      || FHEM_cached[informId] === orig )
+  if( orig === undefined)
     return;
 
   FHEM_cached[informId] = orig;
@@ -126,6 +125,9 @@ FHEM_update(informId, orig, no_update) {
     subscriptions.forEach( function(subscription) {
       var mapping = subscription.mapping;
       if( typeof mapping !== 'object' )
+        return;
+
+      if (FHEM_cached[informId] === orig && !mapping.characteristic_type === 'ProgrammableSwitchEvent')
         return;
 
       mapping.last_update = parseInt( Date.now()/1000 );
