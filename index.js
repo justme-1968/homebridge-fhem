@@ -127,7 +127,7 @@ FHEM_update(informId, orig, no_update) {
       if( typeof mapping !== 'object' )
         return;
 
-      if (FHEM_cached[informId] === orig && !mapping.characteristic_type === 'ProgrammableSwitchEvent')
+      if (FHEM_cached[informId] === orig && mapping.characteristic_type !== 'ProgrammableSwitchEvent')
         return;
 
       mapping.last_update = parseInt( Date.now()/1000 );
