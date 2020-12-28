@@ -115,8 +115,6 @@ FHEM_update(informId, orig, no_update) {
   if( orig === undefined)
     return;
 
-  FHEM_cached[informId] = orig;
-  //FHEM_cached[informId] = { orig: orig, timestamp: Date.now() };
   var date = new Date(Date.now()-tzoffset).toISOString().replace(/T/, ' ').replace(/\..+/, '');
   console.log('  ' + date + ' caching: ' + informId + ': ' + orig );
 
@@ -129,6 +127,9 @@ FHEM_update(informId, orig, no_update) {
 
       if (FHEM_cached[informId] === orig && mapping.characteristic_type !== 'ProgrammableSwitchEvent')
         return;
+
+      FHEM_cached[informId] = orig;
+      //FHEM_cached[informId] = { orig: orig, timestamp: Date.now() };
 
       mapping.last_update = parseInt( Date.now()/1000 );
 
