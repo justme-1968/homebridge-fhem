@@ -112,8 +112,14 @@ var tzoffset = (new Date()).getTimezoneOffset() * 60000; //offset in millisecond
 var FHEM_cached = {};
 function
 FHEM_update(informId, orig, no_update) {
-  if( orig === undefined)
-    return;
+  if( orig === undefined
+      || FHEM_cached[informId] === orig )
+     return;
+
+  FHEM_cached[informId] = orig;
+  //FHEM_cached[informId] = { orig: orig, timestamp: Date.now() };
+  var date = new Date(Date.now()-tzoffset).toISOString().replace(/T/, ' ').replace(/\..+/, '');
+  console.log('  ' + date + ' caching: ' + informId + ': ' + orig );
 
   var subscriptions = FHEM_subscriptions[informId];
   if( subscriptions )
@@ -121,14 +127,6 @@ FHEM_update(informId, orig, no_update) {
       var mapping = subscription.mapping;
       if( typeof mapping !== 'object' )
         return;
-
-      if( FHEM_cached[informId] === orig && mapping.characteristic_type !== 'ProgrammableSwitchEvent' )
-        return;
-
-      FHEM_cached[informId] = orig;
-      //FHEM_cached[informId] = { orig: orig, timestamp: Date.now() };
-      var date = new Date(Date.now()-tzoffset).toISOString().replace(/T/, ' ').replace(/\..+/, '');
-      console.log('  ' + date + ' caching: ' + informId + ': ' + orig );
 
       mapping.last_update = parseInt( Date.now()/1000 );
 
