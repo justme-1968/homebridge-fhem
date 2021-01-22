@@ -1365,7 +1365,7 @@ FHEMAccessory(platform, s) {
   }
 
   /*if( match = s.PossibleSets.match(/(^| )ct(:[^\d]*([^\$ ]*))?/) ) {
-    this.service_name = 'light';
+    if( !this.service_name ) this.service_name = 'light';
     var minValue = 2000;
     var maxValue = 6500;
     if( match[3] ) {
@@ -1382,7 +1382,7 @@ FHEMAccessory(platform, s) {
     this.mappings[ColorTemperature].reading2homekit = reading2homekit.bind(null, this.mappings.color);
 
   } else if( match = s.PossibleSets.match(/(^| )color(:[^\d]*([^\$ ]*))?/) ) {
-    this.service_name = 'light';
+    if( !this.service_name ) this.service_name = 'light';
     var minValue = 2000;
     var maxValue = 6500;
     if( match[3] ) {
@@ -1788,7 +1788,7 @@ FHEMAccessory(platform, s) {
     this.mappings.SecuritySystemTargetState = { reading: 'state', values: ['/^home/:DISARMED', '/^gotosleep/:NIGHT_ARM', '/^absent/:STAY_ARM', '/^gone/:AWAY_ARM'], cmds: ['STAY_ARM:home', 'AWAY_ARM:absent', 'NIGHT_ARM:gotosleep', 'DISARM:home'], delay: true }
 
   } else if( s.Attributes.model == 'fs20di' )
-    this.service_name = 'light';
+    if( !this.service_name ) this.service_name = 'light';
 
   if( match = s.PossibleSets.match(/(^| )desired-temp(:[^\d]*([^\$ ]*))?/) ) {
     //HM & Comet DECT
