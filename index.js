@@ -3189,12 +3189,12 @@ FHEMAccessory.prototype = {
             .on('get', function(mapping, callback) {
                          if( this.historyService === undefined ) {
                            this.log.error(this.name + ': Custom LastActivation characteristic requires FakeGatoHistory');
-                           //callback( "error" );
+                           callback( "error" );
                            return;
                          }
                          if( mapping.last_update === undefined ) {
                            this.log.error(this.name + ': Custom LastActivation characteristic: last update unknown ');
-                           //callback( "error" );
+                           callback( "error" );
                            return;
                          }
 
