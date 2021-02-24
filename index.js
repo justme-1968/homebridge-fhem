@@ -1155,10 +1155,10 @@ FHEMPlatform.prototype = {
 
     var cmd = 'jsonlist2';
     if( this.filter )
-      cmd += ' ' + this.filter;
+      cmd += '%20' + encodeURIComponent(this.filter);
     if( FHEM_csrfToken[this.connection.base_url] )
       cmd += '&fwcsrf='+FHEM_csrfToken[this.connection.base_url];
-    var url = encodeURI( this.connection.base_url + '?cmd=' + cmd + '&XHR=1');
+    var url = this.connection.base_url + '?cmd=' + cmd + '&XHR=1';
     this.log.info( 'fetching: ' + url );
 
 
