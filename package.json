@@ -1,10 +1,12 @@
 {
   "name": "homebridge-fhem",
-  "version": "0.5.25",
+  "version": "0.5.26",
   "description": "a fhem platform plugin for homebridge",
   "author": {
     "name": "justme1968"
   },
+  "files": [
+  ],
   "licenses": [
     {
       "type": "ISC"
