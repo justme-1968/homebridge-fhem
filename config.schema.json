@@ -1,44 +1,48 @@
 {
   "pluginAlias": "FHEM",
   "pluginType": "platform",
-  "headerDisplay": "Full HomeKit support for FHEM. See the [homebridge-fhem](https://github.com/justme-1968/homebridge-fhem) developer page for documentation.",
-  "footerDisplay": "You can find out more about FHEM on its [project page](https://fhem.de)",
+  "headerDisplay": "HomeKit support for the FHEM home automation system. See the [homebridge-fhem](https://github.com/justme-1968/homebridge-fhem) developer page for documentation.",
+  "footerDisplay": "Find out more about FHEM on its [project page](https://fhem.de)",
   "singular": false,
 
   "schema": {
-    "name": {
-      "type": "string",
-      "title": "Name",
-      "required": false,
-      "default": "FHEM",
-      "placeholder": "e.g. FHEM",
-      "description": "Name for this FHEM connection."
-    },
+    "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "Name",
+          "required": false,
+          "default": "FHEM",
+          "placeholder": "e.g. FHEM",
+          "description": "Name for this FHEM connection."
+        },
 
-    "server": {
-      "type": "string",
-      "title": "Server",
-      "required": true,
-      "default": "localhost",
-      "placeholder": "e.g. localhost",
-      "description": "IP of the FHEM server"
-    },
+        "server": {
+          "type": "string",
+          "format": "hostname",
+          "title": "Server",
+          "required": true,
+          "default": "localhost",
+          "placeholder": "e.g. localhost",
+          "description": "IP Address / Hostname of the FHEM server"
+        },
 
-    "port": {
-      "type": "integer",
-      "title": "FHEM port",
-      "required": true,
-      "default": "8083",
-      "description": "fhemweb port"
-    },
+        "port": {
+          "type": "integer",
+          "title": "FHEM port",
+          "required": true,
+          "default": "8083",
+          "description": "fhemweb port"
+        },
 
-    "filter": {
-      "type": "string",
-      "title": "Filter",
-      "required": true,
-      "default": "siriName=.+",
-      "placeholder": "devspec",
-      "description": "devspec that matches the devices that should be exported to homebridge."
-    }
+        "filter": {
+          "type": "string",
+          "title": "Filter",
+          "required": true,
+          "default": "siriName=.+",
+          "placeholder": "devspec",
+          "description": "devspec that matches the devices that should be exported to homebridge."
+        }
+     }
   }
 }
