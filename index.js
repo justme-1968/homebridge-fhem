@@ -804,7 +804,8 @@ FHEMPlatform(log, config, api) {
     this.api.on('shutdown', this.shutdown.bind(this));
   }
 
-  this.server      = config['server'] || '127.0.0.1';
+  //this.server      = config['server'] || '127.0.0.1';
+  this.server      = config['server'];
   this.port        = config['port'] || 8083;
   this.filter      = config['filter'];
   this.jsFunctions = config['jsFunctions'];
@@ -1146,8 +1147,10 @@ FHEMPlatform.prototype = {
 
   accessories: function(callback) {
     //this.checkAndSetGenericDeviceType();
-    if( !this.connection )
+    if( !this.connection ) {
+      //callback();
       return;
+    }
 
     var foundAccessories = [];
 
