@@ -778,8 +778,14 @@ console.log( 'DELETEATTR: ' + value );
              FHEM_longpoll[connection.base_url].connected = false;
 
              FHEM_longpoll[connection.base_url].disconnects++;
-             var timeout = 5000 * FHEM_longpoll[connection.base_url].disconnects;
+             var timeout = 3000 * FHEM_longpoll[connection.base_url].disconnects;
              if( timeout > 30000 ) timeout = 30000;
+
+             if( timeout > 10000 && !FHEM_csrfToken[connection.base_url] ) {
+               connection.log.error( 'longpoll error: ' + err + ', retrys exhausted' );
+	       connection.dead = true;
+	       return;
+             }
 
              connection.log.error( 'longpoll error: ' + err + ', retry in: ' + timeout + 'msec' );
              setTimeout( function(){FHEM_startLongpoll(connection)}, timeout );
@@ -1159,6 +1165,11 @@ FHEMPlatform.prototype = {
     function callbackLater() { if (--asyncCalls == 0) callback(foundAccessories); }
 
     if( FHEM_csrfToken[this.connection.base_url] === undefined ) {
+      if( this.connection.dead ) {
+        callback(foundAccessories);
+	return;
+      }
+
       var timeout = 500;
       if( FHEM_longpoll[this.connection.base_url].disconnects )
         timeout = FHEM_longpoll[this.connection.base_url].disconnects * 1000;
