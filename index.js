@@ -1152,13 +1152,13 @@ FHEMPlatform.prototype = {
   },
 
   accessories: function(callback) {
+    var foundAccessories = [];
+
     //this.checkAndSetGenericDeviceType();
     if( !this.connection ) {
-      //callback();
+      callback(foundAccessories);
       return;
     }
-
-    var foundAccessories = [];
 
     // mechanism to ensure callback is only executed once all requests complete
     var asyncCalls = 0;
