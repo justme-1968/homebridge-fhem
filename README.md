@@ -1,4 +1,5 @@
 # homebridge-fhem
+[![verified-by-homebridge](https://badgen.net/badge/homebridge/verified/purple)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
 [![npm](https://img.shields.io/npm/v/homebridge-fhem.svg?style=plastic)](https://www.npmjs.com/package/homebridge-fhem)
 [![npm](https://img.shields.io/npm/dt/homebridge-fhem.svg?style=plastic)](https://www.npmjs.com/package/homebridge-fhem)
 [![GitHub last commit](https://img.shields.io/github/last-commit/justme-1968/homebridge-fhem.svg?style=plastic)](https://github.com/justme-1968/homebridge-fhem)
