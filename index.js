@@ -781,7 +781,7 @@ console.log( 'DELETEATTR: ' + value );
              var timeout = 3000 * FHEM_longpoll[connection.base_url].disconnects;
              if( timeout > 30000 ) timeout = 30000;
 
-             if( timeout > 10000 && !FHEM_csrfToken[connection.base_url] ) {
+             if( !connection.neverTimeout && timeout > 10000 && !FHEM_csrfToken[connection.base_url] ) {
                connection.log.error( 'longpoll error: ' + err + ', retrys exhausted' );
 	       connection.dead = true;
 	       return;
@@ -860,7 +860,7 @@ FHEMPlatform(log, config, api) {
     request = request.defaults( { auth: auth, rejectUnauthorized: false } );
   }
 
-  this.connection = { base_url: base_url, request: request, log: log, fhem: this };
+  this.connection = { base_url: base_url, request: request, log: log, fhem: this, neverTimeout: config['neverTimeout'] };
 
   FHEM_platforms.push(this);
 
