@@ -42,6 +42,13 @@
           "default": "siriName=.+",
           "placeholder": "devspec",
           "description": "devspec that matches the devices that should be exported to homebridge."
+        },
+
+        "neverTimeout": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "never timeout if trying to reconnect"
         }
      }
   }
