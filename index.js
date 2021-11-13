@@ -2476,7 +2476,7 @@ FHEMAccessory.prototype = {
     if( !this.delayed_timers )
       this.delayed_timers = {};
 
-    if( typeof delay !== 'numeric' )
+    if( typeof delay !== 'number' )
       delay = 1000;
     if( delay < 500 )
       delay = 500;
