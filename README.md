@@ -124,19 +124,19 @@ adding a history characteristic will try to use fakegato-history to create Eve c
 history:size=1024
 ```
 
-
 ### Homekit -> FHEM parameters:
+
 - delay: true/\<number\> -> the value ist send afer one second/\<number\>ms of inactivity
 - factor: divide homekit value by this factor
 - maxValue: for all int and float characteristics -> the allowed range for this value in homekit
 - max: the max value the reading has in fhem, only if different from maxValue
 - cmd: the set command to use: set \<device\> \<cmd\> \<value\>
 - cmdOn, cmdOff: for all bool characteristics
-- cmds: a ; separated list that indicates the mapping of homekit values to fhem values.
-        each list entry consists of a : separated pair of from and to values
-        each from value can be a literal value or a homekit defined term for this characteristic or a regex of the form /regex/
-        each to value has to be a literal value
--cmdSuffix: is appended to the set command
+- cmds: a ; separated list that indicates the mapping of homekit values to fhem values.  
+    each list entry consists of a : separated pair of from and to values  
+    each from value can be a literal value or a homekit defined term for this characteristic or a regex of the form /regex/  
+    each to value has to be a literal value
+- cmdSuffix: is appended to the set command
 
 spaces in commands have to be replaced by +
 
