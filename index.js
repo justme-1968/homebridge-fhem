@@ -2481,17 +2481,17 @@ FHEMAccessory.prototype = {
     if( delay < 500 )
       delay = 500;
 
-    var timer = this.delayed_timers[mapping];
+    var timer = this.delayed_timers[mapping.informId];
     if( timer ) {
       //this.log(this.name + ' delayed: removing old command ' + mapping.characteristic_type);
       clearTimeout( timer );
     }
 
     this.log.info(this.name + ' delaying command ' + mapping.characteristic_type + ' with value ' + value);
-    this.delayed_timers[mapping] = setTimeout( function(){
-                                                 delete this.delayed_timers[mapping];
-                                                 this.command(mapping,value);
-                                               }.bind(this), delay );
+    this.delayed_timers[mapping.informId] = setTimeout( function(){
+        delete this.delayed_timers[mapping.informId];
+        this.command(mapping,value);
+      }.bind(this), delay );
   },
 
   command: function(mapping,value) {
