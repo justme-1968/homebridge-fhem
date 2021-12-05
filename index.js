@@ -3325,7 +3325,7 @@ function FHEMdebug_handleRequest(request, response){
 
   } else if( request.url == '/subscriptions' ) {
     response.write( '<a href="/">home</a><br><br>' );
-    response.end( 'subscriptions: ' + util.inspect(FHEM_subscriptions, {depth: 5}).replace(/\n/g, '<br>') );
+    response.end( '<pre>subscriptions: ' + util.inspect(FHEM_subscriptions, {depth: 5}) + '</pre>');
 
   } else
     response.end( '<a href="/cached">cached</a><br><a href="/subscriptions">subscriptions</a>' );
