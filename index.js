@@ -2640,7 +2640,7 @@ FHEMAccessory.prototype = {
 
     this.log.info('query: ' + (mapping.name?mapping.name:mapping.characteristic_type) + ' for ' + mapping.informId);
     var value = mapping.cached;
-    if( typeof mapping === 'object' && value !== undefined && (!('nocache' in mapping))) {
+    if( typeof mapping === 'object' && value !== undefined && (!('nocache' in mapping)) ) {
       var defined = undefined;
       if( mapping.homekit2name !== undefined ) {
         defined = mapping.homekit2name[value];
