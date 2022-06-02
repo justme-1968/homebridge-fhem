@@ -24,11 +24,11 @@
     "url": "https://github.com/justme-1968/homebridge-fhem.git"
   },
   "dependencies": {
-    "postman-request": "^2.88.1-postman.19"
+    "har-validator": "^5.1.5",
+    "postman-request": "^2.88.1-postman.31"
   },
   "optionalDependencies": {
     "fakegato-history": "^0.5.3",
     "ws": "^6.1.2"
   }
-
 }
