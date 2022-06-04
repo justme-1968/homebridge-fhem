@@ -51,10 +51,26 @@
           "description": "use ssl/https when connecting to fhem"
         },
 
-        "auth": {
-          "type": "string",
+	        "auth": {
+          "type": "object",
           "required": false,
-          "description": "user:password for the fhem connection"
+          "#description": "user & password for this FHEM connection",
+          "properties": {
+            "user": {
+              "type": "string",
+              "title": "Name",
+              "required": false,
+              "#placeholder": "<user>",
+              "description": "user for this FHEM connection."
+            },
+            "pass": {
+              "type": "string",
+              "title": "Server",
+              "required": false,
+              "#placeholder": "<password>",
+              "description": "password for this FHEM connection."
+            }
+          }
         },
 
         "neverTimeout": {
