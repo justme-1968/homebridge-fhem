@@ -40,7 +40,8 @@ module.exports = function(homebridge){
 //process.exit(0);
   User = homebridge.user;
 
-  Accessory = homebridge.platformAccessory;
+  //Accessory = homebridge.platformAccessory;
+  Accessory = homebridge.hap.Accessory;
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
   UUIDGen = homebridge.hap.uuid;
@@ -2403,6 +2404,16 @@ FHEMAccessory.prototype = {
           mapping = {};
           delete this.mappings[characteristic];
           continue;
+        } else if( characteristic === 'AccessoryCategory' ) {
+          delete this.mappings[characteristic];
+          if( !Accessory.Categories || Accessory.Categories[param] === undefined ) {
+            this.log.error( 'unknown category: ' + param );
+
+	  } else {
+	    this.category = Accessory.Categories[param];
+            this.log.info( 'using category: '+ this.category +'( '+ param +')' );
+	  }
+          continue;
         //} else if( characteristic === 'SerialNumber' ) {
         //  delete this.mappings[characteristic];
         //  this.mappings[characteristic] = param;
@@ -2954,6 +2965,7 @@ FHEMAccessory.prototype = {
 
           //this.displayName = this.name;
           this.displayName = this.fuuid;
+	  this.category = Categories.SENSOR
           this.historyService = new FakeGatoHistoryService( type, this,
                                                             { size: mapping.size?mapping.size: 1024,
                                                               storage:'fs' } );
@@ -3175,95 +3187,97 @@ FHEMAccessory.prototype = {
                          this.query(mapping, callback);
                      }.bind(this, mapping) );
 
-        if( FakeGatoHistoryService && characteristic_type === 'ContactSensorState' ) {
-          this.log('    ' + 'Custom TimesOpened characteristic '+ mapping.device + ':' + mapping.reading);
-          characteristic = new Characteristic( 'TimesOpened', 'E863F129-079E-48FF-8F27-9C2605A29F52' );
-          this.mappings['E863F129-079E-48FF-8F27-9C2605A29F52'] = { name: 'Custom TimesOpened', characteristic: characteristic, informId: mapping.device+'-EVE-TimesOpened', log: mapping.log };
-          this.subscribe(this.mappings['E863F129-079E-48FF-8F27-9C2605A29F52'], characteristic);
-          controlService.addCharacteristic( characteristic );
-          characteristic.setProps( { format: Characteristic.Formats['UINT32'] } );
-          characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY] } );
-          characteristic
-            .on('get', function(mapping, callback) {
-                         if( !this.historyService ) {
-                           this.log.error(this.name + ': Custom TimesOpened characteristic requires FakeGatoHistory');
-                           callback( 'no historyService' );
-                           return;
-                         }
+      }
+    }
 
-                         var value = this.historyService.extra_persist.TimesOpened;
-                         this.log('query Custom TimesOpened for '+ mapping.device + ':' + mapping.reading +': '+ value);
-                         callback( null, value );
-                       }.bind(this, mapping) );
+    if( this.historyService != undefined ) {
+      if( this.mappings[ContactSensorState] ) {
+        this.log('    ' + 'Custom TimesOpened characteristic '+ mapping.device + ':' + mapping.reading);
+        characteristic = new Characteristic( 'TimesOpened', 'E863F129-079E-48FF-8F27-9C2605A29F52' );
+        this.mappings['E863F129-079E-48FF-8F27-9C2605A29F52'] = { name: 'Custom TimesOpened', characteristic: characteristic, informId: mapping.device+'-EVE-TimesOpened', log: mapping.log };
+        this.subscribe(this.mappings['E863F129-079E-48FF-8F27-9C2605A29F52'], characteristic);
+        controlService.addCharacteristic( characteristic );
+        characteristic.setProps( { format: Characteristic.Formats['UINT32'] } );
+        characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY] } );
+        characteristic
+          .on('get', function(mapping, callback) {
+                       if( !this.historyService ) {
+                         this.log.error(this.name + ': Custom TimesOpened characteristic requires FakeGatoHistory');
+                         callback( 'no historyService' );
+                         return;
+                       }
+
+                       var value = this.historyService.extra_persist.TimesOpened;
+                       this.log('query Custom TimesOpened for '+ mapping.device + ':' + mapping.reading +': '+ value);
+                       callback( null, value );
+                     }.bind(this, mapping) );
+      }
+
+      if( (this.mappings[ContactSensorState] || this.mappings[MotionDetected])
+          && !seen[service_name +'#E863F11A-079E-48FF-8F27-9C2605A29F52']) {
+        seen[service_name +'#E863F11A-079E-48FF-8F27-9C2605A29F52'] = true;
+        this.log('    ' + 'Custom LastActivation characteristic '+ mapping.device + ':' + mapping.reading);
+        characteristic = new Characteristic( 'LastActivation', 'E863F11A-079E-48FF-8F27-9C2605A29F52' );
+        this.mappings['E863F11A-079E-48FF-8F27-9C2605A29F52'] = { name: 'Custom LastActivation', characteristic: characteristic, informId: mapping.device+'-EVE-LastActivation', log: mapping.log };
+        //this.subscribe(this.mappings['E863F11A-079E-48FF-8F27-9C2605A29F52'], characteristic);
+        this.mappings['E863F11A-079E-48FF-8F27-9C2605A29F52'] = { characteristic: characteristic };
+        controlService.addCharacteristic( characteristic );
+        characteristic.setProps( { format: Characteristic.Formats['UINT32'] } );
+        characteristic.setProps( { perms: [Characteristic.Perms.READ] } );
+        //characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY] } );
+        this.log.debug('      props: ' + util.inspect(characteristic.props) );
+        characteristic
+          .on('get', function(mapping, callback) {
+                       if( this.historyService === undefined ) {
+                         this.log.error(this.name + ': Custom LastActivation characteristic requires FakeGatoHistory');
+                         callback( "error" );
+                         return;
+                       }
+                       if( mapping.last_update === undefined ) {
+                         this.log.error(this.name + ': Custom LastActivation characteristic: last update unknown ');
+                         callback( "error" );
+                         return;
+                       }
+
+                       var time = this.historyService.getInitialTime();
+                       if( time === undefined ) {
+                         var entry = { time: mapping.last_update, status: mapping.cached  };
+                         mapping.log.info( '      adding history entry '+ util.inspect(entry) );
+                         this.historyService.addEntry( entry );
+                       }
+
+                       time = mapping.last_update - this.historyService.getInitialTime();
+
+                       this.log('query Custom LastActivation for '+ mapping.device + ':' + mapping.reading +': '+ time);
+                       callback( null, time );
+                     }.bind(this, mapping) );
         }
 
-        if( FakeGatoHistoryService
-            && (characteristic_type === 'ContactSensorState' || characteristic_type === 'MotionDetected')
-            && !seen[service_name +'#E863F11A-079E-48FF-8F27-9C2605A29F52']) {
-          seen[service_name +'#E863F11A-079E-48FF-8F27-9C2605A29F52'] = true;
-          this.log('    ' + 'Custom LastActivation characteristic '+ mapping.device + ':' + mapping.reading);
-          characteristic = new Characteristic( 'LastActivation', 'E863F11A-079E-48FF-8F27-9C2605A29F52' );
-          this.mappings['E863F11A-079E-48FF-8F27-9C2605A29F52'] = { name: 'Custom LastActivation', characteristic: characteristic, informId: mapping.device+'-EVE-LastActivation', log: mapping.log };
-          //this.subscribe(this.mappings['E863F11A-079E-48FF-8F27-9C2605A29F52'], characteristic);
-          this.mappings['E863F11A-079E-48FF-8F27-9C2605A29F52'] = { characteristic: characteristic };
-          controlService.addCharacteristic( characteristic );
-          characteristic.setProps( { format: Characteristic.Formats['UINT32'] } );
-          characteristic.setProps( { perms: [Characteristic.Perms.READ] } );
-          //characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY] } );
-          this.log.debug('      props: ' + util.inspect(characteristic.props) );
-          characteristic
-            .on('get', function(mapping, callback) {
-                         if( this.historyService === undefined ) {
-                           this.log.error(this.name + ': Custom LastActivation characteristic requires FakeGatoHistory');
-                           callback( "error" );
-                           return;
-                         }
-                         if( mapping.last_update === undefined ) {
-                           this.log.error(this.name + ': Custom LastActivation characteristic: last update unknown ');
-                           callback( "error" );
-                           return;
-                         }
+      if( this.mappings[ContactSensorState] ) {
+        this.log('    ' + 'Custom OpenDuration characteristic '+ mapping.device + ':' + mapping.reading);
+        characteristic = new Characteristic( 'OpenDuration', 'E863F118-079E-48FF-8F27-9C2605A29F52' );
+        controlService.addCharacteristic( characteristic );
+        characteristic.setProps( { format: Characteristic.Formats['UINT32'] } );
+        characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.WRITE, Characteristic.Perms.NOTIFY] } );
+        characteristic
+          .on('get', function(mapping, callback) {
+                       var value = 0;
+                       this.log('query Custom OpenDuration for '+ mapping.device + ':' + mapping.reading +': '+ value);
+                       callback( null, value );
+                     }.bind(this, mapping) );
 
-                         var time = this.historyService.getInitialTime();
-                         if( time === undefined ) {
-                           var entry = { time: mapping.last_update, status: mapping.cached  };
-                           mapping.log.info( '      adding history entry '+ util.inspect(entry) );
-                           this.historyService.addEntry( entry );
-                         }
+        this.log('    ' + 'Custom ClosedDuration characteristic '+ mapping.device + ':' + mapping.reading);
+        characteristic = new Characteristic( 'ClosedDuration', 'E863F119-079E-48FF-8F27-9C2605A29F52' );
+        controlService.addCharacteristic( characteristic );
+        characteristic.setProps( { format: Characteristic.Formats['UINT32'] } );
+        characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.WRITE, Characteristic.Perms.NOTIFY] } );
+        characteristic
+          .on('get', function(mapping, callback) {
+                       var value = 0;
+                       this.log('query Custom ClosedDuration for '+ mapping.device + ':' + mapping.reading +': '+ value);
+                       callback( null, value );
+                     }.bind(this, mapping) );
 
-                         time = mapping.last_update - this.historyService.getInitialTime();
-
-                         this.log('query Custom LastActivation for '+ mapping.device + ':' + mapping.reading +': '+ time);
-                         callback( null, time );
-                       }.bind(this, mapping) );
-          }
-
-        if( FakeGatoHistoryService && characteristic_type === 'ContactSensorState' ) {
-          this.log('    ' + 'Custom OpenDuration characteristic '+ mapping.device + ':' + mapping.reading);
-          characteristic = new Characteristic( 'OpenDuration', 'E863F118-079E-48FF-8F27-9C2605A29F52' );
-          controlService.addCharacteristic( characteristic );
-          characteristic.setProps( { format: Characteristic.Formats['UINT32'] } );
-          characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.WRITE, Characteristic.Perms.NOTIFY] } );
-          characteristic
-            .on('get', function(mapping, callback) {
-                         var value = 0;
-                         this.log('query Custom OpenDuration for '+ mapping.device + ':' + mapping.reading +': '+ value);
-                         callback( null, value );
-                       }.bind(this, mapping) );
-
-          this.log('    ' + 'Custom ClosedDuration characteristic '+ mapping.device + ':' + mapping.reading);
-          characteristic = new Characteristic( 'ClosedDuration', 'E863F119-079E-48FF-8F27-9C2605A29F52' );
-          controlService.addCharacteristic( characteristic );
-          characteristic.setProps( { format: Characteristic.Formats['UINT32'] } );
-          characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.WRITE, Characteristic.Perms.NOTIFY] } );
-          characteristic
-            .on('get', function(mapping, callback) {
-                         var value = 0;
-                         this.log('query Custom ClosedDuration for '+ mapping.device + ':' + mapping.reading +': '+ value);
-                         callback( null, value );
-                       }.bind(this, mapping) );
-
-        }
       }
     }
 
