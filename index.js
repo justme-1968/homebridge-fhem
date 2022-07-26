@@ -2411,7 +2411,7 @@ FHEMAccessory.prototype = {
 
 	  } else {
 	    this.category = Accessory.Categories[param];
-            this.log.info( 'using category: '+ this.category +'( '+ param +')' );
+            this.log.info( 'using category: '+ this.category +' ('+ param +')' );
 	  }
           continue;
         //} else if( characteristic === 'SerialNumber' ) {
@@ -2896,6 +2896,10 @@ FHEMAccessory.prototype = {
 
     }
 
+
+    //this.displayName = this.name;
+    this.displayName = this.fuuid;
+
     var controlService = this.createDeviceService(this.service_name);
     services.push( controlService );
 
@@ -2962,10 +2966,6 @@ FHEMAccessory.prototype = {
             }
 
           this.log('  ' + 'FakeGatoHistory service with type '+ type +' for ' + service_name);
-
-          //this.displayName = this.name;
-          this.displayName = this.fuuid;
-	  this.category = Categories.SENSOR
           this.historyService = new FakeGatoHistoryService( type, this,
                                                             { size: mapping.size?mapping.size: 1024,
                                                               storage:'fs' } );
@@ -3191,7 +3191,7 @@ FHEMAccessory.prototype = {
     }
 
     if( this.historyService != undefined ) {
-      if( this.mappings[ContactSensorState] ) {
+      if( this.mappings.ContactSensorState ) {
         this.log('    ' + 'Custom TimesOpened characteristic '+ mapping.device + ':' + mapping.reading);
         characteristic = new Characteristic( 'TimesOpened', 'E863F129-079E-48FF-8F27-9C2605A29F52' );
         this.mappings['E863F129-079E-48FF-8F27-9C2605A29F52'] = { name: 'Custom TimesOpened', characteristic: characteristic, informId: mapping.device+'-EVE-TimesOpened', log: mapping.log };
@@ -3213,7 +3213,7 @@ FHEMAccessory.prototype = {
                      }.bind(this, mapping) );
       }
 
-      if( (this.mappings[ContactSensorState] || this.mappings[MotionDetected])
+      if( (this.mappings.ContactSensorState || this.mappings.MotionDetected)
           && !seen[service_name +'#E863F11A-079E-48FF-8F27-9C2605A29F52']) {
         seen[service_name +'#E863F11A-079E-48FF-8F27-9C2605A29F52'] = true;
         this.log('    ' + 'Custom LastActivation characteristic '+ mapping.device + ':' + mapping.reading);
@@ -3253,7 +3253,7 @@ FHEMAccessory.prototype = {
                      }.bind(this, mapping) );
         }
 
-      if( this.mappings[ContactSensorState] ) {
+      if( this.mappings.ContactSensorState ) {
         this.log('    ' + 'Custom OpenDuration characteristic '+ mapping.device + ':' + mapping.reading);
         characteristic = new Characteristic( 'OpenDuration', 'E863F118-079E-48FF-8F27-9C2605A29F52' );
         controlService.addCharacteristic( characteristic );
