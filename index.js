@@ -2049,7 +2049,7 @@ FHEMAccessory(platform, s) {
     if( s.Readings.model && s.Readings.model.Value )
       this.model = s.Readings.model.Value;
     this.serial = this.type + '.' + s.Internals.DEF.replace(/ /, '-');
-  } else if( this.type == 'HMCCUDEV' ) {
+  } else if( this.type == 'HMCCUDEV' || this.type == 'HMCCUCHN' ) {
     this.model = s.Internals.ccutype;
     this.serial = s.Internals.ccuaddr;
   }
