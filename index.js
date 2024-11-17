@@ -2055,7 +2055,7 @@ FHEMAccessory(platform, s) {
     this.serial = this.type + '.' + s.Internals.DEF.replace(/ /, '-');
   } else if( this.type == 'HMCCUDEV' || this.type == 'HMCCUCHN' ) {
     this.model = s.Internals.ccutype;
-    this.serial = s.Internals.ccuaddr;
+    this.serial = s.Internals.DEF;
   }
 
   if( !this.serial )
