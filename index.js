@@ -31,7 +31,7 @@ return getLine(2);
 
 
 var User;
-var Accessory, Service, Characteristic, UUIDGen, FakeGatoHistoryService;
+var Accessory, Service, Characteristic, Units, Formats, Perms, UUIDGen, FakeGatoHistoryService;
 module.exports = function(homebridge){
   console.log('homebridge API version: ' + homebridge.version);
   console.info( 'this is homebridge-fhem '+ version );
@@ -799,6 +799,10 @@ var FHEM_platforms = [];
 function
 FHEMPlatform(log, config, api) {
   events.EventEmitter.call(this);
+
+  Units = api.hap.Units;
+  Formats = api.hap.Formats;
+  Perms = api.hap.Perms;
 
   this.log         = log;
   this.config      = config;
@@ -1677,12 +1681,12 @@ FHEMAccessory(platform, s) {
 
     if( isNaN(value) )
       this.mappings.StatusLowBattery = { reading: 'battery', values: ['ok:BATTERY_LEVEL_NORMAL', '/.*/:BATTERY_LEVEL_LOW'] };
-      //this.mappings['BatteryService#StatusLowBattery'] = { reading: 'battery', values: ['ok:BATTERY_LEVEL_NORMAL', '/.*/:BATTERY_LEVEL_LOW'] };
+      //this.mappings['Battery#StatusLowBattery'] = { reading: 'battery', values: ['ok:BATTERY_LEVEL_NORMAL', '/.*/:BATTERY_LEVEL_LOW'] };
     else {
       this.mappings.BatteryLevel = { reading: 'battery' };
       this.mappings.StatusLowBattery = { reading: 'battery', threshold: 20, values: ['0:BATTERY_LEVEL_LOW', '1:BATTERY_LEVEL_NORMAL']  };
-      //this.mappings['BatteryService#BatteryLevel'] = { reading: 'battery' };
-      //this.mappings['BatteryService#StatusLowBattery'] = { reading: 'battery', threshold: 20, values: ['0:BATTERY_LEVEL_LOW', '1:BATTERY_LEVEL_NORMAL']  };
+      //this.mappings['Battery#BatteryLevel'] = { reading: 'battery' };
+      //this.mappings['Battery#StatusLowBattery'] = { reading: 'battery', threshold: 20, values: ['0:BATTERY_LEVEL_LOW', '1:BATTERY_LEVEL_NORMAL']  };
     }
   }
 
@@ -3006,9 +3010,9 @@ FHEMAccessory.prototype = {
             this.log('    ' + 'FakeGatoHistory reset');
             var characteristic = new Characteristic( 'Reset', 'E863F112-079E-48FF-8F27-9C2605A29F52' );
             this.historyService.addCharacteristic( characteristic );
-            characteristic.setProps( { format: Characteristic.Formats['UINT32'] } );
-            characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.WRITE] } );
-            //characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.WRITE, Characteristic.Perms.NOTIFY] } );
+            characteristic.setProps( { format: Formats['UINT32'] } );
+            characteristic.setProps( { perms: [Perms.READ, Perms.WRITE] } );
+            //characteristic.setProps( { perms: [Perms.READ, Perms.WRITE, Perms.NOTIFY] } );
             this.log.debug('      props: ' + util.inspect(characteristic.props) );
             characteristic
               .on('set', function(mapping, value, callback, context) {
@@ -3140,14 +3144,14 @@ FHEMAccessory.prototype = {
           this.log.debug('      no default' );
         }
 
-        if( mapping.format !== undefined ) characteristic.setProps( { format: Characteristic.Formats[mapping.format] } );
+        if( mapping.format !== undefined ) characteristic.setProps( { format: Formats[mapping.format] } );
         if( mapping.unit !== undefined ) {
-          if( Characteristic.Units[mapping.unit] )
-            characteristic.setProps( { unit: Characteristic.Units[mapping.unit] } );
+          if( Units[mapping.unit] )
+            characteristic.setProps( { unit: Units[mapping.unit] } );
           else
             characteristic.setProps( { unit: mapping.unit } );
         }
-        //if( mapping.unit !== undefined ) characteristic.setProps( { unit: Characteristic.Units[mapping.unit] } );
+        //if( mapping.unit !== undefined ) characteristic.setProps( { unit: Units[mapping.unit] } );
         if( mapping.minValue !== undefined ) characteristic.setProps( { minValue: mapping.minValue } );
         if( mapping.maxValue !== undefined ) characteristic.setProps( { maxValue: mapping.maxValue } );
         if( mapping.minStep !== undefined ) characteristic.setProps( { minStep: mapping.minStep } );
@@ -3156,9 +3160,9 @@ FHEMAccessory.prototype = {
         if( characteristic_type.match( /[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}/i )
             || !characteristic.props || !characteristic.props.perms || !characteristic.props.perms.length ) {
           if( mapping.cmd === undefined )
-            characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY] } );
+            characteristic.setProps( { perms: [Perms.READ, Perms.NOTIFY] } );
           else {
-            characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.WRITE, Characteristic.Perms.NOTIFY] } );
+            characteristic.setProps( { perms: [Perms.READ, Perms.WRITE, Perms.NOTIFY] } );
           }
         }
 
@@ -3197,8 +3201,8 @@ FHEMAccessory.prototype = {
         this.mappings['E863F129-079E-48FF-8F27-9C2605A29F52'] = { name: 'Custom TimesOpened', characteristic: characteristic, informId: mapping.device+'-EVE-TimesOpened', log: mapping.log };
         this.subscribe(this.mappings['E863F129-079E-48FF-8F27-9C2605A29F52'], characteristic);
         controlService.addCharacteristic( characteristic );
-        characteristic.setProps( { format: Characteristic.Formats['UINT32'] } );
-        characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY] } );
+        characteristic.setProps( { format: Formats['UINT32'] } );
+        characteristic.setProps( { perms: [Perms.READ, Perms.NOTIFY] } );
         characteristic
           .on('get', function(mapping, callback) {
                        if( !this.historyService ) {
@@ -3222,9 +3226,9 @@ FHEMAccessory.prototype = {
         //this.subscribe(this.mappings['E863F11A-079E-48FF-8F27-9C2605A29F52'], characteristic);
         this.mappings['E863F11A-079E-48FF-8F27-9C2605A29F52'] = { characteristic: characteristic };
         controlService.addCharacteristic( characteristic );
-        characteristic.setProps( { format: Characteristic.Formats['UINT32'] } );
-        characteristic.setProps( { perms: [Characteristic.Perms.READ] } );
-        //characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY] } );
+        characteristic.setProps( { format: Formats['UINT32'] } );
+        characteristic.setProps( { perms: [Perms.READ] } );
+        //characteristic.setProps( { perms: [Perms.READ, Perms.NOTIFY] } );
         this.log.debug('      props: ' + util.inspect(characteristic.props) );
         characteristic
           .on('get', function(mapping, callback) {
@@ -3257,8 +3261,8 @@ FHEMAccessory.prototype = {
         this.log('    ' + 'Custom OpenDuration characteristic '+ mapping.device + ':' + mapping.reading);
         characteristic = new Characteristic( 'OpenDuration', 'E863F118-079E-48FF-8F27-9C2605A29F52' );
         controlService.addCharacteristic( characteristic );
-        characteristic.setProps( { format: Characteristic.Formats['UINT32'] } );
-        characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.WRITE, Characteristic.Perms.NOTIFY] } );
+        characteristic.setProps( { format: Formats['UINT32'] } );
+        characteristic.setProps( { perms: [Perms.READ, Perms.WRITE, Perms.NOTIFY] } );
         characteristic
           .on('get', function(mapping, callback) {
                        var value = 0;
@@ -3269,8 +3273,8 @@ FHEMAccessory.prototype = {
         this.log('    ' + 'Custom ClosedDuration characteristic '+ mapping.device + ':' + mapping.reading);
         characteristic = new Characteristic( 'ClosedDuration', 'E863F119-079E-48FF-8F27-9C2605A29F52' );
         controlService.addCharacteristic( characteristic );
-        characteristic.setProps( { format: Characteristic.Formats['UINT32'] } );
-        characteristic.setProps( { perms: [Characteristic.Perms.READ, Characteristic.Perms.WRITE, Characteristic.Perms.NOTIFY] } );
+        characteristic.setProps( { format: Formats['UINT32'] } );
+        characteristic.setProps( { perms: [Perms.READ, Perms.WRITE, Perms.NOTIFY] } );
         characteristic
           .on('get', function(mapping, callback) {
                        var value = 0;
