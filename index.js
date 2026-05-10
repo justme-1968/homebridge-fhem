@@ -3185,7 +3185,7 @@ FHEMAccessory.prototype = {
                        callback();
                      }.bind(this, mapping) )
           .on('get', function(mapping, callback) {
-                       if( this.mappings.Reachable && !this.mappings.Reachable.cached  )
+                       if( this.mappings.Reachable && this.mappings.Reachable.cached === false )
                          callback( 'unreachable' );
                        else
                          this.query(mapping, callback);
