@@ -1258,6 +1258,18 @@ var CustomUUIDs = {
           Actuation: 'E863F12E-079E-48FF-8F27-9C2605A29F52',
 };
 
+// FHEM allows a wider characters range in name fields than current HAP-NodeJS (Homebridge 2.x)
+// Sanitizing to HAP-NodeJS characters in name fields gets rid of all concerning warnings
+function sanitizeHapName(name) {
+  return name
+    .replace(/_/g, '')
+    .replace(/[^a-zA-Z0-9 ']/g, '')
+    .replace(/^[^a-zA-Z0-9]+/, '')
+    .replace(/[^a-zA-Z0-9]+$/, '')
+    || name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8)
+	|| 'FHEM Device';
+}
+
 function
 FHEMAccessory(platform, s) {
   this.log         = platform.log;
@@ -2016,10 +2028,10 @@ FHEMAccessory(platform, s) {
 //log( util.inspect(s) );
 
   // device info
-  this.name		= s.Internals.NAME;
+  this.name		        = sanitizeHapName( s.Internals.NAME );
   this.fuuid            = s.Internals.FUUID;
-  this.alias		= s.Attributes.alias ? s.Attributes.alias : s.Internals.NAME;
-  this.siriName         = s.Attributes.siriName ? s.Attributes.siriName : this.alias;
+  this.alias		    = sanitizeHapName( s.Attributes.alias ? s.Attributes.alias : s.Internals.NAME );
+  this.siriName         = sanitizeHapName( s.Attributes.siriName ? s.Attributes.siriName : this.alias );
   this.device		= s.Internals.NAME;
   this.type             = s.Internals.TYPE;
   this.model            = s.Readings.model ? s.Readings.model.Value
@@ -2762,7 +2774,7 @@ FHEMAccessory.prototype = {
     if( typeof service === 'function' ) {
       var name = this.siriName;
       if( subtype )
-        name = subtype + ' (' + this.siriName + ')';
+        name = sanitizeHapName( subtype + ' ' + this.siriName );
 
       this.log('  ' + service_name + ' service for ' + this.name + (subtype?' (' + subtype + ')':'') );
       var service = new service(name,subtype?subtype:'');
@@ -2790,7 +2802,7 @@ FHEMAccessory.prototype = {
   createDeviceService: function(service_name,subtype) {
     var name = this.siriName;
     if( subtype )
-      name = subtype + ' (' + this.siriName + ')';
+      name = sanitizeHapName( subtype + ' ' + this.siriName );
 
     var service = this.serviceOfName(service_name,subtype);
     if( typeof service === 'object' )
