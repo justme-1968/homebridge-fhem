@@ -1261,13 +1261,19 @@ var CustomUUIDs = {
 // FHEM allows a wider characters range in name fields than current HAP-NodeJS (Homebridge 2.x)
 // Sanitizing to HAP-NodeJS characters in name fields gets rid of all concerning warnings
 function sanitizeHapName(name) {
-  return name
-    .replace(/_/g, '')
-    .replace(/[^a-zA-Z0-9 ']/g, '')
-    .replace(/^[^a-zA-Z0-9]+/, '')
-    .replace(/[^a-zA-Z0-9]+$/, '')
-    || name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8)
-	|| 'FHEM Device';
+  name = (name === undefined || name === null) ? '' : String(name);
+
+  name = name                                                               // German umlauts
+    .replace(/ä/g, 'ae').replace(/Ä/g, 'Ae')
+    .replace(/ö/g, 'oe').replace(/Ö/g, 'Oe')
+    .replace(/ü/g, 'ue').replace(/Ü/g, 'Ue')
+    .replace(/ß/g, 'ss');
+
+  name = name.replace(/[_-]/g, ' ');                                        // Remove underscore, minus (HAP-NodeJS 2.x)
+  name = name.replace(/[^a-zA-Z0-9 ']/g, '');                               // Keep only: alphanumeric, space, apostrophe characters (HAP-NodeJS 2.x)
+  name = name.replace(/^[^a-zA-Z0-9]+/, '').replace(/[^a-zA-Z0-9]+$/, '');  // Ensure it starts and ends with an alphabetic or numeric character (HAP-NodeJS 2.x)
+
+  return name || 'FHEM Device';
 }
 
 function
