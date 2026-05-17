@@ -2714,10 +2714,12 @@ FHEMAccessory.prototype = {
                         callback(1);
                       else {
                         value = FHEM_reading2homekit(mapping, value);
-                        callback(undefined, value);
-                      }
+                        if( value === undefined )
+                          callback(1);
+                        else
+                          callback(undefined, value);
+                      }                    
                     }
-
                     return value ;
 
                 }.bind(this) );
