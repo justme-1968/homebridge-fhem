@@ -3020,8 +3020,8 @@ FHEMAccessory.prototype = {
             var characteristic = new Characteristic( 'Reset', 'E863F112-079E-48FF-8F27-9C2605A29F52' );
             this.historyService.addCharacteristic( characteristic );
             characteristic.setProps( { format: Formats['UINT32'] } );
-            characteristic.setProps( { perms: [Perms.READ, Perms.WRITE] } );
-            //characteristic.setProps( { perms: [Perms.READ, Perms.WRITE, Perms.NOTIFY] } );
+            characteristic.setProps( { perms: [Perms.PAIRED_READ, Perms.PAIRED_WRITE] } );
+            //characteristic.setProps( { perms: [Perms.PAIRED_READ, Perms.PAIRED_WRITE, Perms.NOTIFY] } );
             this.log.debug('      props: ' + util.inspect(characteristic.props) );
             characteristic
               .on('set', function(mapping, value, callback, context) {
@@ -3169,9 +3169,9 @@ FHEMAccessory.prototype = {
         if( characteristic_type.match( /[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}/i )
             || !characteristic.props || !characteristic.props.perms || !characteristic.props.perms.length ) {
           if( mapping.cmd === undefined )
-            characteristic.setProps( { perms: [Perms.READ, Perms.NOTIFY] } );
+            characteristic.setProps( { perms: [Perms.PAIRED_READ, Perms.NOTIFY] } );
           else {
-            characteristic.setProps( { perms: [Perms.READ, Perms.WRITE, Perms.NOTIFY] } );
+            characteristic.setProps( { perms: [Perms.PAIRED_READ, Perms.PAIRED_WRITE, Perms.NOTIFY] } );
           }
         }
 
@@ -3211,7 +3211,7 @@ FHEMAccessory.prototype = {
         this.subscribe(this.mappings['E863F129-079E-48FF-8F27-9C2605A29F52'], characteristic);
         controlService.addCharacteristic( characteristic );
         characteristic.setProps( { format: Formats['UINT32'] } );
-        characteristic.setProps( { perms: [Perms.READ, Perms.NOTIFY] } );
+        characteristic.setProps( { perms: [Perms.PAIRED_READ, Perms.NOTIFY] } );
         characteristic
           .on('get', function(mapping, callback) {
                        if( !this.historyService ) {
@@ -3236,8 +3236,8 @@ FHEMAccessory.prototype = {
         this.mappings['E863F11A-079E-48FF-8F27-9C2605A29F52'] = { characteristic: characteristic };
         controlService.addCharacteristic( characteristic );
         characteristic.setProps( { format: Formats['UINT32'] } );
-        characteristic.setProps( { perms: [Perms.READ] } );
-        //characteristic.setProps( { perms: [Perms.READ, Perms.NOTIFY] } );
+        characteristic.setProps( { perms: [Perms.PAIRED_READ] } );
+        //characteristic.setProps( { perms: [Perms.PAIRED_READ, Perms.NOTIFY] } );
         this.log.debug('      props: ' + util.inspect(characteristic.props) );
         characteristic
           .on('get', function(mapping, callback) {
@@ -3271,7 +3271,7 @@ FHEMAccessory.prototype = {
         characteristic = new Characteristic( 'OpenDuration', 'E863F118-079E-48FF-8F27-9C2605A29F52' );
         controlService.addCharacteristic( characteristic );
         characteristic.setProps( { format: Formats['UINT32'] } );
-        characteristic.setProps( { perms: [Perms.READ, Perms.WRITE, Perms.NOTIFY] } );
+        characteristic.setProps( { perms: [Perms.PAIRED_READ, Perms.PAIRED_WRITE, Perms.NOTIFY] } );
         characteristic
           .on('get', function(mapping, callback) {
                        var value = 0;
@@ -3283,7 +3283,7 @@ FHEMAccessory.prototype = {
         characteristic = new Characteristic( 'ClosedDuration', 'E863F119-079E-48FF-8F27-9C2605A29F52' );
         controlService.addCharacteristic( characteristic );
         characteristic.setProps( { format: Formats['UINT32'] } );
-        characteristic.setProps( { perms: [Perms.READ, Perms.WRITE, Perms.NOTIFY] } );
+        characteristic.setProps( { perms: [Perms.PAIRED_READ, Perms.PAIRED_WRITE, Perms.NOTIFY] } );
         characteristic
           .on('get', function(mapping, callback) {
                        var value = 0;
