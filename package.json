@@ -1,6 +1,6 @@
 {
   "name": "homebridge-fhem",
-  "version": "0.5.53",
+  "version": "0.5.54",
   "description": "a fhem platform plugin for homebridge",
   "author": {
     "name": "justme1968"
@@ -28,7 +28,7 @@
     "postman-request": "^2.88.1-postman.31"
   },
   "optionalDependencies": {
-    "fakegato-history": "^0.5.3",
+    "fakegato-history": ">=0.5.3",
     "ws": "^6.1.2"
   }
 }
