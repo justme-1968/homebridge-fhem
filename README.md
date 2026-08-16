@@ -28,7 +28,49 @@ includes the devices that should be bridged to homekit.
 - temperature and humidity sensors
 - CO20 and netatmo air quality sensor
 - RESIDENTS module
+- HomeMatic and HomeMatic IP by way of HMCCU (see below)
 - probably some more ...
+
+## homematic ip (HMCCU)
+HMCCUCHN and HMCCUDEV devices are mapped from their ccu datapoints instead of the CUL_HM
+readings, so homematic ip switches, dimmers, blinds and thermostats are detected automatically:
+
+| type | datapoints | set command |
+| --- | --- | --- |
+| switch, outlet | `STATE` | `on`/`off`, else `datapoint <ch>.STATE` |
+| dimmer | `LEVEL` | `pct`, else `datapoint <ch>.LEVEL` |
+| blind, shutter | `LEVEL`, `LEVEL_2`, `ACTIVITY_STATE` | `pct`, else `datapoint <ch>.LEVEL` |
+| thermostat | `SET_POINT_TEMPERATURE`, `ACTUAL_TEMPERATURE`, `HUMIDITY`, `LEVEL` | `desired-temp`, else `datapoint <ch>.SET_POINT_TEMPERATURE` |
+| contact | `STATE` | read only |
+| motion | `MOTION`, `ILLUMINATION` | read only |
+| presence | `PRESENCE_DETECTION_STATE`, `ILLUMINATION` | read only |
+| smoke | `SMOKE_DETECTOR_ALARM_STATUS` | read only |
+| leak | `WATERLEVEL_DETECTED`, `MOISTURE_DETECTED` | read only |
+
+`LOW_BAT` and the `POWER`/`CURRENT`/`VOLTAGE`/`ENERGY_COUNTER` datapoints are mapped as well.
+
+notes:
+- the reading names are looked up by datapoint, so any `ccureadingformat` works
+  (`STATE`, `state`, `1.STATE` and `ABC1234567:1.STATE` are all recognized).
+- on a HMCCUDEV with several channels carrying the same datapoint use
+  `attr <dev> controldatapoint <channel>.<datapoint>` to select the one to use.
+- `LEVEL` is a 0.0-1.0 datapoint and is scaled to 0-100 for homekit. if
+  `attr <dev> ccuscaleval` already scales it, that is detected and no second scaling is applied.
+- venetian blinds expose the slat position as `LEVEL_2`, mapped to a horizontal tilt angle of
+  -90 (slats closed) to 90 (slats open). use the homebridgeMapping attribute for blinds with
+  vertical slats.
+- the device type is taken from `ccurole`, then from `ccutype`, then from the datapoints that
+  are present. use the genericDeviceType attribute if the result is wrong.
+- a bare `STATE` or `LEVEL` datapoint is only treated as an actuator if the device also offers
+  a way to set it, so sensors are not turned into switches.
+
+
+## tests
+```
+npm test
+```
+covers the datapoint lookup, the mappings that survive the accessory constructor and the
+`set` commands sent to fhem, for both HMCCU and CUL_HM devices.
 
 
 ## simple config
