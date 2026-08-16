@@ -1292,7 +1292,7 @@ FHEMAccessory(platform, s) {
   }
 
   var genericType = s.Attributes.genericDeviceType;
-  if( !genericType === undefined )
+  if( genericType === undefined )
     genericType = s.Attributes.genericDisplayType;
 
   if( genericType === 'ignore' ) {
@@ -2282,7 +2282,7 @@ FHEMAccessory(platform, s) {
       else if( s.Readings[mapping.reading] && s.Readings[mapping.reading].Value )
         orig = s.Readings[mapping.reading].Value;
 
-      if( orig === undefined && device == this.device && mappings.default !== undefined ) {
+      if( orig === undefined && device == this.device && mapping.default !== undefined ) {
         delete mapping.informId;
 
       } else {
@@ -2517,15 +2517,16 @@ FHEMAccessory.prototype = {
   },
 
   command: function(mapping,value) {
-    if( mapping.readOnly ) {
-      this.log.info(this.name + ' NOT sending command ' + c + ' with value ' + value + 'for readOnly characteristic');
-      return;
-    }
-
     var c = mapping;
     if( typeof mapping === 'object' )
       c = mapping.cmd;
-    else
+
+    if( mapping.readOnly ) {
+      this.log.info(this.name + ' NOT sending command ' + c + ' with value ' + value + ' for readOnly characteristic');
+      return;
+    }
+
+    if( typeof mapping !== 'object' )
       this.log.info(this.name + ' sending command ' + c + ' with value ' + value);
 
     var command = undefined;
