@@ -1265,6 +1265,440 @@ function sanitizeHapName(name) {
   return name || 'FHEM Device';
 }
 
+//
+// HomeMatic and HomeMatic IP support for the HMCCU modules (HMCCUCHN and HMCCUDEV).
+//
+// HMCCU derives its reading names from the ccu datapoints and the exact spelling depends on
+// the ccureadingformat attribute: STATE, state, 1.STATE or ABC1234567:1.STATE are all the
+// same datapoint. readings are therefore looked up by datapoint name instead of being hardcoded.
+//
+
+// all readings that carry <datapoint>, least qualified first
+function
+FHEM_hmccuReadings(s, datapoint) {
+  var re = new RegExp( '^(.*[.:])?' + datapoint + '$', 'i' );
+
+  var readings = [];
+  for( var reading in s.Readings )
+    if( reading.match( re ) )
+      readings.push( reading );
+
+  return readings.sort( function(a,b) { return a.length - b.length || a.localeCompare(b) } );
+}
+
+// the channel pinned by attr controldatapoint/statedatapoint for <datapoint>, if any
+function
+FHEM_hmccuChannel(s, datapoint) {
+  for( var attr of ['controldatapoint', 'statedatapoint'] ) {
+    var spec = s.Attributes[attr];
+    if( !spec )
+      continue;
+
+    var match = spec.match( /^(?:.*:)?(\d+)\.(.+)$/ );
+    if( match && match[2].toUpperCase() === datapoint.toUpperCase() )
+      return match[1];
+  }
+
+  return undefined;
+}
+
+// the reading to use for <datapoint>, honoring the pinned channel
+function
+FHEM_hmccuReading(s, datapoint) {
+  var readings = FHEM_hmccuReadings( s, datapoint );
+  if( !readings.length )
+    return undefined;
+
+  var channel = FHEM_hmccuChannel( s, datapoint );
+  if( channel !== undefined ) {
+    var re = new RegExp( '(^|[.:])' + channel + '\\.' + datapoint + '$', 'i' );
+    for( var reading of readings )
+      if( reading.match( re ) )
+        return reading;
+  }
+
+  return readings[0];
+}
+
+// the [<channel>.]<datapoint> argument for 'set <device> datapoint ...'
+function
+FHEM_hmccuDatapoint(s, reading, datapoint) {
+  var match;
+  if( reading && (match = reading.match( /(?:^|[.:])(\d+)\.[^.:]+$/ )) )
+    return match[1] +'.'+ datapoint;
+
+  var channel = FHEM_hmccuChannel( s, datapoint );
+  if( channel !== undefined )
+    return channel +'.'+ datapoint;
+
+  return datapoint;
+}
+
+// true if HMCCU already scales LEVEL to 0-100 by way of attr ccuscaleval
+function
+FHEM_hmccuScalesLevel(s) {
+  if( !s.Attributes.ccuscaleval )
+    return false;
+
+  for( var spec of s.Attributes.ccuscaleval.split(',') ) {
+    var parts = spec.replace( /^!/, '' ).split(':');
+    if( parts.length >= 2 && (parts[0] === '' || parts[0].match( /LEVEL$/i )) )
+      return true;
+  }
+
+  return false;
+}
+
+// LEVEL is a 0.0-1.0 datapoint, HomeKit wants 0-100
+var FHEM_hmccuLevel2homekit = function(mapping, orig) {
+  var value = parseFloat( orig );
+  if( isNaN(value) )
+    return undefined;
+
+  value = Math.round( value * mapping.levelFactor );
+
+  return value < 0 ? 0 : (value > 100 ? 100 : value);
+};
+
+var FHEM_hmccuHomekit2level = function(mapping, orig) {
+  return Math.round( orig / mapping.levelWriteFactor * 1000 ) / 1000;
+};
+
+// slat position: the datapoint runs 0.0-1.0 (closed to open), homekit wants -90..90 degrees
+var FHEM_hmccuLevel2tilt = function(mapping, orig) {
+  var value = parseFloat( orig );
+  if( isNaN(value) )
+    return undefined;
+
+  value = Math.round( value * mapping.levelFactor * 1.8 - 90 );
+
+  return value < -90 ? -90 : (value > 90 ? 90 : value);
+};
+
+var FHEM_hmccuTilt2level = function(mapping, orig) {
+  return Math.round( (orig + 90) / 1.8 / mapping.levelWriteFactor * 1000 ) / 1000;
+};
+
+// set up mappings for a HMCCUCHN/HMCCUDEV device. returns false if the device is none of the
+// types handled here, in which case the caller falls back to the generic autodetection.
+function
+FHEM_hmccuMappings(accessory, s, genericType) {
+  var log  = accessory.log;
+  var sets = s.PossibleSets || '';
+
+  var ccutype = s.Internals.ccutype || '';
+  var ccurole = (s.Internals.ccurole || s.Attributes.ccurole || '').toUpperCase();
+
+  var hasOnOff = sets.match( /(^| )on\b/ ) && sets.match( /(^| )off\b/ ) ? true : false;
+
+  var LEVEL    = FHEM_hmccuReading( s, 'LEVEL' );
+  var STATE    = FHEM_hmccuReading( s, 'STATE' );
+  var SETPOINT = FHEM_hmccuReading( s, 'SET_POINT_TEMPERATURE' )
+                 || FHEM_hmccuReading( s, 'SET_TEMPERATURE' )
+                 || FHEM_hmccuReading( s, 'SETPOINT' );
+  var ACTUAL   = FHEM_hmccuReading( s, 'ACTUAL_TEMPERATURE' );
+  var HUMIDITY = FHEM_hmccuReading( s, 'HUMIDITY' );
+
+  var MOTION   = FHEM_hmccuReading( s, 'MOTION' );
+  var PRESENCE = FHEM_hmccuReading( s, 'PRESENCE_DETECTION_STATE' );
+  var SMOKE    = FHEM_hmccuReading( s, 'SMOKE_DETECTOR_ALARM_STATUS' );
+  var WATER    = FHEM_hmccuReading( s, 'WATERLEVEL_DETECTED' )
+                 || FHEM_hmccuReading( s, 'MOISTURE_DETECTED' );
+  var LUX      = FHEM_hmccuReading( s, 'ILLUMINATION' )
+                 || FHEM_hmccuReading( s, 'CURRENT_ILLUMINATION' )
+                 || FHEM_hmccuReading( s, 'AVERAGE_ILLUMINATION' );
+
+  var type = genericType;
+  if( type === undefined ) {
+    // contact roles have to be tested before the blind roles: SHUTTER_CONTACT would
+    // otherwise be taken for a shutter actuator.
+    if( ccurole.match( /(SHUTTER_CONTACT|CONTACT_TRANSCEIVER|ROTARY_HANDLE)/ ) )
+      type = 'contact';
+    else if( ccurole.match( /MOTIONDETECTOR/ ) )
+      type = 'motion';
+    else if( ccurole.match( /PRESENCEDETECTOR/ ) )
+      type = 'presence';
+    else if( ccurole.match( /SMOKE_DETECTOR/ ) )
+      type = 'smoke';
+    else if( ccurole.match( /(WATER_DETECTION|WATER_TRANSMITTER)/ ) )
+      type = 'leak';
+    else if( ccurole.match( /(BLIND|SHUTTER)/ ) )
+      type = 'blind';
+    else if( ccurole.match( /DIMMER/ ) )
+      type = 'light';
+    else if( ccurole.match( /(CLIMATECONTROL|THERMALCONTROL|HEATING)/ ) )
+      type = 'thermostat';
+    else if( ccurole.match( /SWITCH/ ) )
+      type = 'switch';
+    else if( ccutype.match( /(BROLL|FROLL|BBL|FBL|DRBLI|BLIND|-BL\d)/i ) )
+      type = 'blind';
+    else if( ccutype.match( /(BDT|PDT|FDT|DIM)/i ) )
+      type = 'light';
+    else if( ccutype.match( /(SWDO|SWDM|SCI|SRH)/i ) )
+      type = 'contact';
+    else if( SETPOINT )
+      type = 'thermostat';
+    else if( MOTION )
+      type = 'motion';
+    else if( PRESENCE )
+      type = 'presence';
+    else if( SMOKE )
+      type = 'smoke';
+    else if( WATER )
+      type = 'leak';
+    // a bare LEVEL/STATE datapoint is not enough on its own: sensors have those too, and
+    // guessing actuator from them turns e.g. a window contact into a switch. only fall
+    // back to them when the device also offers a way to actually set the datapoint.
+    else if( LEVEL && (hasOnOff || sets.match( /(^| )pct\b/ )) )
+      type = 'light';
+    else if( STATE && hasOnOff )
+      type = 'switch';
+  }
+
+  if( ['blind', 'light', 'switch', 'outlet', 'thermostat',
+       'contact', 'motion', 'presence', 'smoke', 'leak'].indexOf( type ) < 0 ) {
+    log.info( s.Internals.NAME +' ('+ (ccutype||'?') +'/'+ (ccurole||'?')
+                               +'): no HMCCU mapping, using generic autodetection' );
+    return false;
+  }
+
+  var levelFactor = FHEM_hmccuScalesLevel(s) ? 1 : 100;
+
+  if( type === 'blind' || type === 'light' ) {
+    if( !LEVEL ) {
+      log.error( s.Internals.NAME +': detected as '+ type +' but has no LEVEL reading' );
+      return false;
+    }
+
+    // 'set <device> pct' takes a percentage, 'set <device> datapoint' takes the raw datapoint
+    var usePct     = sets.match( /(^| )pct\b/ ) ? true : false;
+    var levelCmd   = usePct ? 'pct' : 'datapoint '+ FHEM_hmccuDatapoint( s, LEVEL, 'LEVEL' );
+    var writeFactor = usePct ? 1 : levelFactor;
+
+    if( !usePct && !sets.match( /(^| )datapoint\b/ ) )
+      log.warn( s.Internals.NAME +': neither set pct nor set datapoint available, '+ type +' will not be controllable' );
+
+    if( type === 'blind' ) {
+      accessory.service_name = 'blind';
+
+      accessory.mappings.CurrentPosition = { reading: LEVEL, levelFactor: levelFactor };
+      accessory.mappings.TargetPosition  = { reading: LEVEL, cmd: levelCmd, delay: true,
+                                             levelFactor: levelFactor, levelWriteFactor: writeFactor };
+
+      accessory.mappings.CurrentPosition.reading2homekit
+        = FHEM_hmccuLevel2homekit.bind( null, accessory.mappings.CurrentPosition );
+      accessory.mappings.TargetPosition.reading2homekit
+        = FHEM_hmccuLevel2homekit.bind( null, accessory.mappings.TargetPosition );
+      accessory.mappings.TargetPosition.homekit2reading
+        = FHEM_hmccuHomekit2level.bind( null, accessory.mappings.TargetPosition );
+
+      // HmIP ACTIVITY_STATE / classic DIRECTION: 1 = up/opening, 2 = down/closing
+      var ACTIVITY = FHEM_hmccuReading( s, 'ACTIVITY_STATE' ) || FHEM_hmccuReading( s, 'DIRECTION' );
+      if( ACTIVITY )
+        accessory.mappings.PositionState = { reading: ACTIVITY,
+                                             values: ['/^(1|UP|up|OPENING|opening)$/:INCREASING',
+                                                      '/^(2|DOWN|down|CLOSING|closing)$/:DECREASING',
+                                                      '/.*/:STOPPED'] };
+
+      // venetian blinds (HmIP-BBL/FBL) expose the slat position as LEVEL_2. homekit wants a
+      // tilt angle of -90..90, so 0.0 (slats closed) maps to -90 and 1.0 (slats open) to 90.
+      // horizontal is assumed; use homebridgeMapping for blinds with vertical slats.
+      var LEVEL_2 = FHEM_hmccuReading( s, 'LEVEL_2' );
+      if( LEVEL_2 ) {
+        var slatDatapoint = FHEM_hmccuDatapoint( s, LEVEL_2, 'LEVEL_2' );
+
+        accessory.mappings.CurrentHorizontalTiltAngle = { reading: LEVEL_2, levelFactor: levelFactor };
+        accessory.mappings.TargetHorizontalTiltAngle  = { reading: LEVEL_2, delay: true,
+                                                          cmd: 'datapoint '+ slatDatapoint,
+                                                          levelFactor: levelFactor,
+                                                          levelWriteFactor: levelFactor };
+
+        accessory.mappings.CurrentHorizontalTiltAngle.reading2homekit
+          = FHEM_hmccuLevel2tilt.bind( null, accessory.mappings.CurrentHorizontalTiltAngle );
+        accessory.mappings.TargetHorizontalTiltAngle.reading2homekit
+          = FHEM_hmccuLevel2tilt.bind( null, accessory.mappings.TargetHorizontalTiltAngle );
+        accessory.mappings.TargetHorizontalTiltAngle.homekit2reading
+          = FHEM_hmccuTilt2level.bind( null, accessory.mappings.TargetHorizontalTiltAngle );
+      }
+
+    } else {
+      accessory.service_name = 'light';
+
+      accessory.mappings.On = { reading: LEVEL, valueOff: '/^0(\\.0*)?$/' };
+      if( hasOnOff ) {
+        accessory.mappings.On.cmdOn  = 'on';
+        accessory.mappings.On.cmdOff = 'off';
+      } else {
+        var dp = FHEM_hmccuDatapoint( s, LEVEL, 'LEVEL' );
+        accessory.mappings.On.cmdOn  = 'datapoint '+ dp +' '+ (levelFactor == 1 ? 100 : 1);
+        accessory.mappings.On.cmdOff = 'datapoint '+ dp +' 0';
+      }
+
+      accessory.mappings.Brightness = { reading: LEVEL, cmd: levelCmd, delay: true,
+                                        levelFactor: levelFactor, levelWriteFactor: writeFactor };
+      accessory.mappings.Brightness.reading2homekit
+        = FHEM_hmccuLevel2homekit.bind( null, accessory.mappings.Brightness );
+      accessory.mappings.Brightness.homekit2reading
+        = FHEM_hmccuHomekit2level.bind( null, accessory.mappings.Brightness );
+    }
+
+  } else if( type === 'switch' || type === 'outlet' ) {
+    if( !STATE ) {
+      log.error( s.Internals.NAME +': detected as '+ type +' but has no STATE reading' );
+      return false;
+    }
+
+    accessory.service_name = type;
+    accessory.mappings.On = { reading: STATE, valueOn: '/^(1|[Tt]rue|TRUE|[Oo]n|ON)$/' };
+
+    if( hasOnOff ) {
+      accessory.mappings.On.cmdOn  = 'on';
+      accessory.mappings.On.cmdOff = 'off';
+    } else {
+      var dp = FHEM_hmccuDatapoint( s, STATE, 'STATE' );
+      accessory.mappings.On.cmdOn  = 'datapoint '+ dp +' true';
+      accessory.mappings.On.cmdOff = 'datapoint '+ dp +' false';
+    }
+
+  } else if( type === 'thermostat' ) {
+    if( !SETPOINT ) {
+      log.error( s.Internals.NAME +': detected as thermostat but has no set point reading' );
+      return false;
+    }
+
+    accessory.service_name = 'thermostat';
+
+    var tempCmd = sets.match( /(^| )desired-temp\b/ )
+                  ? 'desired-temp'
+                  : 'datapoint '+ FHEM_hmccuDatapoint( s, SETPOINT, 'SET_POINT_TEMPERATURE' );
+
+    accessory.mappings.TargetTemperature = { reading: SETPOINT, cmd: tempCmd, delay: true,
+                                             minValue: 4.5, maxValue: 30.5, minStep: 0.5 };
+
+    if( ACTUAL )
+      accessory.mappings.CurrentTemperature = { reading: ACTUAL, minValue: -30 };
+
+    if( HUMIDITY )
+      accessory.mappings.CurrentRelativeHumidity = { reading: HUMIDITY };
+
+    // valve position doubles as the heating indicator for eTRVs
+    if( LEVEL ) {
+      accessory.mappings.CurrentHeatingCoolingState = { reading: LEVEL,
+                                                        values: ['/^0(\\.0*)?$/:OFF', '/.*/:HEAT'] };
+
+      accessory.mappings[CustomUUIDs.Actuation] = { reading: LEVEL, name: 'Actuation',
+                                                    format: 'UINT8', unit: 'PERCENTAGE',
+                                                    minValue: 0, maxValue: 100, minStep: 1,
+                                                    levelFactor: levelFactor };
+      accessory.mappings[CustomUUIDs.Actuation].reading2homekit
+        = FHEM_hmccuLevel2homekit.bind( null, accessory.mappings[CustomUUIDs.Actuation] );
+    }
+
+    var MODE = FHEM_hmccuReading( s, 'CONTROL_MODE' ) || FHEM_hmccuReading( s, 'SET_POINT_MODE' );
+    if( MODE && sets.match( /(^| )auto\b/ ) && sets.match( /(^| )manu\b/ ) )
+      accessory.mappings.TargetHeatingCoolingState = { reading: MODE, delay: true,
+                                                       values: ['/^(0|AUTO|auto|AUTO-MODE)$/:AUTO', '/.*/:HEAT'],
+                                                       cmds: ['AUTO:auto', 'HEAT:manu', 'COOL:manu',
+                                                              'OFF:'+ (sets.match( /(^| )off\b/ ) ? 'off' : 'manu')] };
+
+  } else if( type === 'contact' ) {
+    if( !STATE ) {
+      log.error( s.Internals.NAME +': detected as contact but has no STATE reading' );
+      return false;
+    }
+
+    accessory.service_name = 'contact';
+
+    // HmIP-SWDO/SWDM: 0 = closed, 1 = open. HmIP-SRH: 0 = closed, 1 = tilted, 2 = open.
+    accessory.mappings.ContactSensorState = { reading: STATE,
+                                              values: ['/^(0|CLOSED|closed|[Ff]alse|FALSE)$/:CONTACT_DETECTED',
+                                                       '/.*/:CONTACT_NOT_DETECTED'] };
+    accessory.mappings.CurrentDoorState = { reading: STATE,
+                                            values: ['/^(0|CLOSED|closed|[Ff]alse|FALSE)$/:CLOSED',
+                                                     '/.*/:OPEN'] };
+
+  } else if( type === 'motion' ) {
+    if( !MOTION ) {
+      log.error( s.Internals.NAME +': detected as motion sensor but has no MOTION reading' );
+      return false;
+    }
+
+    accessory.service_name = 'MotionSensor';
+    accessory.mappings.MotionDetected = { reading: MOTION,
+                                          valueOn: '/^(1|[Tt]rue|TRUE|[Oo]n|ON)$/' };
+
+  } else if( type === 'presence' ) {
+    if( !PRESENCE ) {
+      log.error( s.Internals.NAME +': detected as presence sensor but has no PRESENCE_DETECTION_STATE reading' );
+      return false;
+    }
+
+    accessory.service_name = 'OccupancySensor';
+    accessory.mappings.OccupancyDetected = { reading: PRESENCE,
+                                             values: ['/^(1|[Tt]rue|TRUE)$/:OCCUPANCY_DETECTED',
+                                                      '/.*/:OCCUPANCY_NOT_DETECTED'] };
+
+  } else if( type === 'smoke' ) {
+    if( !SMOKE ) {
+      log.error( s.Internals.NAME +': detected as smoke detector but has no SMOKE_DETECTOR_ALARM_STATUS reading' );
+      return false;
+    }
+
+    accessory.service_name = 'SmokeSensor';
+
+    // 0 = IDLE_OFF, 1 = PRIMARY_ALARM, 2 = INTRUSION_ALARM, 3 = SECONDARY_ALARM
+    accessory.mappings.SmokeDetected = { reading: SMOKE,
+                                         values: ['/^(0|IDLE_OFF|idle_off)$/:SMOKE_NOT_DETECTED',
+                                                  '/.*/:SMOKE_DETECTED'] };
+
+  } else if( type === 'leak' ) {
+    if( !WATER ) {
+      log.error( s.Internals.NAME +': detected as leak sensor but has no water detection reading' );
+      return false;
+    }
+
+    accessory.service_name = 'LeakSensor';
+    accessory.mappings.LeakDetected = { reading: WATER,
+                                        values: ['/^(0|[Ff]alse|FALSE)$/:LEAK_NOT_DETECTED',
+                                                 '/.*/:LEAK_DETECTED'] };
+  }
+
+  // motion and presence detectors report brightness as their own light sensor service
+  if( LUX && (type === 'motion' || type === 'presence') )
+    accessory.mappings['LightSensor#CurrentAmbientLightLevel'] = { reading: LUX, minValue: 0 };
+
+  // battery, common to all HmIP battery powered devices
+  if( !s.Readings.battery ) {
+    var LOWBAT = FHEM_hmccuReading( s, 'LOW_BAT' ) || FHEM_hmccuReading( s, 'LOWBAT' );
+    if( LOWBAT )
+      accessory.mappings.StatusLowBattery = { reading: LOWBAT,
+                                              values: ['/^(0|[Ff]alse|FALSE|ok|OK)$/:BATTERY_LEVEL_NORMAL',
+                                                       '/.*/:BATTERY_LEVEL_LOW'] };
+  }
+
+  // power measurement, e.g. HmIP-PSM / HmIP-BSM
+  var POWER   = FHEM_hmccuReading( s, 'POWER' );
+  var CURRENT = FHEM_hmccuReading( s, 'CURRENT' );
+  var VOLTAGE = FHEM_hmccuReading( s, 'VOLTAGE' );
+  var ENERGY  = FHEM_hmccuReading( s, 'ENERGY_COUNTER' );
+
+  if( POWER && !accessory.mappings[CustomUUIDs.Power] )
+    accessory.mappings[CustomUUIDs.Power] = { name: 'Power', reading: POWER, format: 'FLOAT', factor: 1 };
+  if( CURRENT && !accessory.mappings[CustomUUIDs.Current] )
+    accessory.mappings[CustomUUIDs.Current] = { name: 'Current', reading: CURRENT, format: 'FLOAT', factor: 0.001 };
+  if( VOLTAGE && !accessory.mappings[CustomUUIDs.Voltage] )
+    accessory.mappings[CustomUUIDs.Voltage] = { name: 'Voltage', reading: VOLTAGE, format: 'FLOAT', factor: 1 };
+  if( ENERGY && !accessory.mappings[CustomUUIDs.Energy] )
+    accessory.mappings[CustomUUIDs.Energy] = { name: 'Energy', reading: ENERGY, format: 'FLOAT', factor: 0.001 };
+
+  log.info( s.Internals.NAME +' ('+ (ccutype||'?') +'/'+ (ccurole||'?') +') mapped as HMCCU '+ type
+            + (LEVEL ? '; LEVEL='+ LEVEL +' x'+ levelFactor : '')
+            + (STATE ? '; STATE='+ STATE : '')
+            + (SETPOINT ? '; setpoint='+ SETPOINT : '') );
+
+  return true;
+}
+
 function
 FHEMAccessory(platform, s) {
   this.log         = platform.log;
@@ -1319,6 +1753,12 @@ FHEMAccessory(platform, s) {
 
   //this.service_name = 'switch';
 
+  // HMCCU devices use ccu datapoint names for their readings and none of the CUL_HM
+  // attributes the autodetection below relies on, so they are mapped separately.
+  var isHMCCU = false;
+  if( s.Internals.TYPE === 'HMCCUCHN' || s.Internals.TYPE === 'HMCCUDEV' )
+    isHMCCU = FHEM_hmccuMappings( this, s, genericType );
+
   var match;
   if( match = s.PossibleSets.match(/(^| )dim:slider,0,1,99/) ) {
     // ZWave dimmer
@@ -1350,7 +1790,7 @@ FHEMAccessory(platform, s) {
     }.bind(null, this.mappings.Brightness);
 
 
-  } else if( match = s.PossibleSets.match(/(^| )pct\b/) ) {
+  } else if( !isHMCCU && (match = s.PossibleSets.match(/(^| )pct\b/)) ) {
     // HM dimmer
     if( !this.service_name ) this.service_name = 'light';
     this.mappings.On = { reading: 'pct', valueOff: '0', cmdOn: 'on', cmdOff: 'off' };
@@ -1828,7 +2268,7 @@ FHEMAccessory(platform, s) {
   } else if( s.Attributes.model == 'fs20di' )
     if( !this.service_name ) this.service_name = 'light';
 
-  if( match = s.PossibleSets.match(/(^| )desired-temp(:[^\d]*([^\$ ]*))?/) ) {
+  if( !isHMCCU && (match = s.PossibleSets.match(/(^| )desired-temp(:[^\d]*([^\$ ]*))?/)) ) {
     //HM & Comet DECT
     if( !this.service_name ) this.service_name = 'thermostat';
     this.mappings.TargetTemperature = { reading: 'desired-temp', cmd: 'desired-temp', delay: true };
@@ -1863,7 +2303,7 @@ FHEMAccessory(platform, s) {
                                                   cmds: ['OFF:mode holiday_short', 'HEAT:mode manual', 'COOL:mode manual', 'AUTO:mode auto'], };
     }
 
-  } else if( match = s.PossibleSets.match(/(^| )desiredTemperature(:[^\d]*([^\$ ]*))?/) ) {
+  } else if( !isHMCCU && (match = s.PossibleSets.match(/(^| )desiredTemperature(:[^\d]*([^\$ ]*))?/)) ) {
     // MAX
     if( !this.service_name ) this.service_name = 'thermostat';
     this.mappings.TargetTemperature = { reading: 'desiredTemperature', cmd: 'desiredTemperature', delay: true };
@@ -1880,7 +2320,7 @@ FHEMAccessory(platform, s) {
       this.mappings.TargetTemperature.minStep = values[1] - values[0];
     }
 
-  } else if( match = s.PossibleSets.match(/(^| )desired(:[^\d]*([^\$ ]*))?/) ) {
+  } else if( !isHMCCU && (match = s.PossibleSets.match(/(^| )desired(:[^\d]*([^\$ ]*))?/)) ) {
     //PID20
     if( !this.service_name ) this.service_name = 'thermostat';
     this.mappings.TargetTemperature = { reading: 'desired', cmd: 'desired', delay: true };
@@ -1919,7 +2359,7 @@ FHEMAccessory(platform, s) {
       }
     }
 
-  } else if( !this.mappings.On
+  } else if( !isHMCCU && !this.mappings.On
              && s.PossibleSets.match(/(^| )on\b/)
              && s.PossibleSets.match(/(^| )off\b/) ) {
     if( !this.service_name ) this.service_name = 'switch';
@@ -1953,7 +2393,7 @@ FHEMAccessory(platform, s) {
     this.mappings[CustomUUIDs.AirPressure] = { name: 'AirPressure', reading: 'pressure', format: 'UINT16', factor: 1 };
 
 
-  if( this.service_name === 'thermostat' )
+  if( this.service_name === 'thermostat' && !this.mappings.CurrentHeatingCoolingState )
     this.mappings.CurrentHeatingCoolingState = { default: 'HEAT' };
 
 
@@ -1987,12 +2427,17 @@ FHEMAccessory(platform, s) {
       || this.service_name === 'lock' || this.service_name === 'garage' || this.service_name === 'window' )
     delete this.mappings.On;
 
-  if( this.service_name === 'thermostat'
-      && (!this.mappings.TargetTemperature
-          || !this.mappings.TargetTemperature.cmd || !s.PossibleSets.match('(^| )'+this.mappings.TargetTemperature.cmd+'\\b') ) ) {
-    this.log.error( s.Internals.NAME + ' is NOT a thermostat. set command for target temperature missing: '
-                          + (this.mappings.TargetTemperature && this.mappings.TargetTemperature.cmd?this.mappings.TargetTemperature.cmd:'') );
-    delete this.mappings.TargetTemperature;
+  if( this.service_name === 'thermostat' ) {
+    // the cmd can carry arguments, e.g. 'datapoint 1.SET_POINT_TEMPERATURE'. only the
+    // command itself is listed in PossibleSets.
+    var targetCmd = this.mappings.TargetTemperature ? this.mappings.TargetTemperature.cmd : undefined;
+    var targetVerb = targetCmd ? targetCmd.split(' ')[0] : undefined;
+
+    if( !targetVerb || !s.PossibleSets.match('(^| )'+targetVerb+'\\b') ) {
+      this.log.error( s.Internals.NAME + ' is NOT a thermostat. set command for target temperature missing: '
+                            + (targetCmd ? targetCmd : '') );
+      delete this.mappings.TargetTemperature;
+    }
   }
 
 
