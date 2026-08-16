@@ -2162,7 +2162,11 @@ FHEMAccessory(platform, s) {
 	     || s.Internals.type == 'blind'
              || s.Attributes.subType == 'blind'
              || s.Attributes.subType == 'blindActuator' ) {
-    if( !this.service_name ) this.service_name = 'blind';
+    // the 'set pct' branch above already claimed the service as a light. that guess only
+    // wins when the user did not ask for a specific type, otherwise a blindActuator ends
+    // up exposed as a Lightbulb instead of a WindowCovering.
+    if( !this.service_name || (this.service_name === 'light' && genericType === undefined) )
+      this.service_name = 'blind';
     delete this.mappings.Brightness;
     if( s.PossibleSets.match(/(^| )position\b/) ) {
       this.mappings.CurrentPosition = { reading: 'position' };
